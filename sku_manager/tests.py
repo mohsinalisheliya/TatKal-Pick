@@ -229,46 +229,52 @@ class MarketplaceListingSKUTests(TestCase):
 		self.client.force_login(user)
 		self.item = JewelrySKU.objects.create(name='Mapping Test Product')
 		self.platform = Platform.objects.create(name='Amazon')
-		self.url = reverse('stock_action', args=[self.item.pk])
+		self.url = reverse('product_edit_details', args=[self.item.pk])
 
-	def test_stock_form_saves_marketplace_sku_mapping(self):
-		response = self.client.post(self.url, {
-			'batch_no': 'MAP-1',
-			'stock_qty': '5',
-			'purchase_price': '10.00',
-			'selling_price': '20.00',
+	def product_data(self, **extra):
+		data = {
+			'category': self.item.category,
+			'style': self.item.style,
+			'name': self.item.name,
+			'design_model': self.item.design_model,
+			'color': self.item.color,
+			'size': self.item.size,
+			'number': self.item.number,
+		}
+		data.update(extra)
+		return data
+
+	def test_product_form_saves_marketplace_sku_mapping(self):
+		response = self.client.post(self.url, self.product_data(
 			f'listing_sku_source_{self.platform.pk}': MarketplaceListingSKU.SOURCE_MANUAL,
 			f'listing_sku_{self.platform.pk}': 'AMZ-MAPPING-123',
-		})
+		))
 
-		self.assertRedirects(response, reverse('inventory_list'))
+		self.assertRedirects(response, reverse('product_list'))
 		mapping = MarketplaceListingSKU.objects.get(sku=self.item, platform=self.platform)
 		self.assertEqual(mapping.listing_sku, 'AMZ-MAPPING-123')
 		self.assertEqual(mapping.effective_sku, 'AMZ-MAPPING-123')
-		self.assertEqual(self.item.batches.get().quantity, 5)
 
 	def test_database_sku_mode_uses_the_current_product_sku(self):
-		response = self.client.post(self.url, {
-			'batch_no': 'MAP-DATABASE',
-			'stock_qty': '3',
-			'purchase_price': '10.00',
-			'selling_price': '20.00',
+		response = self.client.post(self.url, self.product_data(
+			name='Edited Mapping Product',
 			f'listing_sku_source_{self.platform.pk}': MarketplaceListingSKU.SOURCE_DATABASE,
-		})
+		))
 
-		self.assertRedirects(response, reverse('inventory_list'))
+		self.assertRedirects(response, reverse('product_list'))
+		self.item.refresh_from_db()
 		mapping = MarketplaceListingSKU.objects.get(sku=self.item, platform=self.platform)
 		self.assertEqual(mapping.source, MarketplaceListingSKU.SOURCE_DATABASE)
 		self.assertEqual(mapping.listing_sku, '')
 		self.assertEqual(mapping.effective_sku, self.item.sku)
 
-		self.item.name = 'Updated Mapping Product'
+		self.item.name = 'Updated Again Mapping Product'
 		self.item.save()
 		mapping.refresh_from_db()
 		self.assertEqual(mapping.effective_sku, self.item.sku)
 
 	def test_get_form_defaults_to_database_sku_mode(self):
-		response = self.client.get(self.url)
+		response = self.client.get(reverse('product_master'))
 
 		self.assertEqual(response.status_code, 200)
 		row = next(row for row in response.context['platform_rows'] if row['platform'] == self.platform)
@@ -283,18 +289,16 @@ class MarketplaceListingSKUTests(TestCase):
 			listing_sku='AMZ-ALREADY-USED',
 		)
 
-		response = self.client.post(self.url, {
-			'batch_no': 'MAP-DUPLICATE',
-			'stock_qty': '5',
-			'purchase_price': '10.00',
-			'selling_price': '20.00',
+		response = self.client.post(self.url, self.product_data(
+			name='Should Not Save',
 			f'listing_sku_source_{self.platform.pk}': MarketplaceListingSKU.SOURCE_MANUAL,
 			f'listing_sku_{self.platform.pk}': 'amz-already-used',
-		})
+		))
 
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'already mapped to another product')
-		self.assertFalse(self.item.batches.exists())
+		self.item.refresh_from_db()
+		self.assertEqual(self.item.name, 'MAPPING TEST PRODUCT')
 		self.assertFalse(MarketplaceListingSKU.objects.filter(sku=self.item).exists())
 
 	def test_switching_seller_sku_to_database_uses_product_sku(self):
@@ -304,33 +308,44 @@ class MarketplaceListingSKUTests(TestCase):
 			listing_sku='AMZ-OLD-SKU',
 		)
 
-		response = self.client.post(self.url, {
-			'batch_no': 'MAP-CLEAR',
-			'stock_qty': '5',
-			'purchase_price': '10.00',
-			'selling_price': '20.00',
+		response = self.client.post(self.url, self.product_data(
 			f'listing_sku_source_{self.platform.pk}': MarketplaceListingSKU.SOURCE_DATABASE,
 			f'listing_sku_{self.platform.pk}': 'AMZ-OLD-SKU',
-		})
+		))
 
-		self.assertRedirects(response, reverse('inventory_list'))
+		self.assertRedirects(response, reverse('product_list'))
 		mapping = MarketplaceListingSKU.objects.get(sku=self.item, platform=self.platform)
 		self.assertEqual(mapping.source, MarketplaceListingSKU.SOURCE_DATABASE)
 		self.assertEqual(mapping.effective_sku, self.item.sku)
 
 	def test_manual_mode_requires_a_seller_sku(self):
-		response = self.client.post(self.url, {
-			'batch_no': 'MAP-MISSING',
-			'stock_qty': '5',
-			'purchase_price': '10.00',
-			'selling_price': '20.00',
+		response = self.client.post(self.url, self.product_data(
 			f'listing_sku_source_{self.platform.pk}': MarketplaceListingSKU.SOURCE_MANUAL,
 			f'listing_sku_{self.platform.pk}': '',
-		})
+		))
 
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'Enter a seller SKU for Amazon')
-		self.assertFalse(self.item.batches.exists())
+
+	def test_stock_form_does_not_change_marketplace_listing_sku(self):
+		mapping = MarketplaceListingSKU.objects.create(
+			sku=self.item,
+			platform=self.platform,
+			source=MarketplaceListingSKU.SOURCE_MANUAL,
+			listing_sku='AMZ-KEEP-THIS',
+		)
+
+		response = self.client.post(reverse('stock_action', args=[self.item.pk]), {
+			'batch_no': 'MAP-BATCH',
+			'stock_qty': '4',
+			'purchase_price': '10.00',
+			'selling_price': '20.00',
+		})
+
+		self.assertRedirects(response, reverse('inventory_list'))
+		mapping.refresh_from_db()
+		self.assertEqual(mapping.listing_sku, 'AMZ-KEEP-THIS')
+		self.assertEqual(self.item.batches.get().quantity, 4)
 
 
 class LabelPrintingTests(TestCase):
