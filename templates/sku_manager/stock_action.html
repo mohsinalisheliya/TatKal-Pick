@@ -84,10 +84,18 @@
                   class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-2 text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
               </div>
               <div>
-                <label for="listing-sku-{{ row.platform.id }}" class="block text-[10px] font-semibold text-slate-500 mb-1">Seller SKU on {{ row.platform.name }}</label>
-                <input id="listing-sku-{{ row.platform.id }}" type="text" maxlength="100" name="listing_sku_{{ row.platform.id }}" value="{{ row.listing_sku }}" placeholder="Enter marketplace SKU"
+                <label for="listing-sku-source-{{ row.platform.id }}" class="block text-[10px] font-semibold text-slate-500 mb-1">Seller SKU source on {{ row.platform.name }}</label>
+                <select id="listing-sku-source-{{ row.platform.id }}" name="listing_sku_source_{{ row.platform.id }}" data-sku-source="{{ row.platform.id }}"
+                  class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-2 text-xs font-bold text-slate-800 dark:text-white">
+                  <option value="database" {% if row.listing_sku_source == 'database' %}selected{% endif %}>From database</option>
+                  <option value="manual" {% if row.listing_sku_source == 'manual' %}selected{% endif %}>Enter manually</option>
+                </select>
+                <div id="listing-sku-database-{{ row.platform.id }}" data-sku-database="{{ row.platform.id }}"
+                  class="mt-2 rounded-lg bg-slate-100 dark:bg-slate-800 px-2 py-2 text-xs font-mono font-bold text-slate-700 dark:text-slate-200">
+                  {{ item.sku }} <span class="font-sans font-normal text-slate-400">(Tatkal Pick SKU)</span>
+                </div>
+                <input id="listing-sku-{{ row.platform.id }}" data-sku-manual="{{ row.platform.id }}" type="text" maxlength="100" name="listing_sku_{{ row.platform.id }}" value="{{ row.listing_sku }}" placeholder="Enter marketplace SKU"
                   class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-2 text-xs font-mono font-bold text-slate-800 dark:text-white">
-                <p class="mt-1 text-[10px] text-slate-400">Leave blank if this platform uses your Tatkal Pick SKU.</p>
               </div>
             </div>
           {% endfor %}
@@ -123,4 +131,21 @@
     </form>
   </div>
 </div>
+<script>
+  document.querySelectorAll('[data-sku-source]').forEach((select) => {
+    const platformId = select.dataset.skuSource;
+    const manualInput = document.querySelector(`[data-sku-manual="${platformId}"]`);
+    const databasePreview = document.querySelector(`[data-sku-database="${platformId}"]`);
+
+    const updateSkuSource = () => {
+      const useManualSku = select.value === 'manual';
+      manualInput.hidden = !useManualSku;
+      manualInput.required = useManualSku;
+      databasePreview.hidden = useManualSku;
+    };
+
+    select.addEventListener('change', updateSkuSource);
+    updateSkuSource();
+  });
+</script>
 {% endblock %}

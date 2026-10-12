@@ -148,9 +148,17 @@ class PlatformPrice(models.Model):
         unique_together = ('sku', 'platform')
 
 class MarketplaceListingSKU(models.Model):
+    SOURCE_DATABASE = 'database'
+    SOURCE_MANUAL = 'manual'
+    SOURCE_CHOICES = [
+        (SOURCE_DATABASE, 'From database'),
+        (SOURCE_MANUAL, 'Enter manually'),
+    ]
+
     sku = models.ForeignKey(JewelrySKU, on_delete=models.CASCADE, related_name='marketplace_listing_skus')
     platform = models.ForeignKey(Platform, on_delete=models.CASCADE, related_name='listing_skus')
-    listing_sku = models.CharField(max_length=100)
+    source = models.CharField(max_length=10, choices=SOURCE_CHOICES, default=SOURCE_MANUAL)
+    listing_sku = models.CharField(max_length=100, blank=True, default='')
 
     class Meta:
         constraints = [
@@ -158,12 +166,19 @@ class MarketplaceListingSKU(models.Model):
             models.UniqueConstraint(
                 Lower('listing_sku'),
                 'platform',
+                condition=~models.Q(listing_sku=''),
                 name='uniq_market_sku_value_ci',
             ),
         ]
 
+    @property
+    def effective_sku(self):
+        if self.source == self.SOURCE_DATABASE:
+            return self.sku.sku
+        return self.listing_sku
+
     def __str__(self):
-        return f"{self.platform.name}: {self.listing_sku} → {self.sku.sku}"
+        return f"{self.platform.name}: {self.effective_sku} → {self.sku.sku}"
 
 class DispatchLog(models.Model):
     sku = models.ForeignKey(JewelrySKU, on_delete=models.CASCADE, related_name='dispatch_logs')

@@ -313,7 +313,7 @@ def product_detail(request, pk):
     mrp = item.selling_price
     price_map = {price.platform_id: price.price for price in item.platform_prices.all()}
     listing_sku_map = {
-        mapping.platform_id: mapping.listing_sku
+        mapping.platform_id: mapping
         for mapping in item.marketplace_listing_skus.all()
     }
     platform_rows = []
@@ -322,7 +322,16 @@ def product_detail(request, pk):
         row = {
             'platform': platform,
             'price': price,
-            'listing_sku': listing_sku_map.get(platform.id),
+            'listing_sku': (
+                listing_sku_map[platform.id].effective_sku
+                if platform.id in listing_sku_map
+                else item.sku
+            ),
+            'listing_sku_source': (
+                listing_sku_map[platform.id].source
+                if platform.id in listing_sku_map
+                else MarketplaceListingSKU.SOURCE_DATABASE
+            ),
             'margin': None,
             'margin_pct': None,
             'discount_pct': None,
@@ -399,7 +408,7 @@ def stock_action(request, pk):
     def render_form(form_values=None, form_errors=None):
         price_map = {pp.platform_id: pp.price for pp in item.platform_prices.all()}
         listing_sku_map = {
-            mapping.platform_id: mapping.listing_sku
+            mapping.platform_id: mapping
             for mapping in item.marketplace_listing_skus.all()
         }
         platform_rows = []
@@ -414,7 +423,25 @@ def stock_action(request, pk):
                 'listing_sku': (
                     form_values.get(f'listing_sku_{platform.id}', '')
                     if form_values is not None
-                    else listing_sku_map.get(platform.id, '')
+                    else (
+                        listing_sku_map[platform.id].listing_sku
+                        if platform.id in listing_sku_map
+                        else ''
+                    )
+                ),
+                'listing_sku_source': (
+                    form_values.get(
+                        f'listing_sku_source_{platform.id}',
+                        MarketplaceListingSKU.SOURCE_MANUAL
+                        if form_values.get(f'listing_sku_{platform.id}', '').strip()
+                        else MarketplaceListingSKU.SOURCE_DATABASE,
+                    )
+                    if form_values is not None
+                    else (
+                        listing_sku_map[platform.id].source
+                        if platform.id in listing_sku_map
+                        else MarketplaceListingSKU.SOURCE_DATABASE
+                    )
                 ),
             })
         return render(request, 'sku_manager/stock_action.html', {
@@ -448,15 +475,32 @@ def stock_action(request, pk):
         listing_skus = {}
         form_errors = []
         for platform in platforms:
+            source = request.POST.get(
+                f'listing_sku_source_{platform.id}',
+                MarketplaceListingSKU.SOURCE_DATABASE,
+            ).strip()
             listing_sku = request.POST.get(f'listing_sku_{platform.id}', '').strip()
-            if len(listing_sku) > 100:
+            if source not in {choice[0] for choice in MarketplaceListingSKU.SOURCE_CHOICES}:
+                form_errors.append(f"Choose a valid seller SKU source for {platform.name}.")
+            elif source == MarketplaceListingSKU.SOURCE_MANUAL and not listing_sku:
+                form_errors.append(f"Enter a seller SKU for {platform.name} or choose From database.")
+            elif source == MarketplaceListingSKU.SOURCE_MANUAL and len(listing_sku) > 100:
                 form_errors.append(f"{platform.name} seller SKU must be 100 characters or fewer.")
-            elif listing_sku and MarketplaceListingSKU.objects.filter(
+            elif source == MarketplaceListingSKU.SOURCE_MANUAL and MarketplaceListingSKU.objects.filter(
                 platform=platform,
-                listing_sku__iexact=listing_sku,
-            ).exclude(sku=item).exists():
+            ).exclude(sku=item).filter(
+                Q(source=MarketplaceListingSKU.SOURCE_MANUAL, listing_sku__iexact=listing_sku)
+                | Q(source=MarketplaceListingSKU.SOURCE_DATABASE, sku__sku__iexact=listing_sku)
+            ).exists():
                 form_errors.append(f"'{listing_sku}' is already mapped to another product on {platform.name}.")
-            listing_skus[platform.id] = listing_sku
+            elif source == MarketplaceListingSKU.SOURCE_DATABASE and MarketplaceListingSKU.objects.filter(
+                platform=platform,
+            ).exclude(sku=item).filter(
+                Q(source=MarketplaceListingSKU.SOURCE_MANUAL, listing_sku__iexact=item.sku)
+                | Q(source=MarketplaceListingSKU.SOURCE_DATABASE, sku__sku__iexact=item.sku)
+            ).exists():
+                form_errors.append(f"'{item.sku}' is already mapped to another product on {platform.name}.")
+            listing_skus[platform.id] = {'source': source, 'listing_sku': listing_sku}
 
         if form_errors:
             return render_form(request.POST, form_errors)
@@ -497,15 +541,25 @@ def stock_action(request, pk):
                     else:
                         PlatformPrice.objects.filter(sku=item, platform=platform).delete()
 
-                    listing_sku = listing_skus[platform.id]
-                    if listing_sku:
+                    mapping = listing_skus[platform.id]
+                    if mapping['source'] == MarketplaceListingSKU.SOURCE_DATABASE:
                         MarketplaceListingSKU.objects.update_or_create(
                             sku=item,
                             platform=platform,
-                            defaults={'listing_sku': listing_sku},
+                            defaults={
+                                'source': mapping['source'],
+                                'listing_sku': '',
+                            },
                         )
                     else:
-                        MarketplaceListingSKU.objects.filter(sku=item, platform=platform).delete()
+                        MarketplaceListingSKU.objects.update_or_create(
+                            sku=item,
+                            platform=platform,
+                            defaults={
+                                'source': mapping['source'],
+                                'listing_sku': mapping['listing_sku'],
+                            },
+                        )
 
                 item.sync_stock_from_batches()
         except IntegrityError:
