@@ -61,10 +61,12 @@ def parse_meesho_label_text(text):
 
 
 def extract_meesho_label(uploaded_file):
-    if uploaded_file.size > MAX_LABEL_PDF_BYTES:
+    uploaded_file.seek(0, 2)
+    file_size = getattr(uploaded_file, 'size', uploaded_file.tell())
+    uploaded_file.seek(0)
+    if file_size > MAX_LABEL_PDF_BYTES:
         raise LabelParseError('PDF must be 10 MB or smaller.')
 
-    uploaded_file.seek(0)
     if uploaded_file.read(5) != b'%PDF-':
         raise LabelParseError('Upload a valid PDF shipping label.')
     uploaded_file.seek(0)
