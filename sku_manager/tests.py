@@ -412,6 +412,12 @@ TAX INVOICE Original For Recipient"""
 		with self.assertRaises(LabelParseError):
 			parse_meesho_label_text('Unrelated PDF text')
 
+	def test_missing_pdf_dependency_does_not_prevent_app_import_and_reports_install_help(self):
+		with patch.dict('sys.modules', {'pypdf': None}):
+			with self.assertRaisesMessage(LabelParseError, 'same Python environment that runs Django'):
+				from .pdf_orders import extract_meesho_label
+				extract_meesho_label(SimpleUploadedFile('label.pdf', b'%PDF-test'))
+
 	def test_upload_creates_pending_review_without_changing_stock(self):
 		response = self.upload_label()
 

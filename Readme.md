@@ -77,8 +77,8 @@ cd tatkal-pick
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
-# 3. dependencies (core ones used by the app)
-pip install django pillow "qrcode[pil]" pypdf
+# 3. dependencies (run with the same Python environment used for Django)
+python -m pip install -r requirements.txt
 
 # 4. database and admin user
 python manage.py migrate

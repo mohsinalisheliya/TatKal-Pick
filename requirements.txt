@@ -1,0 +1,5 @@
+django>=5.2,<5.3
+pillow
+polars
+qrcode[pil]
+pypdf>=6,<7

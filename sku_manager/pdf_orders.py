@@ -1,9 +1,5 @@
 import re
 
-from pypdf import PdfReader
-from pypdf.errors import PdfReadError
-
-
 MAX_LABEL_PDF_BYTES = 10 * 1024 * 1024
 MAX_LABEL_PDF_PAGES = 5
 
@@ -61,6 +57,16 @@ def parse_meesho_label_text(text):
 
 
 def extract_meesho_label(uploaded_file):
+    try:
+        from pypdf import PdfReader
+        from pypdf.errors import PdfReadError
+    except ImportError as error:
+        raise LabelParseError(
+            'PDF scanning needs pypdf. Install the project dependencies with '
+            '"python -m pip install -r requirements.txt" using the same Python '
+            'environment that runs Django.'
+        ) from error
+
     uploaded_file.seek(0, 2)
     file_size = getattr(uploaded_file, 'size', uploaded_file.tell())
     uploaded_file.seek(0)
