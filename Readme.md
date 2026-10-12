@@ -42,6 +42,7 @@ one-tap dispatch page that reduces stock and keeps an audit trail.
 | 🛒 **Marketplace pricing** | A separate selling rate per platform, with profit or loss shown against your purchase cost |
 | 🗄️ **Storage boxes** | Boxes and compartments with unique names and unique color tags (used colors are locked) |
 | 📷 **QR scan and 1-tap dispatch** | Scan a sticker, pick the marketplace, and one unit leaves the oldest sellable batch (FIFO) |
+| 🧾 **Meesho PDF order scan** | Extract order ID, seller SKU, quantity and recipient details; review before FIFO stock deduction and prevent duplicate dispatch |
 | 🧮 **Dispatch log** | Every dispatch records platform, sold price, quantity and stock left |
 | 🖨️ **Sticker printing** | Prints 50 × 25 mm labels, two per row on a 105 mm roll, with QR, product name, SKU and batch number |
 | ♻️ **30-day batch retention** | Finished batches are kept for 30 days and then removed automatically |
@@ -61,6 +62,7 @@ one-tap dispatch page that reduces stock and keeps an audit trail.
 2. **Stock** – add a batch (batch no, quantity, cost, MRP, marketplace rates, box and compartment).
 3. **Label** – print stickers from the inventory page (🏷️ Label) or from a batch row.
 4. **Dispatch** – scan the sticker with the in-app scanner; choose the marketplace; confirm.
+5. **Marketplace PDF orders** – open **PDF Order Scan**, upload a text-based Meesho label, verify the product and recipient, then confirm dispatch. Duplicate order IDs cannot deduct stock twice.
 
 ## Getting started
 

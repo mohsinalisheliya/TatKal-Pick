@@ -1,0 +1,76 @@
+{% extends "sku_manager/base.html" %}
+
+{% block title %}Review Marketplace Order - Tatkal Pick{% endblock %}
+
+{% block content %}
+<section class="max-w-4xl mx-auto space-y-6">
+  <header class="border-b border-slate-200 dark:border-slate-800 pb-4">
+    <p class="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">{{ order.platform_name }} Order</p>
+    <h1 class="mt-1 text-2xl font-extrabold text-slate-900 dark:text-white">Review before dispatch</h1>
+    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Order ID: <span class="font-mono font-bold">{{ order.order_id }}</span></p>
+  </header>
+
+  {% if order.status == 'dispatched' %}
+    <div class="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-emerald-800 dark:text-emerald-300">
+      <h2 class="font-extrabold">Order dispatched — duplicate-safe</h2>
+      <p class="mt-1 text-sm">{{ order.quantity }} unit(s) of {{ order.sku.sku }} dispatched on {{ order.dispatched_at|date:"d M Y, h:i A" }}. Uploading this label again will not deduct stock again.</p>
+      <p class="mt-1 text-sm">Stock remaining: {{ order.dispatch_log.stock_after }}</p>
+    </div>
+    <dl class="grid gap-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 p-5 sm:grid-cols-2">
+      <div><dt class="text-xs font-bold uppercase text-slate-500">Recipient</dt><dd class="mt-1">{{ order.customer_name }}</dd></div>
+      <div><dt class="text-xs font-bold uppercase text-slate-500">Seller SKU</dt><dd class="mt-1 font-mono">{{ order.seller_sku }}</dd></div>
+      <div class="sm:col-span-2"><dt class="text-xs font-bold uppercase text-slate-500">Delivery address</dt><dd class="mt-1 whitespace-pre-line">{{ order.shipping_address }}</dd></div>
+    </dl>
+  {% else %}
+    <div class="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-200">
+      Stock is unchanged. Confirming below deducts the requested quantity from the oldest sellable batch(es).
+    </div>
+
+    <form method="post" class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 p-5 sm:p-7 space-y-5">
+      {% csrf_token %}
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Order ID</label>
+          <p class="mt-1 font-mono font-bold text-slate-900 dark:text-white">{{ order.order_id }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Platform seller SKU</label>
+          <p class="mt-1 font-mono font-bold text-slate-900 dark:text-white">{{ order.seller_sku }}</p>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Quantity from label</label>
+          <p class="mt-1 font-bold text-slate-900 dark:text-white">{{ order.quantity }}</p>
+        </div>
+        <div>
+          <label for="sku_id" class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Tatkal Pick product</label>
+          <select id="sku_id" name="sku_id" required class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3 py-2.5 text-sm">
+            <option value="">Choose the matching product</option>
+            {% for product in products %}
+              <option value="{{ product.pk }}" {% if matched_product.pk == product.pk %}selected{% endif %}>{{ product.sku }} — {{ product.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="customer_name" class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Recipient name</label>
+          <input id="customer_name" name="customer_name" value="{{ order.customer_name }}" maxlength="150" required class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3 py-2.5 text-sm">
+        </div>
+        <div>
+          <label for="shipping_address" class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Delivery address</label>
+          <textarea id="shipping_address" name="shipping_address" rows="3" required class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3 py-2.5 text-sm">{{ order.shipping_address }}</textarea>
+        </div>
+      </div>
+
+      <label class="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+        <input type="checkbox" name="save_seller_sku" class="mt-1 rounded border-slate-300">
+        <span>Save this Meesho seller SKU against the selected product for future scans.</span>
+      </label>
+
+      <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-extrabold text-white hover:bg-emerald-500">
+        Confirm order and deduct {{ order.quantity }} unit(s)
+      </button>
+    </form>
+  {% endif %}
+
+  <a href="{% url 'pdf_order_scan' %}" class="inline-flex rounded-xl border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Scan another label</a>
+</section>
+{% endblock %}
