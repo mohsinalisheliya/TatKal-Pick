@@ -183,6 +183,49 @@ class MarketplaceListingSKU(models.Model):
     def __str__(self):
         return f"{self.platform.name}: {self.effective_sku} → {self.sku.sku}"
 
+class MarketplaceOrder(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_DISPATCHED = 'dispatched'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending review'),
+        (STATUS_DISPATCHED, 'Dispatched'),
+    ]
+
+    platform = models.ForeignKey(Platform, on_delete=models.PROTECT, related_name='orders')
+    platform_name = models.CharField(max_length=50)
+    order_id = models.CharField(max_length=100)
+    seller_sku = models.CharField(max_length=100)
+    sku = models.ForeignKey(
+        JewelrySKU,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='marketplace_orders',
+    )
+    quantity = models.PositiveIntegerField()
+    customer_name = models.CharField(max_length=150, blank=True, default='')
+    shipping_address = models.TextField(blank=True, default='')
+    customer_phone = models.CharField(max_length=40, blank=True, default='')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    dispatch_log = models.OneToOneField(
+        'DispatchLog',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='marketplace_order',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    dispatched_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=('platform', 'order_id'), name='uniq_marketplace_order_id'),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.platform_name} order {self.order_id}"
+
 class DispatchLog(models.Model):
     sku = models.ForeignKey(JewelrySKU, on_delete=models.CASCADE, related_name='dispatch_logs')
     platform = models.ForeignKey(Platform, on_delete=models.SET_NULL, null=True, blank=True)
