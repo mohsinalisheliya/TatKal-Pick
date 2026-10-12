@@ -231,7 +231,7 @@ class MarketplaceListingSKUTests(TestCase):
 		self.platform = Platform.objects.create(name='Amazon')
 		self.url = reverse('product_edit_details', args=[self.item.pk])
 
-	def product_data(self, **extra):
+	def product_data(self, extra=None, **fields):
 		data = {
 			'category': self.item.category,
 			'style': self.item.style,
@@ -241,14 +241,15 @@ class MarketplaceListingSKUTests(TestCase):
 			'size': self.item.size,
 			'number': self.item.number,
 		}
-		data.update(extra)
+		data.update(extra or {})
+		data.update(fields)
 		return data
 
 	def test_product_form_saves_marketplace_sku_mapping(self):
-		response = self.client.post(self.url, self.product_data(
+		response = self.client.post(self.url, self.product_data({
 			f'listing_sku_source_{self.platform.pk}': MarketplaceListingSKU.SOURCE_MANUAL,
 			f'listing_sku_{self.platform.pk}': 'AMZ-MAPPING-123',
-		))
+		}))
 
 		self.assertRedirects(response, reverse('product_list'))
 		mapping = MarketplaceListingSKU.objects.get(sku=self.item, platform=self.platform)
@@ -256,10 +257,9 @@ class MarketplaceListingSKUTests(TestCase):
 		self.assertEqual(mapping.effective_sku, 'AMZ-MAPPING-123')
 
 	def test_database_sku_mode_uses_the_current_product_sku(self):
-		response = self.client.post(self.url, self.product_data(
-			name='Edited Mapping Product',
+		response = self.client.post(self.url, self.product_data({
 			f'listing_sku_source_{self.platform.pk}': MarketplaceListingSKU.SOURCE_DATABASE,
-		))
+		}, name='Edited Mapping Product'))
 
 		self.assertRedirects(response, reverse('product_list'))
 		self.item.refresh_from_db()
@@ -289,10 +289,11 @@ class MarketplaceListingSKUTests(TestCase):
 			listing_sku='AMZ-ALREADY-USED',
 		)
 
-		response = self.client.post(self.url, self.product_data(
-			name='Should Not Save',
+		response = self.client.post(self.url, self.product_data({
 			f'listing_sku_source_{self.platform.pk}': MarketplaceListingSKU.SOURCE_MANUAL,
 			f'listing_sku_{self.platform.pk}': 'amz-already-used',
+		},
+			name='Should Not Save',
 		))
 
 		self.assertEqual(response.status_code, 200)
@@ -308,10 +309,10 @@ class MarketplaceListingSKUTests(TestCase):
 			listing_sku='AMZ-OLD-SKU',
 		)
 
-		response = self.client.post(self.url, self.product_data(
+		response = self.client.post(self.url, self.product_data({
 			f'listing_sku_source_{self.platform.pk}': MarketplaceListingSKU.SOURCE_DATABASE,
 			f'listing_sku_{self.platform.pk}': 'AMZ-OLD-SKU',
-		))
+		}))
 
 		self.assertRedirects(response, reverse('product_list'))
 		mapping = MarketplaceListingSKU.objects.get(sku=self.item, platform=self.platform)
@@ -319,10 +320,10 @@ class MarketplaceListingSKUTests(TestCase):
 		self.assertEqual(mapping.effective_sku, self.item.sku)
 
 	def test_manual_mode_requires_a_seller_sku(self):
-		response = self.client.post(self.url, self.product_data(
+		response = self.client.post(self.url, self.product_data({
 			f'listing_sku_source_{self.platform.pk}': MarketplaceListingSKU.SOURCE_MANUAL,
 			f'listing_sku_{self.platform.pk}': '',
-		))
+		}))
 
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'Enter a seller SKU for Amazon')
