@@ -13,7 +13,7 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import Q, Count, OuterRef, Subquery, Sum, Max, Min, F, DecimalField, ExpressionWrapper
 from django.urls import reverse, NoReverseMatch
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -96,8 +96,39 @@ def product_master(request, pk=None):
     """
     is_edit = pk is not None
     product = get_object_or_404(JewelrySKU, pk=pk) if is_edit else None
+    platforms = get_or_seed_platforms()
+
+    def get_marketplace_rows(form_values=None):
+        mapping_map = {
+            mapping.platform_id: mapping
+            for mapping in product.marketplace_listing_skus.all()
+        } if product else {}
+        rows = []
+        for platform in platforms:
+            mapping = mapping_map.get(platform.id)
+            if form_values is not None:
+                listing_sku = form_values.get(f'listing_sku_{platform.id}', '').strip()
+                source = form_values.get(
+                    f'listing_sku_source_{platform.id}',
+                    MarketplaceListingSKU.SOURCE_MANUAL
+                    if listing_sku
+                    else MarketplaceListingSKU.SOURCE_DATABASE,
+                )
+            else:
+                listing_sku = mapping.listing_sku if mapping else ''
+                source = mapping.source if mapping else MarketplaceListingSKU.SOURCE_DATABASE
+            rows.append({
+                'platform': platform,
+                'listing_sku': listing_sku,
+                'listing_sku_source': source,
+            })
+        return rows
+
+    form_errors = []
+    form_values = None
 
     if request.method == 'POST':
+        form_values = request.POST
         category = request.POST.get('category', '').strip().upper()
         style = request.POST.get('style', '').strip().upper()
         name = request.POST.get('name', '').strip().upper()
@@ -109,43 +140,105 @@ def product_master(request, pk=None):
         if not name:
             messages.error(request, "Product name is required.")
         else:
+            if not number:
+                number = product.number if is_edit else get_next_serial()
+            number = number.zfill(3) if number.isdigit() and len(number) < 3 else number
+
             if is_edit:
-                # Update existing product
-                product.category = category or product.category
-                product.style = style or product.style
-                product.name = name or product.name
-                product.design_model = design_model
-                product.color = color or product.color
-                product.size = size or product.size
-                if number:
-                    product.number = number.zfill(3) if number.isdigit() and len(number) < 3 else number
-
-                if request.FILES.get('image'):
-                    product.image = request.FILES['image']
-
-                product.save()
-                messages.success(request, f"✓ Product '{product.sku}' updated successfully!")
-                return redirect('product_list')
+                candidate = product
             else:
-                # Create new product
-                if not number:
-                    number = get_next_serial()
-                number = number.zfill(3) if number.isdigit() and len(number) < 3 else number
+                candidate = JewelrySKU()
 
-                new_product = JewelrySKU(
-                    category=category or 'GEN',
-                    style=style or 'STD',
-                    name=name,
-                    design_model=design_model,
-                    color=color or 'BLK',
-                    size=size or 'FREE',
-                    number=number,
-                    image=request.FILES.get('image'),
-                    stock=0
+            candidate.category = category or (product.category if product else 'GEN')
+            candidate.style = style or (product.style if product else 'STD')
+            candidate.name = name
+            candidate.design_model = design_model
+            candidate.color = color or (product.color if product else 'BLK')
+            candidate.size = size or (product.size if product else 'FREE')
+            candidate.number = number
+            candidate_sku = candidate.generate_sku()
+
+            listing_skus = {}
+            for platform in platforms:
+                listing_sku = request.POST.get(f'listing_sku_{platform.id}', '').strip()
+                current_mapping = (
+                    MarketplaceListingSKU.objects.filter(sku=product, platform=platform).first()
+                    if product else None
                 )
-                new_product.save()
-                messages.success(request, f"✓ Product created successfully! SKU: {new_product.sku}")
-                return redirect('product_master')
+                default_source = (
+                    MarketplaceListingSKU.SOURCE_MANUAL
+                    if listing_sku
+                    else current_mapping.source
+                    if current_mapping
+                    else MarketplaceListingSKU.SOURCE_DATABASE
+                )
+                source = request.POST.get(
+                    f'listing_sku_source_{platform.id}',
+                    default_source,
+                ).strip()
+
+                if source not in {choice[0] for choice in MarketplaceListingSKU.SOURCE_CHOICES}:
+                    form_errors.append(f"Choose a valid seller SKU source for {platform.name}.")
+                elif source == MarketplaceListingSKU.SOURCE_MANUAL and not listing_sku:
+                    form_errors.append(f"Enter a seller SKU for {platform.name} or choose From database.")
+                elif source == MarketplaceListingSKU.SOURCE_MANUAL and len(listing_sku) > 100:
+                    form_errors.append(f"{platform.name} seller SKU must be 100 characters or fewer.")
+                else:
+                    effective_sku = (
+                        listing_sku
+                        if source == MarketplaceListingSKU.SOURCE_MANUAL
+                        else candidate_sku
+                    )
+                    existing_mapping = MarketplaceListingSKU.objects.filter(
+                        platform=platform,
+                    ).exclude(sku=product).filter(
+                        Q(source=MarketplaceListingSKU.SOURCE_MANUAL, listing_sku__iexact=effective_sku)
+                        | Q(source=MarketplaceListingSKU.SOURCE_DATABASE, sku__sku__iexact=effective_sku)
+                    )
+                    if existing_mapping.exists():
+                        form_errors.append(
+                            f"'{effective_sku}' is already mapped to another product on {platform.name}."
+                        )
+
+                listing_skus[platform.id] = {
+                    'source': source,
+                    'listing_sku': listing_sku,
+                }
+
+            if not form_errors:
+                if request.FILES.get('image'):
+                    candidate.image = request.FILES['image']
+
+                try:
+                    with transaction.atomic():
+                        candidate.save()
+                        for platform in platforms:
+                            mapping = listing_skus[platform.id]
+                            MarketplaceListingSKU.objects.update_or_create(
+                                sku=candidate,
+                                platform=platform,
+                                defaults={
+                                    'source': mapping['source'],
+                                    'listing_sku': (
+                                        mapping['listing_sku']
+                                        if mapping['source'] == MarketplaceListingSKU.SOURCE_MANUAL
+                                        else ''
+                                    ),
+                                },
+                            )
+                except Exception as exc:
+                    if not isinstance(exc, IntegrityError):
+                        raise
+                    form_errors.append(
+                        'A seller SKU mapping conflict prevented saving. '
+                        'Check that each seller SKU is unique on its marketplace.'
+                    )
+                else:
+                    if is_edit:
+                        messages.success(request, f"✓ Product '{candidate.sku}' updated successfully!")
+                        return redirect('product_list')
+                    messages.success(request, f"✓ Product created successfully! SKU: {candidate.sku}")
+                    return redirect('product_master')
 
     # Exclude current SKU from duplicate detection during edit
     if is_edit:
@@ -161,6 +254,8 @@ def product_master(request, pk=None):
         'existing_skus': existing_skus,
         'next_serial': product.number if is_edit else get_next_serial(),
         'products_count': products_count,
+        'platform_rows': get_marketplace_rows(form_values),
+        'form_errors': form_errors,
         'active_page': 'products',
     })
 
