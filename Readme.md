@@ -1,9 +1,6 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./sku_manager/static/tatkal-pick-logo-horizontal.png">
-  <img src="./sku_manager/static/tatkal-pick-logo-horizontal.png" alt="Tatkal Pick" width="640">
-</picture>
+<img src="./sku_manager/static/tatkal-pick-logo-horizontal.png" alt="Tatkal Pick" width="640">
 
 <br><br>
 
@@ -134,11 +131,11 @@ assets/                       # logos used by this README
 
 ## Brand assets
 
-| | Light backgrounds | Dark backgrounds |
-|---|---|---|
-| **Horizontal logo** | `sku_manager/static/tatkal-pick-logo-horizontal.png` | `assets/logo-light.svg` |
-| **Logo** | `assets/logo-dark.svg` | `assets/logo-light.svg` |
-| **Icon** | `assets/icon-dark.svg` | `assets/icon-light.svg` |
+| Asset | File |
+|---|---|
+| **Horizontal logo** | `sku_manager/static/tatkal-pick-logo-horizontal.png` |
+| **Horizontal logo (SVG)** | `sku_manager/static/tatkal-pick-logo-horizontal.svg` |
+| **Icon** | `sku_manager/static/tatkal-pick-icon.svg` |
 
 The logo is a single color: a parcel inside scan corners, for *pick* and *scan*. Colors are `#0F172A` (dark) and `#F8FAFC` (light).
 
