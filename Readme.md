@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/logo-light.svg">
-  <img src="assets/logo-dark.svg" alt="Tatkal Pick" width="420">
+  <img src="sku_manager/static/tatkal-pick-logo-horizontal.png" alt="Tatkal Pick" width="640">
 </picture>
 
 <br><br>
@@ -136,6 +136,7 @@ assets/                       # logos used by this README
 
 | | Light backgrounds | Dark backgrounds |
 |---|---|---|
+| **Horizontal logo** | `sku_manager/static/tatkal-pick-logo-horizontal.png` | `assets/logo-light.svg` |
 | **Logo** | `assets/logo-dark.svg` | `assets/logo-light.svg` |
 | **Icon** | `assets/icon-dark.svg` | `assets/icon-light.svg` |
 
