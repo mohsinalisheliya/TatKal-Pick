@@ -35,17 +35,24 @@
     <form method="POST" action="" class="space-y-5">
       {% csrf_token %}
 
+      {% if form_errors %}
+        <div role="alert" class="rounded-xl border border-rose-500/30 bg-rose-50 dark:bg-rose-950/30 px-4 py-3 text-xs font-semibold text-rose-700 dark:text-rose-300">
+          <p class="font-bold">Marketplace SKU mappings could not be saved:</p>
+          {% for error in form_errors %}<p class="mt-1">{{ error }}</p>{% endfor %}
+        </div>
+      {% endif %}
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Batch Number <span class="text-rose-500">*</span></label>
           <input type="text" name="batch_no" required
-            value="{% if is_edit %}{{ selected_batch.batch_no }}{% else %}{{ suggested_batch }}{% endif %}"
+            value="{% if form_values %}{{ form_values.batch_no }}{% elif is_edit %}{{ selected_batch.batch_no }}{% else %}{{ suggested_batch }}{% endif %}"
             class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-amber-600 dark:text-amber-400 focus:outline-none focus:border-amber-500">
         </div>
         <div>
           <label class="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Quantity <span class="text-rose-500">*</span></label>
           <input type="number" min="0" name="stock_qty" required
-            value="{% if is_edit %}{{ selected_batch.quantity }}{% else %}10{% endif %}"
+            value="{% if form_values %}{{ form_values.stock_qty }}{% elif is_edit %}{{ selected_batch.quantity }}{% else %}10{% endif %}"
             class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500">
         </div>
       </div>
@@ -54,25 +61,33 @@
         <div>
           <label class="block text-xs font-semibold uppercase text-rose-600 dark:text-rose-400 mb-1">Unit Purchase Cost (₹)</label>
           <input type="number" step="0.01" min="0" name="purchase_price"
-            value="{% if is_edit %}{{ selected_batch.purchase_price }}{% else %}{{ item.purchase_price }}{% endif %}"
+            value="{% if form_values %}{{ form_values.purchase_price }}{% elif is_edit %}{{ selected_batch.purchase_price }}{% else %}{{ item.purchase_price }}{% endif %}"
             class="w-full bg-slate-50 dark:bg-slate-900 border border-rose-500/30 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 dark:text-white">
         </div>
         <div>
           <label class="block text-xs font-semibold uppercase text-emerald-600 dark:text-emerald-400 mb-1">Standard MRP (₹)</label>
           <input type="number" step="0.01" min="0" name="selling_price"
-            value="{% if is_edit %}{{ selected_batch.selling_price }}{% else %}{{ item.selling_price }}{% endif %}"
+            value="{% if form_values %}{{ form_values.selling_price }}{% elif is_edit %}{{ selected_batch.selling_price }}{% else %}{{ item.selling_price }}{% endif %}"
             class="w-full bg-slate-50 dark:bg-slate-900 border border-emerald-500/30 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 dark:text-white">
         </div>
       </div>
 
       <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Marketplace Selling Rates</label>
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Marketplace Selling Rates &amp; Seller SKUs</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {% for row in platform_rows %}
-            <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate max-w-[80px]">{{ row.platform.name }}</span>
-              <input type="number" step="0.01" min="0" name="platform_price_{{ row.platform.id }}" value="{{ row.price }}" placeholder="0.00"
-                class="w-24 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-right font-mono font-bold text-amber-600 dark:text-amber-400">
+            <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 space-y-2">
+              <span class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ row.platform.name }}</span>
+              <div>
+                <label for="platform-price-{{ row.platform.id }}" class="block text-[10px] font-semibold text-slate-500 mb-1">Selling rate (₹)</label>
+                <input id="platform-price-{{ row.platform.id }}" type="number" step="0.01" min="0" name="platform_price_{{ row.platform.id }}" value="{{ row.price }}" placeholder="0.00"
+                  class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-2 text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
+              </div>
+              <div>
+                <label for="listing-sku-{{ row.platform.id }}" class="block text-[10px] font-semibold text-slate-500 mb-1">Seller SKU on {{ row.platform.name }}</label>
+                <input id="listing-sku-{{ row.platform.id }}" type="text" maxlength="100" name="listing_sku_{{ row.platform.id }}" value="{{ row.listing_sku }}" placeholder="Enter marketplace SKU"
+                  class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-2 text-xs font-mono font-bold text-slate-800 dark:text-white">
+              </div>
             </div>
           {% endfor %}
         </div>
@@ -84,11 +99,11 @@
           <select name="existing_box_id" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-bold">
             <option value="">-- No Box Assigned --</option>
             {% for b in boxes %}
-              <option value="{{ b.id }}" {% if is_edit and selected_batch.storage_box_id == b.id %}selected{% elif not is_edit and item.storage_box_id == b.id %}selected{% endif %}>📦 {{ b.name }}</option>
+              <option value="{{ b.id }}" {% if form_values and form_values.existing_box_id == b.id|stringformat:"s" %}selected{% elif is_edit and selected_batch.storage_box_id == b.id %}selected{% elif not form_values and not is_edit and item.storage_box_id == b.id %}selected{% endif %}>📦 {{ b.name }}</option>
             {% endfor %}
           </select>
           <input type="text" name="section_name"
-            value="{% if is_edit %}{{ selected_batch.section_name }}{% else %}{{ item.section_name }}{% endif %}"
+            value="{% if form_values %}{{ form_values.section_name }}{% elif is_edit %}{{ selected_batch.section_name }}{% else %}{{ item.section_name }}{% endif %}"
             placeholder="Compartment / Slot (e.g. Tray 1, Slot A)"
             class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-bold">
         </div>

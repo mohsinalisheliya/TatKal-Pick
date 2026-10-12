@@ -1,5 +1,6 @@
 # sku_manager/models.py
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 from datetime import timedelta
 import re
@@ -145,6 +146,24 @@ class PlatformPrice(models.Model):
 
     class Meta:
         unique_together = ('sku', 'platform')
+
+class MarketplaceListingSKU(models.Model):
+    sku = models.ForeignKey(JewelrySKU, on_delete=models.CASCADE, related_name='marketplace_listing_skus')
+    platform = models.ForeignKey(Platform, on_delete=models.CASCADE, related_name='listing_skus')
+    listing_sku = models.CharField(max_length=100)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=('sku', 'platform'), name='uniq_market_sku_product'),
+            models.UniqueConstraint(
+                Lower('listing_sku'),
+                'platform',
+                name='uniq_market_sku_value_ci',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.platform.name}: {self.listing_sku} → {self.sku.sku}"
 
 class DispatchLog(models.Model):
     sku = models.ForeignKey(JewelrySKU, on_delete=models.CASCADE, related_name='dispatch_logs')

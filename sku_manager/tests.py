@@ -8,7 +8,16 @@ from django.test import override_settings
 import tempfile
 import qrcode
 
-from .models import AppSettings, DispatchLog, JewelrySKU, Platform, PlatformPrice, StockBatch, StorageBox
+from .models import (
+	AppSettings,
+	DispatchLog,
+	JewelrySKU,
+	MarketplaceListingSKU,
+	Platform,
+	PlatformPrice,
+	StockBatch,
+	StorageBox,
+)
 from .views import COLOR_PALETTE
 
 
@@ -183,6 +192,18 @@ class ProductDetailTests(TestCase):
 		self.assertEqual(platform_sales['last_sale'], response.context['last_dispatch'].dispatched_at)
 		self.assertContains(response, 'On Hold')
 
+	def test_detail_page_shows_marketplace_listing_sku(self):
+		MarketplaceListingSKU.objects.create(
+			sku=self.item,
+			platform=self.platform,
+			listing_sku='AMZ-DETAIL-123',
+		)
+
+		response = self.client.get(self.url)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'AMZ-DETAIL-123')
+
 	def test_list_status_toggle_returns_to_safe_next_path(self):
 		response = self.client.post(
 			reverse('toggle_product_status', args=[self.item.pk]),
@@ -200,6 +221,68 @@ class ProductDetailTests(TestCase):
 		)
 
 		self.assertRedirects(response, reverse('product_batches', args=[self.item.pk]))
+
+
+class MarketplaceListingSKUTests(TestCase):
+	def setUp(self):
+		user = get_user_model().objects.create_user(username='mapping-user', password='test-password')
+		self.client.force_login(user)
+		self.item = JewelrySKU.objects.create(name='Mapping Test Product')
+		self.platform = Platform.objects.create(name='Amazon')
+		self.url = reverse('stock_action', args=[self.item.pk])
+
+	def test_stock_form_saves_marketplace_sku_mapping(self):
+		response = self.client.post(self.url, {
+			'batch_no': 'MAP-1',
+			'stock_qty': '5',
+			'purchase_price': '10.00',
+			'selling_price': '20.00',
+			f'listing_sku_{self.platform.pk}': 'AMZ-MAPPING-123',
+		})
+
+		self.assertRedirects(response, reverse('inventory_list'))
+		mapping = MarketplaceListingSKU.objects.get(sku=self.item, platform=self.platform)
+		self.assertEqual(mapping.listing_sku, 'AMZ-MAPPING-123')
+		self.assertEqual(self.item.batches.get().quantity, 5)
+
+	def test_duplicate_marketplace_sku_is_rejected_without_saving_stock(self):
+		other_item = JewelrySKU.objects.create(name='Other Mapping Product')
+		MarketplaceListingSKU.objects.create(
+			sku=other_item,
+			platform=self.platform,
+			listing_sku='AMZ-ALREADY-USED',
+		)
+
+		response = self.client.post(self.url, {
+			'batch_no': 'MAP-DUPLICATE',
+			'stock_qty': '5',
+			'purchase_price': '10.00',
+			'selling_price': '20.00',
+			f'listing_sku_{self.platform.pk}': 'amz-already-used',
+		})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'already mapped to another product')
+		self.assertFalse(self.item.batches.exists())
+		self.assertFalse(MarketplaceListingSKU.objects.filter(sku=self.item).exists())
+
+	def test_clearing_seller_sku_removes_the_existing_mapping(self):
+		MarketplaceListingSKU.objects.create(
+			sku=self.item,
+			platform=self.platform,
+			listing_sku='AMZ-OLD-SKU',
+		)
+
+		response = self.client.post(self.url, {
+			'batch_no': 'MAP-CLEAR',
+			'stock_qty': '5',
+			'purchase_price': '10.00',
+			'selling_price': '20.00',
+			f'listing_sku_{self.platform.pk}': '',
+		})
+
+		self.assertRedirects(response, reverse('inventory_list'))
+		self.assertFalse(MarketplaceListingSKU.objects.filter(sku=self.item, platform=self.platform).exists())
 
 
 class LabelPrintingTests(TestCase):

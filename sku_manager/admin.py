@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import JewelrySKU, Platform, PlatformPrice, DispatchLog
+from .models import JewelrySKU, MarketplaceListingSKU, Platform, PlatformPrice, DispatchLog
 
 
 @admin.register(Platform)
@@ -23,6 +23,14 @@ class PlatformPriceAdmin(admin.ModelAdmin):
     list_display = ('sku', 'platform', 'price')
     list_filter = ('platform',)
     search_fields = ('sku__sku', 'platform__name')
+    list_per_page = 25
+
+
+@admin.register(MarketplaceListingSKU)
+class MarketplaceListingSKUAdmin(admin.ModelAdmin):
+    list_display = ('platform', 'listing_sku', 'sku')
+    list_filter = ('platform',)
+    search_fields = ('listing_sku', 'sku__sku', 'sku__name', 'platform__name')
     list_per_page = 25
 
 

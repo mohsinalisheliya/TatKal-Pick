@@ -13,13 +13,22 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q, Count, OuterRef, Subquery, Sum, Max, Min, F, DecimalField, ExpressionWrapper
 from django.urls import reverse, NoReverseMatch
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 
-from .models import JewelrySKU, Platform, PlatformPrice, StorageBox, StockBatch, DispatchLog, AppSettings
+from .models import (
+    AppSettings,
+    DispatchLog,
+    JewelrySKU,
+    MarketplaceListingSKU,
+    Platform,
+    PlatformPrice,
+    StorageBox,
+    StockBatch,
+)
 
 DEFAULT_PLATFORMS = ['Flipkart', 'Amazon', 'Meesho', 'Website']
 
@@ -303,10 +312,21 @@ def product_detail(request, pk):
     cost = item.purchase_price
     mrp = item.selling_price
     price_map = {price.platform_id: price.price for price in item.platform_prices.all()}
+    listing_sku_map = {
+        mapping.platform_id: mapping.listing_sku
+        for mapping in item.marketplace_listing_skus.all()
+    }
     platform_rows = []
     for platform in get_or_seed_platforms():
         price = price_map.get(platform.id)
-        row = {'platform': platform, 'price': price, 'margin': None, 'margin_pct': None, 'discount_pct': None}
+        row = {
+            'platform': platform,
+            'price': price,
+            'listing_sku': listing_sku_map.get(platform.id),
+            'margin': None,
+            'margin_pct': None,
+            'discount_pct': None,
+        }
         if price:
             row['margin'] = price - cost
             row['margin_pct'] = round((price - cost) / price * 100, 1)
@@ -376,6 +396,40 @@ def stock_action(request, pk):
     selected_batch = item.batches.filter(pk=edit_id).first() if edit_id else None
     is_edit = selected_batch is not None
 
+    def render_form(form_values=None, form_errors=None):
+        price_map = {pp.platform_id: pp.price for pp in item.platform_prices.all()}
+        listing_sku_map = {
+            mapping.platform_id: mapping.listing_sku
+            for mapping in item.marketplace_listing_skus.all()
+        }
+        platform_rows = []
+        for platform in platforms:
+            platform_rows.append({
+                'platform': platform,
+                'price': (
+                    form_values.get(f'platform_price_{platform.id}', '')
+                    if form_values is not None
+                    else price_map.get(platform.id, '')
+                ),
+                'listing_sku': (
+                    form_values.get(f'listing_sku_{platform.id}', '')
+                    if form_values is not None
+                    else listing_sku_map.get(platform.id, '')
+                ),
+            })
+        return render(request, 'sku_manager/stock_action.html', {
+            'item': item,
+            'is_edit': is_edit,
+            'selected_batch': selected_batch,
+            'boxes': boxes,
+            'platform_rows': platform_rows,
+            'all_batches_count': item.batches.count(),
+            'suggested_batch': f"BAT-{datetime.now().strftime('%y%m%d-%H%M')}",
+            'form_values': form_values,
+            'form_errors': form_errors or [],
+            'active_page': 'inventory',
+        })
+
     if request.method == 'POST':
         batch_no = request.POST.get('batch_no', '').strip() or f"BAT-{datetime.now().strftime('%y%m%d%H%M')}"
         qty_raw = request.POST.get('stock_qty', '0').strip()
@@ -391,59 +445,79 @@ def stock_action(request, pk):
 
         section_name = request.POST.get('section_name', '').strip() or 'Main Compartment'
 
-        with transaction.atomic():
-            if is_edit:
-                batch = selected_batch
-                batch.batch_no = batch_no
-                batch.quantity = stock_qty
-                batch.purchase_price = purchase_price
-                batch.selling_price = selling_price
-                batch.storage_box = storage_box
-                batch.section_name = section_name
-                if stock_qty > 0:
-                    batch.status = 'active'
-                    batch.finished_at = None
-                else:
-                    batch.status = 'disabled'
-                    batch.finished_at = timezone.now()
-                batch.save()
-                messages.success(request, f"Batch '{batch_no}' updated! Units: {stock_qty}")
-            else:
-                new_batch = StockBatch.objects.create(
-                    sku=item, batch_no=batch_no, quantity=stock_qty,
-                    purchase_price=purchase_price, selling_price=selling_price,
-                    storage_box=storage_box, section_name=section_name,
-                    status='active' if stock_qty > 0 else 'disabled',
-                    finished_at=timezone.now() if stock_qty == 0 else None,
-                )
-                messages.success(request, f"Added new batch '{batch_no}' with {stock_qty} units!")
+        listing_skus = {}
+        form_errors = []
+        for platform in platforms:
+            listing_sku = request.POST.get(f'listing_sku_{platform.id}', '').strip()
+            if len(listing_sku) > 100:
+                form_errors.append(f"{platform.name} seller SKU must be 100 characters or fewer.")
+            elif listing_sku and MarketplaceListingSKU.objects.filter(
+                platform=platform,
+                listing_sku__iexact=listing_sku,
+            ).exclude(sku=item).exists():
+                form_errors.append(f"'{listing_sku}' is already mapped to another product on {platform.name}.")
+            listing_skus[platform.id] = listing_sku
 
-            for platform in platforms:
-                p_val = request.POST.get(f'platform_price_{platform.id}', '').strip()
-                if p_val:
-                    PlatformPrice.objects.update_or_create(
-                        sku=item, platform=platform, defaults={'price': Decimal(p_val)})
-                else:
-                    PlatformPrice.objects.filter(sku=item, platform=platform).delete()
+        if form_errors:
+            return render_form(request.POST, form_errors)
 
-            item.sync_stock_from_batches()
+        try:
+            with transaction.atomic():
+                if is_edit:
+                    batch = selected_batch
+                    batch.batch_no = batch_no
+                    batch.quantity = stock_qty
+                    batch.purchase_price = purchase_price
+                    batch.selling_price = selling_price
+                    batch.storage_box = storage_box
+                    batch.section_name = section_name
+                    if stock_qty > 0:
+                        batch.status = 'active'
+                        batch.finished_at = None
+                    else:
+                        batch.status = 'disabled'
+                        batch.finished_at = timezone.now()
+                    batch.save()
+                    messages.success(request, f"Batch '{batch_no}' updated! Units: {stock_qty}")
+                else:
+                    new_batch = StockBatch.objects.create(
+                        sku=item, batch_no=batch_no, quantity=stock_qty,
+                        purchase_price=purchase_price, selling_price=selling_price,
+                        storage_box=storage_box, section_name=section_name,
+                        status='active' if stock_qty > 0 else 'disabled',
+                        finished_at=timezone.now() if stock_qty == 0 else None,
+                    )
+                    messages.success(request, f"Added new batch '{batch_no}' with {stock_qty} units!")
+
+                for platform in platforms:
+                    p_val = request.POST.get(f'platform_price_{platform.id}', '').strip()
+                    if p_val:
+                        PlatformPrice.objects.update_or_create(
+                            sku=item, platform=platform, defaults={'price': Decimal(p_val)})
+                    else:
+                        PlatformPrice.objects.filter(sku=item, platform=platform).delete()
+
+                    listing_sku = listing_skus[platform.id]
+                    if listing_sku:
+                        MarketplaceListingSKU.objects.update_or_create(
+                            sku=item,
+                            platform=platform,
+                            defaults={'listing_sku': listing_sku},
+                        )
+                    else:
+                        MarketplaceListingSKU.objects.filter(sku=item, platform=platform).delete()
+
+                item.sync_stock_from_batches()
+        except IntegrityError:
+            return render_form(
+                request.POST,
+                ['A seller SKU mapping conflict prevented saving. Check that each seller SKU is unique on its marketplace.'],
+            )
         if request.POST.get('then') == 'label' and not is_edit and 'new_batch' in locals() and new_batch.quantity > 0:
             return redirect(f"{reverse('sku_print_label', args=[item.pk])}?batch={new_batch.pk}&copies={new_batch.quantity}")
         return redirect('inventory_list')
 
-    price_map = {pp.platform_id: pp.price for pp in item.platform_prices.all()}
-    platform_rows = [{'platform': platform, 'price': price_map.get(platform.id, '')} for platform in platforms]
-
-    return render(request, 'sku_manager/stock_action.html', {
-        'item': item,
-        'is_edit': is_edit,
-        'selected_batch': selected_batch,
-        'boxes': boxes,
-        'platform_rows': platform_rows,
-        'all_batches_count': item.batches.count(),
-        'suggested_batch': f"BAT-{datetime.now().strftime('%y%m%d-%H%M')}",
-        'active_page': 'inventory',
-    })
+    return render_form()
 
 
 @login_required(login_url='login')
