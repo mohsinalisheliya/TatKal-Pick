@@ -13,12 +13,14 @@ from .models import (
 	DispatchLog,
 	JewelrySKU,
 	MarketplaceListingSKU,
+	MarketplaceOrder,
 	Platform,
 	PlatformPrice,
 	StockBatch,
 	StorageBox,
 )
 from .views import COLOR_PALETTE
+from .pdf_orders import LabelParseError, parse_meesho_label_text
 
 
 class SalesHoldTests(TestCase):
@@ -347,6 +349,145 @@ class MarketplaceListingSKUTests(TestCase):
 		mapping.refresh_from_db()
 		self.assertEqual(mapping.listing_sku, 'AMZ-KEEP-THIS')
 		self.assertEqual(self.item.batches.get().quantity, 4)
+
+
+class MeeshoPDFOrderTests(TestCase):
+	def setUp(self):
+		user = get_user_model().objects.create_user(username='pdf-order-user', password='test-password')
+		self.client.force_login(user)
+		self.item = JewelrySKU.objects.create(name='PDF Order Product')
+		self.platform = Platform.objects.create(name='Meesho')
+		self.older_batch = StockBatch.objects.create(
+			sku=self.item,
+			batch_no='PDF-OLD',
+			quantity=2,
+		)
+		self.newer_batch = StockBatch.objects.create(
+			sku=self.item,
+			batch_no='PDF-NEW',
+			quantity=3,
+		)
+		self.parsed_label = {
+			'seller_sku': 'MEESHO-PDF-123',
+			'order_id': '123456789012345678_1',
+			'quantity': 2,
+			'customer_name': 'Sample Recipient',
+			'shipping_address': '10 Sample Street, Sample City',
+		}
+		self.upload_url = reverse('pdf_order_scan')
+
+	def upload_label(self):
+		with patch('sku_manager.views.extract_meesho_label', return_value=self.parsed_label):
+			return self.client.post(self.upload_url, {
+				'label_pdf': SimpleUploadedFile(
+					'meesho-label.pdf',
+					b'%PDF-test',
+					content_type='application/pdf',
+				),
+			})
+
+	def test_parser_extracts_suborder_sku_quantity_and_recipient(self):
+		text = """Customer Address
+Sample Recipient
+10 Sample Street
+Sample City, State, 123456
+If undelivered, return to:
+SELLER
+Product Details
+SKU Size Qty Color Order No.
+MEESHO-PDF-123 Free Size 2 Gold 123456789012345678_1
+TAX INVOICE Original For Recipient"""
+
+		result = parse_meesho_label_text(text)
+
+		self.assertEqual(result, {
+			'seller_sku': 'MEESHO-PDF-123',
+			'order_id': '123456789012345678_1',
+			'quantity': 2,
+			'customer_name': 'Sample Recipient',
+			'shipping_address': '10 Sample Street, Sample City, State, 123456',
+		})
+
+	def test_parser_rejects_labels_without_meesho_order_fields(self):
+		with self.assertRaises(LabelParseError):
+			parse_meesho_label_text('Unrelated PDF text')
+
+	def test_upload_creates_pending_review_without_changing_stock(self):
+		response = self.upload_label()
+
+		order = MarketplaceOrder.objects.get(order_id=self.parsed_label['order_id'])
+		self.assertRedirects(response, reverse('pdf_order_review', args=[order.pk]))
+		self.assertEqual(order.status, MarketplaceOrder.STATUS_PENDING)
+		self.assertIsNone(order.sku)
+		self.assertEqual(self.older_batch.quantity, 2)
+		self.assertEqual(self.newer_batch.quantity, 3)
+		self.assertContains(self.client.get(response.url), 'Review before dispatch')
+
+	def test_confirm_deducts_fifo_stock_and_saves_seller_sku_mapping(self):
+		self.upload_label()
+		order = MarketplaceOrder.objects.get(order_id=self.parsed_label['order_id'])
+
+		response = self.client.post(reverse('pdf_order_review', args=[order.pk]), {
+			'sku_id': self.item.pk,
+			'customer_name': self.parsed_label['customer_name'],
+			'shipping_address': self.parsed_label['shipping_address'],
+			'save_seller_sku': 'on',
+		})
+
+		order.refresh_from_db()
+		self.older_batch.refresh_from_db()
+		self.newer_batch.refresh_from_db()
+		self.item.refresh_from_db()
+		self.assertRedirects(response, reverse('pdf_order_review', args=[order.pk]))
+		self.assertEqual(order.status, MarketplaceOrder.STATUS_DISPATCHED)
+		self.assertEqual(order.sku, self.item)
+		self.assertEqual(self.older_batch.quantity, 0)
+		self.assertEqual(self.newer_batch.quantity, 3)
+		self.assertEqual(self.item.stock, 3)
+		dispatch = DispatchLog.objects.get(sku=self.item)
+		self.assertEqual(dispatch.quantity, 2)
+		self.assertEqual(order.dispatch_log, dispatch)
+		self.assertEqual(
+			MarketplaceListingSKU.objects.get(sku=self.item, platform=self.platform).listing_sku,
+			'MEESHO-PDF-123',
+		)
+
+	def test_reuploading_dispatched_order_does_not_deduct_stock_twice(self):
+		self.upload_label()
+		order = MarketplaceOrder.objects.get(order_id=self.parsed_label['order_id'])
+		self.client.post(reverse('pdf_order_review', args=[order.pk]), {
+			'sku_id': self.item.pk,
+			'customer_name': self.parsed_label['customer_name'],
+			'shipping_address': self.parsed_label['shipping_address'],
+		})
+
+		response = self.upload_label()
+
+		self.assertRedirects(response, reverse('pdf_order_review', args=[order.pk]))
+		self.assertEqual(DispatchLog.objects.filter(sku=self.item).count(), 1)
+		self.older_batch.refresh_from_db()
+		self.assertEqual(self.older_batch.quantity, 0)
+
+	def test_insufficient_stock_leaves_order_pending_and_does_not_dispatch(self):
+		self.older_batch.quantity = 1
+		self.older_batch.save()
+		self.newer_batch.quantity = 0
+		self.newer_batch.save()
+		self.upload_label()
+		order = MarketplaceOrder.objects.get(order_id=self.parsed_label['order_id'])
+
+		response = self.client.post(reverse('pdf_order_review', args=[order.pk]), {
+			'sku_id': self.item.pk,
+			'customer_name': self.parsed_label['customer_name'],
+			'shipping_address': self.parsed_label['shipping_address'],
+		})
+
+		order.refresh_from_db()
+		self.older_batch.refresh_from_db()
+		self.assertRedirects(response, reverse('pdf_order_review', args=[order.pk]))
+		self.assertEqual(order.status, MarketplaceOrder.STATUS_PENDING)
+		self.assertEqual(self.older_batch.quantity, 1)
+		self.assertFalse(DispatchLog.objects.filter(sku=self.item).exists())
 
 
 class LabelPrintingTests(TestCase):
