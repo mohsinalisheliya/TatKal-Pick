@@ -299,7 +299,7 @@ class MarketplaceListingSKUTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, 'already mapped to another product')
 		self.item.refresh_from_db()
-		self.assertEqual(self.item.name, 'MAPPING TEST PRODUCT')
+		self.assertEqual(self.item.name, 'Mapping Test Product')
 		self.assertFalse(MarketplaceListingSKU.objects.filter(sku=self.item).exists())
 
 	def test_switching_seller_sku_to_database_uses_product_sku(self):
