@@ -502,7 +502,7 @@ def stock_action(request, pk):
     selected_batch = item.batches.filter(pk=edit_id).first() if edit_id else None
     is_edit = selected_batch is not None
 
-    def render_form(form_values=None, form_errors=None):
+    def render_form(form_values=None):
         price_map = {pp.platform_id: pp.price for pp in item.platform_prices.all()}
         platform_rows = [
             {
@@ -524,7 +524,6 @@ def stock_action(request, pk):
             'all_batches_count': item.batches.count(),
             'suggested_batch': f"BAT-{datetime.now().strftime('%y%m%d-%H%M')}",
             'form_values': form_values,
-            'form_errors': form_errors or [],
             'active_page': 'inventory',
         })
 
