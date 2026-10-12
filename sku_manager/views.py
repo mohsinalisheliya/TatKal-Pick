@@ -919,6 +919,7 @@ def pdf_order_scan(request):
 
     return render(request, 'sku_manager/pdf_order_scan.html', {
         'active_page': 'pdf_order_scan',
+        'orders': MarketplaceOrder.objects.select_related('sku')[:20],
     })
 
 

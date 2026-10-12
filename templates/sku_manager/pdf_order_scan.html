@@ -22,5 +22,40 @@
       Scan label and review order
     </button>
   </form>
+
+  <section class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 p-5 sm:p-7 space-y-4">
+    <div>
+      <h2 class="text-lg font-extrabold text-slate-900 dark:text-white">Recent scanned orders</h2>
+      <p class="text-xs text-slate-500 dark:text-slate-400">Customer and delivery details are stored with each order.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-slate-200 dark:border-slate-700 text-xs uppercase text-slate-500">
+          <tr>
+            <th class="py-2 pr-4">Order ID</th>
+            <th class="py-2 pr-4">Recipient</th>
+            <th class="py-2 pr-4">Product</th>
+            <th class="py-2 pr-4">Qty</th>
+            <th class="py-2 pr-4">Status</th>
+            <th class="py-2">Details</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+          {% for order in orders %}
+            <tr>
+              <td class="py-3 pr-4 font-mono text-xs">{{ order.order_id }}</td>
+              <td class="py-3 pr-4">{{ order.customer_name|default:"Not extracted" }}</td>
+              <td class="py-3 pr-4">{{ order.sku.sku|default:order.seller_sku }}</td>
+              <td class="py-3 pr-4">{{ order.quantity }}</td>
+              <td class="py-3 pr-4">{% if order.status == 'dispatched' %}Dispatched{% else %}Needs review{% endif %}</td>
+              <td class="py-3"><a href="{% url 'pdf_order_review' order.pk %}" class="font-bold text-amber-600 dark:text-amber-400 hover:underline">Open</a></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="py-8 text-center text-sm text-slate-500">No PDF orders scanned yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </section>
 {% endblock %}
