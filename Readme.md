@@ -76,7 +76,7 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
 # 3. dependencies (core ones used by the app)
-pip install django pillow "qrcode[pil]"
+pip install django pillow "qrcode[pil]" pypdf
 
 # 4. database and admin user
 python manage.py migrate
