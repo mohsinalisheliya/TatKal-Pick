@@ -87,6 +87,7 @@
                 <label for="listing-sku-{{ row.platform.id }}" class="block text-[10px] font-semibold text-slate-500 mb-1">Seller SKU on {{ row.platform.name }}</label>
                 <input id="listing-sku-{{ row.platform.id }}" type="text" maxlength="100" name="listing_sku_{{ row.platform.id }}" value="{{ row.listing_sku }}" placeholder="Enter marketplace SKU"
                   class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-2 text-xs font-mono font-bold text-slate-800 dark:text-white">
+                <p class="mt-1 text-[10px] text-slate-400">Leave blank if this platform uses your Tatkal Pick SKU.</p>
               </div>
             </div>
           {% endfor %}

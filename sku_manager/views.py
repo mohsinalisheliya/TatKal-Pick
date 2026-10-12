@@ -478,7 +478,7 @@ def stock_action(request, pk):
                         batch.status = 'disabled'
                         batch.finished_at = timezone.now()
                     batch.save()
-                    messages.success(request, f"Batch '{batch_no}' updated! Units: {stock_qty}")
+                    success_message = f"Batch '{batch_no}' updated! Units: {stock_qty}"
                 else:
                     new_batch = StockBatch.objects.create(
                         sku=item, batch_no=batch_no, quantity=stock_qty,
@@ -487,7 +487,7 @@ def stock_action(request, pk):
                         status='active' if stock_qty > 0 else 'disabled',
                         finished_at=timezone.now() if stock_qty == 0 else None,
                     )
-                    messages.success(request, f"Added new batch '{batch_no}' with {stock_qty} units!")
+                    success_message = f"Added new batch '{batch_no}' with {stock_qty} units!"
 
                 for platform in platforms:
                     p_val = request.POST.get(f'platform_price_{platform.id}', '').strip()
@@ -513,6 +513,7 @@ def stock_action(request, pk):
                 request.POST,
                 ['A seller SKU mapping conflict prevented saving. Check that each seller SKU is unique on its marketplace.'],
             )
+        messages.success(request, success_message)
         if request.POST.get('then') == 'label' and not is_edit and 'new_batch' in locals() and new_batch.quantity > 0:
             return redirect(f"{reverse('sku_print_label', args=[item.pk])}?batch={new_batch.pk}&copies={new_batch.quantity}")
         return redirect('inventory_list')
