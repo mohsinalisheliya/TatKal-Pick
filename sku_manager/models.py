@@ -90,7 +90,7 @@ class JewelrySKU(models.Model):
 
         self.save(update_fields=['stock', 'purchase_price', 'selling_price', 'batch_no', 'storage_box', 'section_name', 'updated_at'])
 
-    def save(self, *args, **kwargs):
+    def generate_sku(self):
         clean_cat = re.sub(r'[^A-Z0-9]', '', self.category.upper()) or 'GEN'
         clean_sty = re.sub(r'[^A-Z0-9]', '', self.style.upper()) or 'STD'
         clean_name = re.sub(r'[^A-Z0-9]', '', self.name.upper()) or 'ITEM'
@@ -100,7 +100,10 @@ class JewelrySKU(models.Model):
         if clean_num.isdigit() and len(clean_num) < 3:
             clean_num = clean_num.zfill(3)
 
-        self.sku = f"{clean_cat}-{clean_sty}-{clean_name}-{clean_col}-{clean_size}-{clean_num}"
+        return f"{clean_cat}-{clean_sty}-{clean_name}-{clean_col}-{clean_size}-{clean_num}"
+
+    def save(self, *args, **kwargs):
+        self.sku = self.generate_sku()
         super().save(*args, **kwargs)
 
     def __str__(self):
