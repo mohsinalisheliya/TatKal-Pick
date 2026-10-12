@@ -504,43 +504,17 @@ def stock_action(request, pk):
 
     def render_form(form_values=None, form_errors=None):
         price_map = {pp.platform_id: pp.price for pp in item.platform_prices.all()}
-        listing_sku_map = {
-            mapping.platform_id: mapping
-            for mapping in item.marketplace_listing_skus.all()
-        }
-        platform_rows = []
-        for platform in platforms:
-            platform_rows.append({
+        platform_rows = [
+            {
                 'platform': platform,
                 'price': (
                     form_values.get(f'platform_price_{platform.id}', '')
                     if form_values is not None
                     else price_map.get(platform.id, '')
                 ),
-                'listing_sku': (
-                    form_values.get(f'listing_sku_{platform.id}', '')
-                    if form_values is not None
-                    else (
-                        listing_sku_map[platform.id].listing_sku
-                        if platform.id in listing_sku_map
-                        else ''
-                    )
-                ),
-                'listing_sku_source': (
-                    form_values.get(
-                        f'listing_sku_source_{platform.id}',
-                        MarketplaceListingSKU.SOURCE_MANUAL
-                        if form_values.get(f'listing_sku_{platform.id}', '').strip()
-                        else MarketplaceListingSKU.SOURCE_DATABASE,
-                    )
-                    if form_values is not None
-                    else (
-                        listing_sku_map[platform.id].source
-                        if platform.id in listing_sku_map
-                        else MarketplaceListingSKU.SOURCE_DATABASE
-                    )
-                ),
-            })
+            }
+            for platform in platforms
+        ]
         return render(request, 'sku_manager/stock_action.html', {
             'item': item,
             'is_edit': is_edit,
@@ -569,106 +543,42 @@ def stock_action(request, pk):
 
         section_name = request.POST.get('section_name', '').strip() or 'Main Compartment'
 
-        listing_skus = {}
-        form_errors = []
-        for platform in platforms:
-            listing_sku = request.POST.get(f'listing_sku_{platform.id}', '').strip()
-            default_source = (
-                MarketplaceListingSKU.SOURCE_MANUAL
-                if listing_sku
-                else MarketplaceListingSKU.SOURCE_DATABASE
-            )
-            source = request.POST.get(
-                f'listing_sku_source_{platform.id}',
-                default_source,
-            ).strip()
-            if source not in {choice[0] for choice in MarketplaceListingSKU.SOURCE_CHOICES}:
-                form_errors.append(f"Choose a valid seller SKU source for {platform.name}.")
-            elif source == MarketplaceListingSKU.SOURCE_MANUAL and not listing_sku:
-                form_errors.append(f"Enter a seller SKU for {platform.name} or choose From database.")
-            elif source == MarketplaceListingSKU.SOURCE_MANUAL and len(listing_sku) > 100:
-                form_errors.append(f"{platform.name} seller SKU must be 100 characters or fewer.")
-            elif source == MarketplaceListingSKU.SOURCE_MANUAL and MarketplaceListingSKU.objects.filter(
-                platform=platform,
-            ).exclude(sku=item).filter(
-                Q(source=MarketplaceListingSKU.SOURCE_MANUAL, listing_sku__iexact=listing_sku)
-                | Q(source=MarketplaceListingSKU.SOURCE_DATABASE, sku__sku__iexact=listing_sku)
-            ).exists():
-                form_errors.append(f"'{listing_sku}' is already mapped to another product on {platform.name}.")
-            elif source == MarketplaceListingSKU.SOURCE_DATABASE and MarketplaceListingSKU.objects.filter(
-                platform=platform,
-            ).exclude(sku=item).filter(
-                Q(source=MarketplaceListingSKU.SOURCE_MANUAL, listing_sku__iexact=item.sku)
-                | Q(source=MarketplaceListingSKU.SOURCE_DATABASE, sku__sku__iexact=item.sku)
-            ).exists():
-                form_errors.append(f"'{item.sku}' is already mapped to another product on {platform.name}.")
-            listing_skus[platform.id] = {'source': source, 'listing_sku': listing_sku}
-
-        if form_errors:
-            return render_form(request.POST, form_errors)
-
-        try:
-            with transaction.atomic():
-                if is_edit:
-                    batch = selected_batch
-                    batch.batch_no = batch_no
-                    batch.quantity = stock_qty
-                    batch.purchase_price = purchase_price
-                    batch.selling_price = selling_price
-                    batch.storage_box = storage_box
-                    batch.section_name = section_name
-                    if stock_qty > 0:
-                        batch.status = 'active'
-                        batch.finished_at = None
-                    else:
-                        batch.status = 'disabled'
-                        batch.finished_at = timezone.now()
-                    batch.save()
-                    success_message = f"Batch '{batch_no}' updated! Units: {stock_qty}"
+        with transaction.atomic():
+            if is_edit:
+                batch = selected_batch
+                batch.batch_no = batch_no
+                batch.quantity = stock_qty
+                batch.purchase_price = purchase_price
+                batch.selling_price = selling_price
+                batch.storage_box = storage_box
+                batch.section_name = section_name
+                if stock_qty > 0:
+                    batch.status = 'active'
+                    batch.finished_at = None
                 else:
-                    new_batch = StockBatch.objects.create(
-                        sku=item, batch_no=batch_no, quantity=stock_qty,
-                        purchase_price=purchase_price, selling_price=selling_price,
-                        storage_box=storage_box, section_name=section_name,
-                        status='active' if stock_qty > 0 else 'disabled',
-                        finished_at=timezone.now() if stock_qty == 0 else None,
-                    )
-                    success_message = f"Added new batch '{batch_no}' with {stock_qty} units!"
+                    batch.status = 'disabled'
+                    batch.finished_at = timezone.now()
+                batch.save()
+                success_message = f"Batch '{batch_no}' updated! Units: {stock_qty}"
+            else:
+                new_batch = StockBatch.objects.create(
+                    sku=item, batch_no=batch_no, quantity=stock_qty,
+                    purchase_price=purchase_price, selling_price=selling_price,
+                    storage_box=storage_box, section_name=section_name,
+                    status='active' if stock_qty > 0 else 'disabled',
+                    finished_at=timezone.now() if stock_qty == 0 else None,
+                )
+                success_message = f"Added new batch '{batch_no}' with {stock_qty} units!"
 
-                for platform in platforms:
-                    p_val = request.POST.get(f'platform_price_{platform.id}', '').strip()
-                    if p_val:
-                        PlatformPrice.objects.update_or_create(
-                            sku=item, platform=platform, defaults={'price': Decimal(p_val)})
-                    else:
-                        PlatformPrice.objects.filter(sku=item, platform=platform).delete()
+            for platform in platforms:
+                p_val = request.POST.get(f'platform_price_{platform.id}', '').strip()
+                if p_val:
+                    PlatformPrice.objects.update_or_create(
+                        sku=item, platform=platform, defaults={'price': Decimal(p_val)})
+                else:
+                    PlatformPrice.objects.filter(sku=item, platform=platform).delete()
 
-                    mapping = listing_skus[platform.id]
-                    if mapping['source'] == MarketplaceListingSKU.SOURCE_DATABASE:
-                        MarketplaceListingSKU.objects.update_or_create(
-                            sku=item,
-                            platform=platform,
-                            defaults={
-                                'source': mapping['source'],
-                                'listing_sku': '',
-                            },
-                        )
-                    else:
-                        MarketplaceListingSKU.objects.update_or_create(
-                            sku=item,
-                            platform=platform,
-                            defaults={
-                                'source': mapping['source'],
-                                'listing_sku': mapping['listing_sku'],
-                            },
-                        )
-
-                item.sync_stock_from_batches()
-        except IntegrityError:
-            return render_form(
-                request.POST,
-                ['A seller SKU mapping conflict prevented saving. Check that each seller SKU is unique on its marketplace.'],
-            )
+            item.sync_stock_from_batches()
         messages.success(request, success_message)
         if request.POST.get('then') == 'label' and not is_edit and 'new_batch' in locals() and new_batch.quantity > 0:
             return redirect(f"{reverse('sku_print_label', args=[item.pk])}?batch={new_batch.pk}&copies={new_batch.quantity}")
