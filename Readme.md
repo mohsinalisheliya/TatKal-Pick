@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-light.svg">
-  <img src="sku_manager/static/tatkal-pick-logo-horizontal.png" alt="Tatkal Pick" width="640">
+  <source media="(prefers-color-scheme: dark)" srcset="./sku_manager/static/tatkal-pick-logo-horizontal.png">
+  <img src="./sku_manager/static/tatkal-pick-logo-horizontal.png" alt="Tatkal Pick" width="640">
 </picture>
 
 <br><br>
