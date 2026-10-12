@@ -13,7 +13,7 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q, Count, OuterRef, Subquery, Sum, Max, Min, F, DecimalField, ExpressionWrapper
 from django.urls import reverse, NoReverseMatch
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -157,6 +157,10 @@ def product_master(request, pk=None):
             candidate.size = size or (product.size if product else 'FREE')
             candidate.number = number
             candidate_sku = candidate.generate_sku()
+            if JewelrySKU.objects.filter(sku=candidate_sku).exclude(
+                pk=product.pk if product else None,
+            ).exists():
+                form_errors.append(f"SKU '{candidate_sku}' already exists in the catalog.")
 
             listing_skus = {}
             for platform in platforms:
@@ -226,9 +230,7 @@ def product_master(request, pk=None):
                                     ),
                                 },
                             )
-                except Exception as exc:
-                    if not isinstance(exc, IntegrityError):
-                        raise
+                except IntegrityError:
                     form_errors.append(
                         'A seller SKU mapping conflict prevented saving. '
                         'Check that each seller SKU is unique on its marketplace.'
