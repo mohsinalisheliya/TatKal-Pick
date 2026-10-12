@@ -24,11 +24,13 @@ from .models import (
     DispatchLog,
     JewelrySKU,
     MarketplaceListingSKU,
+    MarketplaceOrder,
     Platform,
     PlatformPrice,
     StorageBox,
     StockBatch,
 )
+from .pdf_orders import LabelParseError, extract_meesho_label
 
 DEFAULT_PLATFORMS = ['Flipkart', 'Amazon', 'Meesho', 'Website']
 
@@ -860,6 +862,185 @@ def dispatch_logs(request):
         'total_dispatches': logs.count(),
         'active_page': 'dispatch_logs',
     })
+
+def normalize_seller_sku(value):
+    return re.sub(r'\s+', '', value).casefold()
+
+
+def find_product_for_seller_sku(platform, seller_sku):
+    normalized_sku = normalize_seller_sku(seller_sku)
+    matches = {
+        product.pk: product
+        for product in JewelrySKU.objects.all()
+        if normalize_seller_sku(product.sku) == normalized_sku
+    }
+    for mapping in MarketplaceListingSKU.objects.filter(platform=platform).select_related('sku'):
+        if normalize_seller_sku(mapping.effective_sku) == normalized_sku:
+            matches[mapping.sku_id] = mapping.sku
+    return next(iter(matches.values())) if len(matches) == 1 else None
+
+
+@login_required(login_url='login')
+def pdf_order_scan(request):
+    platform, _ = Platform.objects.get_or_create(name='Meesho')
+    if request.method == 'POST':
+        uploaded_file = request.FILES.get('label_pdf')
+        if not uploaded_file:
+            messages.error(request, 'Choose a Meesho shipping-label PDF to scan.')
+            return redirect('pdf_order_scan')
+
+        try:
+            parsed = extract_meesho_label(uploaded_file)
+        except LabelParseError as error:
+            messages.error(request, str(error))
+            return redirect('pdf_order_scan')
+
+        product = find_product_for_seller_sku(platform, parsed['seller_sku'])
+        order, created = MarketplaceOrder.objects.get_or_create(
+            platform=platform,
+            order_id=parsed['order_id'],
+            defaults={
+                'platform_name': platform.name,
+                'seller_sku': parsed['seller_sku'],
+                'sku': product,
+                'quantity': parsed['quantity'],
+                'customer_name': parsed['customer_name'],
+                'shipping_address': parsed['shipping_address'],
+            },
+        )
+        if not created:
+            if order.status == MarketplaceOrder.STATUS_DISPATCHED:
+                messages.info(request, 'This order was already dispatched; stock was not changed.')
+            else:
+                messages.info(request, 'This order is already awaiting review.')
+        else:
+            messages.success(request, 'Label scanned. Review the order before confirming stock dispatch.')
+        return redirect('pdf_order_review', pk=order.pk)
+
+    return render(request, 'sku_manager/pdf_order_scan.html', {
+        'active_page': 'pdf_order_scan',
+    })
+
+
+@login_required(login_url='login')
+def pdf_order_review(request, pk):
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                order = get_object_or_404(
+                    MarketplaceOrder.objects.select_for_update().select_related('platform'),
+                    pk=pk,
+                )
+                if order.status == MarketplaceOrder.STATUS_DISPATCHED:
+                    messages.info(request, 'This order was already dispatched; stock was not changed.')
+                    return redirect('pdf_order_review', pk=order.pk)
+
+                item = get_object_or_404(JewelrySKU, pk=request.POST.get('sku_id'))
+                customer_name = request.POST.get('customer_name', '').strip()
+                shipping_address = request.POST.get('shipping_address', '').strip()
+                if not customer_name or not shipping_address:
+                    messages.error(request, 'Customer name and delivery address are required.')
+                    return redirect('pdf_order_review', pk=order.pk)
+
+                batches = list(
+                    StockBatch.objects.select_for_update().filter(
+                        sku=item,
+                        status='active',
+                        sales_enabled=True,
+                        quantity__gt=0,
+                    ).order_by('created_at', 'pk')
+                )
+                available_stock = sum(batch.quantity for batch in batches)
+                if available_stock < order.quantity:
+                    messages.error(
+                        request,
+                        f"Not enough sellable stock for {item.sku}: "
+                        f"{available_stock} available, {order.quantity} required.",
+                    )
+                    return redirect('pdf_order_review', pk=order.pk)
+
+                remaining = order.quantity
+                for batch in batches:
+                    dispatched = min(batch.quantity, remaining)
+                    batch.quantity -= dispatched
+                    remaining -= dispatched
+                    if batch.quantity == 0:
+                        batch.status = 'disabled'
+                        batch.finished_at = timezone.now()
+                    batch.save(update_fields=['quantity', 'status', 'finished_at', 'updated_at'])
+                    if remaining == 0:
+                        break
+
+                item.sync_stock_from_batches()
+                sold_price = PlatformPrice.objects.filter(
+                    sku=item,
+                    platform=order.platform,
+                ).values_list('price', flat=True).first()
+                if sold_price is None:
+                    sold_price = item.selling_price
+                dispatch_log = DispatchLog.objects.create(
+                    sku=item,
+                    platform=order.platform,
+                    platform_name=order.platform.name,
+                    quantity=order.quantity,
+                    sold_price=sold_price,
+                    stock_after=item.stock,
+                )
+
+                if request.POST.get('save_seller_sku') == 'on':
+                    MarketplaceListingSKU.objects.update_or_create(
+                        sku=item,
+                        platform=order.platform,
+                        defaults={
+                            'source': MarketplaceListingSKU.SOURCE_MANUAL,
+                            'listing_sku': order.seller_sku,
+                        },
+                    )
+
+                order.sku = item
+                order.customer_name = customer_name
+                order.shipping_address = shipping_address
+                order.dispatch_log = dispatch_log
+                order.status = MarketplaceOrder.STATUS_DISPATCHED
+                order.dispatched_at = timezone.now()
+                order.save(update_fields=[
+                    'sku',
+                    'customer_name',
+                    'shipping_address',
+                    'dispatch_log',
+                    'status',
+                    'dispatched_at',
+                ])
+        except IntegrityError:
+            messages.error(
+                request,
+                'That seller SKU is already mapped to another product on Meesho. '
+                'Review the mapping before dispatching this order.',
+            )
+            return redirect('pdf_order_review', pk=pk)
+
+        messages.success(
+            request,
+            f"Order {order.order_id} dispatched: {order.quantity} unit(s) of {item.sku}.",
+        )
+        return redirect('pdf_order_review', pk=order.pk)
+
+    order = get_object_or_404(
+        MarketplaceOrder.objects.select_related('platform', 'sku'),
+        pk=pk,
+    )
+    products = JewelrySKU.objects.filter(is_listed=True).order_by('name', 'sku')
+    if order.status == MarketplaceOrder.STATUS_PENDING:
+        matched_product = find_product_for_seller_sku(order.platform, order.seller_sku)
+    else:
+        matched_product = order.sku
+    return render(request, 'sku_manager/pdf_order_review.html', {
+        'order': order,
+        'products': products,
+        'matched_product': matched_product,
+        'active_page': 'pdf_order_scan',
+    })
+
 
 @login_required(login_url='login')
 def export_csv(request):
