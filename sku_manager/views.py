@@ -475,11 +475,16 @@ def stock_action(request, pk):
         listing_skus = {}
         form_errors = []
         for platform in platforms:
+            listing_sku = request.POST.get(f'listing_sku_{platform.id}', '').strip()
+            default_source = (
+                MarketplaceListingSKU.SOURCE_MANUAL
+                if listing_sku
+                else MarketplaceListingSKU.SOURCE_DATABASE
+            )
             source = request.POST.get(
                 f'listing_sku_source_{platform.id}',
-                MarketplaceListingSKU.SOURCE_DATABASE,
+                default_source,
             ).strip()
-            listing_sku = request.POST.get(f'listing_sku_{platform.id}', '').strip()
             if source not in {choice[0] for choice in MarketplaceListingSKU.SOURCE_CHOICES}:
                 form_errors.append(f"Choose a valid seller SKU source for {platform.name}.")
             elif source == MarketplaceListingSKU.SOURCE_MANUAL and not listing_sku:
