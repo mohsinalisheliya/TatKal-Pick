@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('sku_manager', '0018_marketplaceorder'),
+        ("sku_manager", "0018_marketplaceorder"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='appsettings',
-            name='amazon_store_url',
-            field=models.URLField(blank=True, default='', max_length=500),
+            model_name="appsettings",
+            name="amazon_store_url",
+            field=models.URLField(blank=True, default="", max_length=500),
         ),
         migrations.AddField(
-            model_name='appsettings',
-            name='flipkart_store_url',
-            field=models.URLField(blank=True, default='', max_length=500),
+            model_name="appsettings",
+            name="flipkart_store_url",
+            field=models.URLField(blank=True, default="", max_length=500),
         ),
         migrations.AddField(
-            model_name='appsettings',
-            name='meesho_store_url',
-            field=models.URLField(blank=True, default='', max_length=500),
+            model_name="appsettings",
+            name="meesho_store_url",
+            field=models.URLField(blank=True, default="", max_length=500),
         ),
     ]
