@@ -41,6 +41,19 @@ def _clean_address_line(line):
 # Meesho
 # --------------------------------------------------------------------------
 _MEESHO_ORDER_RE = re.compile(r'(\d{10,}(?:_\d+)?)\s*$')
+_MEESHO_SIZE_SUFFIXES = (
+    ('FREE', 'SIZE'),
+    ('ONE', 'SIZE'),
+    ('ADJUSTABLE',),
+    ('ADJ',),
+    ('XXL',),
+    ('XL',),
+    ('L',),
+    ('M',),
+    ('S',),
+    ('FREE',),
+)
+_MEESHO_NUMERIC_SIZE_RE = re.compile(r'\d+(?:\.\d+)?')
 
 
 def parse_meesho_label_text(text):
@@ -83,16 +96,30 @@ def parse_meesho_label_text(text):
 
     order_id = match.group(1)
     tokens = row[:match.start()].split()
-    if len(tokens) < 2:
+    quantity_index = max(
+        (i for i, token in enumerate(tokens) if token.isdigit()),
+        default=None,
+    )
+    if quantity_index is None or quantity_index == 0:
         raise LabelParseError('SKU or quantity not found on the Meesho label.')
-    seller_sku = tokens[0]
-    middle = tokens[1:]
-    qty_index = max((i for i, token in enumerate(middle) if token.isdigit()), default=None)
-    if qty_index is None:
-        raise LabelParseError('Quantity not found on the Meesho label.')
-    quantity = int(middle[qty_index])
+    quantity = int(tokens[quantity_index])
     if quantity < 1:
         raise LabelParseError('Quantity on the Meesho label must be at least 1.')
+
+    sku_and_size = tokens[:quantity_index]
+    size_start = len(sku_and_size)
+    upper_tokens = [token.upper() for token in sku_and_size]
+    for suffix in _MEESHO_SIZE_SUFFIXES:
+        if len(upper_tokens) > len(suffix) and tuple(upper_tokens[-len(suffix):]) == suffix:
+            size_start = len(upper_tokens) - len(suffix)
+            break
+    else:
+        if len(upper_tokens) > 1 and _MEESHO_NUMERIC_SIZE_RE.fullmatch(sku_and_size[-1]):
+            size_start -= 1
+
+    # SKU is the variable-length first column; the known size column follows it.
+    # Fall back to the legacy first-token parse when a label uses an unknown size.
+    seller_sku = ' '.join(sku_and_size[:size_start]) if size_start else tokens[0]
 
     return {
         'seller_sku': seller_sku,
