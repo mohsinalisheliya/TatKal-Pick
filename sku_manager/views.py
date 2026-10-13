@@ -1347,8 +1347,7 @@ def pdf_order_batch(request):
         ),
         'ids': ','.join(str(order.pk) for order in orders),
         'skipped_pages': request.GET.get('skipped', ''),
-        'pdf_url': reverse('pdf_order_scan_file', args=[scan.pk]) if scan else '',
-        'scan_id': scan.pk if scan else '',
+        **marketplace_pdf_stamper_context(scan),
     })
 
 
@@ -1361,6 +1360,28 @@ def pdf_order_scan_file(request, pk):
         filename=scan.pdf_file.name.rsplit('/', 1)[-1],
         content_type='application/pdf',
     )
+
+
+@login_required(login_url='login')
+def pdf_order_stamped_file(request, pk):
+    scan = get_object_or_404(MarketplaceLabelScan, pk=pk)
+    settings_obj = AppSettings.get_settings()
+    include_logo = request.GET.get('logo') == '1' and bool(settings_obj.label_logo)
+    include_store_qr = (
+        request.GET.get('qr') == '1' and bool(settings_obj.meesho_store_url)
+    )
+    if not include_logo and not include_store_qr:
+        return redirect('pdf_order_scan_file', pk=scan.pk)
+
+    stamped_pdf = stamp_marketplace_pdf(scan, include_logo, include_store_qr)
+    response = FileResponse(
+        stamped_pdf,
+        as_attachment=False,
+        filename=f"stamped-{scan.pdf_file.name.rsplit('/', 1)[-1]}",
+        content_type='application/pdf',
+    )
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @login_required(login_url='login')
@@ -1408,7 +1429,7 @@ def pdf_order_review(request, pk):
         'order': order,
         'products': products,
         'matched_product': matched_product,
-        'pdf_url': reverse('pdf_order_scan_file', args=[scan.pk]) if scan else '',
+        **marketplace_pdf_stamper_context(scan),
         'active_page': 'pdf_order_scan',
     })
 
