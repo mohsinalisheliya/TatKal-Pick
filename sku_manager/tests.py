@@ -20,7 +20,12 @@ from .models import (
 	StorageBox,
 )
 from .views import COLOR_PALETTE
-from .pdf_orders import LabelParseError, parse_meesho_label_text
+from .pdf_orders import (
+	LabelParseError,
+	extract_labels,
+	parse_amazon_label_text,
+	parse_meesho_label_text,
+)
 
 
 class SalesHoldTests(TestCase):
@@ -377,7 +382,10 @@ class MeeshoPDFOrderTests(TestCase):
 		self.upload_url = reverse('pdf_order_scan')
 
 	def upload_label(self):
-		with patch('sku_manager.views.extract_meesho_label', return_value=self.parsed_label):
+		with patch(
+			'sku_manager.views.extract_labels',
+			return_value=([{**self.parsed_label, 'platform': 'Meesho'}], []),
+		):
 			return self.client.post(self.upload_url, {
 				'label_pdf': SimpleUploadedFile(
 					'meesho-label.pdf',
