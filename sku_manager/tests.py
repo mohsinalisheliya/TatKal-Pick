@@ -494,7 +494,7 @@ TAX INVOICE Original For Recipient"""
 
 				scan = MarketplaceLabelScan.objects.get()
 				self.assertEqual(list(scan.orders.all()), [order])
-				self.assertContains(self.client.get(response.url), 'Original label PDF')
+				self.assertContains(self.client.get(response.url), 'Shipping label PDF')
 				pdf_response = self.client.get(reverse('pdf_order_scan_file', args=[scan.pk]))
 				self.assertEqual(pdf_response.status_code, 200)
 				self.assertEqual(pdf_response['Content-Type'], 'application/pdf')
@@ -534,7 +534,7 @@ TAX INVOICE Original For Recipient"""
 				scan = MarketplaceLabelScan.objects.get()
 				self.assertEqual(scan.orders.count(), 2)
 				page = self.client.get(response.url)
-				self.assertContains(page, 'Original label PDF')
+				self.assertContains(page, 'Shipping label PDF')
 				self.assertContains(page, 'Print PDF')
 				self.assertContains(page, f'src="{reverse("pdf_order_scan_file", args=[scan.pk])}"')
 				self.assertContains(page, f'name="scan_id" value="{scan.pk}"')
