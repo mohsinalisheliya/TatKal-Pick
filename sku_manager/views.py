@@ -1059,6 +1059,107 @@ class MarketplaceOrderDispatchError(ValueError):
     pass
 
 
+def marketplace_pdf_stamper_context(scan):
+    if not scan:
+        return {}
+
+    settings_obj = AppSettings.get_settings()
+    return {
+        'pdf_url': reverse('pdf_order_scan_file', args=[scan.pk]),
+        'pdf_stamp_url': reverse('pdf_order_stamped_file', args=[scan.pk]),
+        'scan_id': scan.pk,
+        'label_logo_url': settings_obj.label_logo.url if settings_obj.label_logo else '',
+        'store_qr_available': bool(settings_obj.meesho_store_url),
+    }
+
+
+def stamp_marketplace_pdf(scan, include_logo, include_store_qr):
+    from pypdf import PdfReader, PdfWriter
+    from reportlab.lib.utils import ImageReader
+    from reportlab.pdfgen import canvas
+    from PIL import Image, ImageOps
+
+    settings_obj = AppSettings.get_settings()
+    logo = None
+    if include_logo and settings_obj.label_logo:
+        with settings_obj.label_logo.open('rb') as logo_file:
+            logo = Image.open(logo_file)
+            logo.load()
+            logo = ImageOps.exif_transpose(logo).convert('RGBA')
+            logo.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
+
+    store_qr = None
+    if include_store_qr and settings_obj.meesho_store_url:
+        qr_code = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=6,
+            border=2,
+        )
+        qr_code.add_data(settings_obj.meesho_store_url)
+        qr_code.make(fit=True)
+        store_qr = qr_code.make_image(fill_color='black', back_color='white').convert('RGB')
+
+    output = io.BytesIO()
+    overlay_readers = []
+    writer = PdfWriter()
+    with scan.pdf_file.open('rb') as source_file:
+        reader = PdfReader(source_file)
+        for page in reader.pages:
+            if logo or store_qr:
+                page_width = float(page.mediabox.width)
+                page_height = float(page.mediabox.height)
+                margin = min(18, page_width * 0.04, page_height * 0.04)
+                overlay_buffer = io.BytesIO()
+                overlay = canvas.Canvas(
+                    overlay_buffer,
+                    pagesize=(page_width, page_height),
+                    pageCompression=1,
+                )
+
+                if logo:
+                    max_logo_width = min(90, page_width * 0.28)
+                    max_logo_height = min(42, page_height * 0.12)
+                    image_width, image_height = logo.size
+                    scale = min(
+                        max_logo_width / image_width,
+                        max_logo_height / image_height,
+                    )
+                    draw_width = image_width * scale
+                    draw_height = image_height * scale
+                    overlay.drawImage(
+                        ImageReader(logo),
+                        margin,
+                        margin,
+                        width=draw_width,
+                        height=draw_height,
+                        mask='auto',
+                    )
+
+                if store_qr:
+                    qr_size = min(48, page_width * 0.16, page_height * 0.14)
+                    overlay.drawImage(
+                        ImageReader(store_qr),
+                        page_width - margin - qr_size,
+                        margin,
+                        width=qr_size,
+                        height=qr_size,
+                    )
+
+                overlay.showPage()
+                overlay.save()
+                overlay_buffer.seek(0)
+                overlay_reader = PdfReader(overlay_buffer)
+                overlay_readers.append((overlay_buffer, overlay_reader))
+                page.merge_page(overlay_reader.pages[0])
+            writer.add_page(page)
+
+        writer.write(output)
+
+    output.seek(0)
+    return output
+
+
 def dispatch_marketplace_order(order_id, sku_id, customer_name, shipping_address, save_seller_sku=False):
     with transaction.atomic():
         order = get_object_or_404(
