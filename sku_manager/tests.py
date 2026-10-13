@@ -498,6 +498,7 @@ TAX INVOICE Original For Recipient"""
 				pdf_response = self.client.get(reverse('pdf_order_scan_file', args=[scan.pk]))
 				self.assertEqual(pdf_response.status_code, 200)
 				self.assertEqual(pdf_response['Content-Type'], 'application/pdf')
+				self.assertEqual(pdf_response['X-Frame-Options'], 'SAMEORIGIN')
 				self.assertIn('inline', pdf_response['Content-Disposition'])
 				self.assertEqual(b''.join(pdf_response.streaming_content), b'%PDF-test')
 				self.client.logout()
