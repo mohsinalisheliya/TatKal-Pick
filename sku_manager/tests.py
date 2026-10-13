@@ -1,6 +1,8 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from io import BytesIO
+from openpyxl import load_workbook
 from polars import Decimal
 from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -468,6 +470,64 @@ TAX INVOICE Original For Recipient"""
 		self.assertEqual(self.older_batch.quantity, 2)
 		self.assertEqual(self.newer_batch.quantity, 3)
 		self.assertContains(self.client.get(response.url), 'Review before dispatch')
+
+	def test_scan_page_links_to_separate_order_history(self):
+		response = self.client.get(self.upload_url)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, reverse('pdf_order_history'))
+		self.assertNotContains(response, 'Recent scanned orders')
+
+	def test_order_history_is_paginated_and_links_to_excel_export(self):
+		for number in range(26):
+			MarketplaceOrder.objects.create(
+				platform=self.platform,
+				platform_name=self.platform.name,
+				order_id=f'HISTORY-{number}',
+				seller_sku=f'SELLER-{number}',
+				quantity=1,
+			)
+
+		first_page = self.client.get(reverse('pdf_order_history'))
+		second_page = self.client.get(reverse('pdf_order_history'), {'page': 2})
+
+		self.assertEqual(first_page.status_code, 200)
+		self.assertEqual(first_page.context['page_obj'].paginator.num_pages, 2)
+		self.assertEqual(len(first_page.context['orders']), 25)
+		self.assertContains(first_page, reverse('pdf_order_export'))
+		self.assertContains(first_page, 'Next')
+		self.assertEqual(len(second_page.context['orders']), 1)
+		self.assertContains(second_page, 'Previous')
+
+	def test_excel_export_contains_all_orders_and_customer_details_as_text(self):
+		order = MarketplaceOrder.objects.create(
+			platform=self.platform,
+			platform_name=self.platform.name,
+			order_id='=HYPERLINK("https://example.com")',
+			seller_sku='SELLER-EXCEL',
+			sku=self.item,
+			quantity=2,
+			customer_name='Sample Recipient',
+			customer_phone='9876543210',
+			shipping_address='10 Sample Street',
+		)
+
+		response = self.client.get(reverse('pdf_order_export'))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(
+			response['Content-Type'],
+			'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+		)
+		self.assertIn('attachment; filename="scanned-orders.xlsx"', response['Content-Disposition'])
+		workbook = load_workbook(BytesIO(response.content), read_only=True, data_only=False)
+		sheet = workbook['Scanned Orders']
+		self.assertEqual(sheet.max_row, 2)
+		self.assertEqual(sheet['B2'].value, "'=HYPERLINK(\"https://example.com\")")
+		self.assertEqual(sheet['F2'].value, 'Sample Recipient')
+		self.assertEqual(sheet['G2'].value, '9876543210')
+		self.assertEqual(sheet['H2'].value, '10 Sample Street')
+		self.assertEqual(sheet['D2'].value, self.item.sku)
 
 	def test_confirm_deducts_fifo_stock_and_saves_seller_sku_mapping(self):
 		self.upload_label()
