@@ -882,40 +882,46 @@ def find_product_for_seller_sku(platform, seller_sku):
 
 @login_required(login_url='login')
 def pdf_order_scan(request):
-    platform, _ = Platform.objects.get_or_create(name='Meesho')
     if request.method == 'POST':
         uploaded_file = request.FILES.get('label_pdf')
         if not uploaded_file:
-            messages.error(request, 'Choose a Meesho shipping-label PDF to scan.')
+            messages.error(request, 'Choose a marketplace shipping-label PDF to scan.')
             return redirect('pdf_order_scan')
 
         try:
-            parsed = extract_meesho_label(uploaded_file)
+            parsed_labels, skipped_pages = extract_labels(uploaded_file)
         except LabelParseError as error:
             messages.error(request, str(error))
             return redirect('pdf_order_scan')
 
-        product = find_product_for_seller_sku(platform, parsed['seller_sku'])
-        order, created = MarketplaceOrder.objects.get_or_create(
-            platform=platform,
-            order_id=parsed['order_id'],
-            defaults={
-                'platform_name': platform.name,
-                'seller_sku': parsed['seller_sku'],
-                'sku': product,
-                'quantity': parsed['quantity'],
-                'customer_name': parsed['customer_name'],
-                'shipping_address': parsed['shipping_address'],
-            },
-        )
-        if not created:
-            if order.status == MarketplaceOrder.STATUS_DISPATCHED:
-                messages.info(request, 'This order was already dispatched; stock was not changed.')
-            else:
-                messages.info(request, 'This order is already awaiting review.')
-        else:
-            messages.success(request, 'Label scanned. Review the order before confirming stock dispatch.')
-        return redirect('pdf_order_review', pk=order.pk)
+        orders = []
+        for parsed in parsed_labels:
+            platform, _ = Platform.objects.get_or_create(name=parsed['platform'])
+            product = find_product_for_seller_sku(platform, parsed['seller_sku'])
+            order, _ = MarketplaceOrder.objects.get_or_create(
+                platform=platform,
+                order_id=parsed['order_id'],
+                defaults={
+                    'platform_name': platform.name,
+                    'seller_sku': parsed['seller_sku'],
+                    'sku': product,
+                    'quantity': parsed['quantity'],
+                    'customer_name': parsed['customer_name'],
+                    'shipping_address': parsed['shipping_address'],
+                },
+            )
+            orders.append(order)
+
+        if skipped_pages:
+            messages.warning(
+                request,
+                'Some pages could not be read: ' + ', '.join(map(str, skipped_pages)),
+            )
+        if len(orders) == 1:
+            return redirect('pdf_order_review', pk=orders[0].pk)
+        batch_url = reverse('pdf_order_batch')
+        order_ids = ','.join(str(order.pk) for order in orders)
+        return redirect(f'{batch_url}?ids={order_ids}')
 
     return render(request, 'sku_manager/pdf_order_scan.html', {
         'active_page': 'pdf_order_scan',
@@ -923,100 +929,189 @@ def pdf_order_scan(request):
     })
 
 
+class MarketplaceOrderDispatchError(ValueError):
+    pass
+
+
+def dispatch_marketplace_order(order_id, sku_id, customer_name, shipping_address, save_seller_sku=False):
+    with transaction.atomic():
+        order = get_object_or_404(
+            MarketplaceOrder.objects.select_for_update().select_related('platform'),
+            pk=order_id,
+        )
+        if order.status == MarketplaceOrder.STATUS_DISPATCHED:
+            raise MarketplaceOrderDispatchError('This order was already dispatched.')
+
+        item = JewelrySKU.objects.filter(pk=sku_id).first()
+        if item is None:
+            raise MarketplaceOrderDispatchError('Choose a valid Tatkal Pick product.')
+        customer_name = customer_name.strip()
+        shipping_address = shipping_address.strip()
+        if not customer_name or not shipping_address:
+            raise MarketplaceOrderDispatchError('Customer name and delivery address are required.')
+
+        batches = list(
+            StockBatch.objects.select_for_update().filter(
+                sku=item,
+                status='active',
+                sales_enabled=True,
+                quantity__gt=0,
+            ).order_by('created_at', 'pk')
+        )
+        available_stock = sum(batch.quantity for batch in batches)
+        if available_stock < order.quantity:
+            raise MarketplaceOrderDispatchError(
+                f"Not enough sellable stock for {item.sku}: "
+                f"{available_stock} available, {order.quantity} required."
+            )
+
+        remaining = order.quantity
+        for batch in batches:
+            dispatched = min(batch.quantity, remaining)
+            batch.quantity -= dispatched
+            remaining -= dispatched
+            if batch.quantity == 0:
+                batch.status = 'disabled'
+                batch.finished_at = timezone.now()
+            batch.save(update_fields=['quantity', 'status', 'finished_at', 'updated_at'])
+            if remaining == 0:
+                break
+
+        item.sync_stock_from_batches()
+        sold_price = PlatformPrice.objects.filter(
+            sku=item,
+            platform=order.platform,
+        ).values_list('price', flat=True).first()
+        if sold_price is None:
+            sold_price = item.selling_price
+        dispatch_log = DispatchLog.objects.create(
+            sku=item,
+            platform=order.platform,
+            platform_name=order.platform.name,
+            quantity=order.quantity,
+            sold_price=sold_price,
+            stock_after=item.stock,
+        )
+
+        if save_seller_sku:
+            MarketplaceListingSKU.objects.update_or_create(
+                sku=item,
+                platform=order.platform,
+                defaults={
+                    'source': MarketplaceListingSKU.SOURCE_MANUAL,
+                    'listing_sku': order.seller_sku,
+                },
+            )
+
+        order.sku = item
+        order.customer_name = customer_name
+        order.shipping_address = shipping_address
+        order.dispatch_log = dispatch_log
+        order.status = MarketplaceOrder.STATUS_DISPATCHED
+        order.dispatched_at = timezone.now()
+        order.save(update_fields=[
+            'sku',
+            'customer_name',
+            'shipping_address',
+            'dispatch_log',
+            'status',
+            'dispatched_at',
+        ])
+    return order, item
+
+
+def parse_marketplace_order_ids(value):
+    order_ids = []
+    for part in value.split(','):
+        try:
+            order_id = int(part)
+        except (TypeError, ValueError):
+            continue
+        if order_id > 0 and order_id not in order_ids:
+            order_ids.append(order_id)
+    return order_ids[:100]
+
+
+@login_required(login_url='login')
+def pdf_order_batch(request):
+    raw_ids = request.POST.get('ids', '') if request.method == 'POST' else request.GET.get('ids', '')
+    order_ids = parse_marketplace_order_ids(raw_ids)
+    if not order_ids:
+        messages.error(request, 'No scanned orders were selected for review.')
+        return redirect('pdf_order_scan')
+
+    if request.method == 'POST':
+        dispatched_count = 0
+        failed_count = 0
+        for order_id in order_ids:
+            if request.POST.get(f'include_{order_id}') != 'on':
+                continue
+            try:
+                order, _ = dispatch_marketplace_order(
+                    order_id=order_id,
+                    sku_id=request.POST.get(f'sku_{order_id}'),
+                    customer_name=request.POST.get(f'name_{order_id}', ''),
+                    shipping_address=request.POST.get(f'address_{order_id}', ''),
+                    save_seller_sku=request.POST.get(f'save_sku_{order_id}') == 'on',
+                )
+                dispatched_count += 1
+            except MarketplaceOrderDispatchError as error:
+                failed_count += 1
+                messages.error(request, f"Order {order_id}: {error}")
+            except IntegrityError:
+                failed_count += 1
+                messages.error(
+                    request,
+                    f"Order {order_id}: seller SKU is already mapped to another product "
+                    f"on that marketplace.",
+                )
+
+        if dispatched_count:
+            messages.success(request, f'{dispatched_count} order(s) dispatched successfully.')
+        if not dispatched_count and not failed_count:
+            messages.info(request, 'No orders were selected for dispatch.')
+        query_ids = ','.join(str(order_id) for order_id in order_ids)
+        return redirect(f"{reverse('pdf_order_batch')}?ids={query_ids}")
+
+    orders = list(
+        MarketplaceOrder.objects.filter(pk__in=order_ids).select_related('platform', 'sku')
+    )
+    order_by_id = {order.pk: order for order in orders}
+    orders = [order_by_id[order_id] for order_id in order_ids if order_id in order_by_id]
+    if not orders:
+        messages.error(request, 'No scanned orders were found.')
+        return redirect('pdf_order_scan')
+
+    return render(request, 'sku_manager/pdf_order_batch.html', {
+        'active_page': 'pdf_order_scan',
+        'orders': orders,
+        'orders_found': len(orders),
+        'skipped_pages': request.GET.get('skipped', ''),
+    })
+
+
 @login_required(login_url='login')
 def pdf_order_review(request, pk):
     if request.method == 'POST':
         try:
-            with transaction.atomic():
-                order = get_object_or_404(
-                    MarketplaceOrder.objects.select_for_update().select_related('platform'),
-                    pk=pk,
+            order, item = dispatch_marketplace_order(
+                order_id=pk,
+                sku_id=request.POST.get('sku_id'),
+                customer_name=request.POST.get('customer_name', ''),
+                shipping_address=request.POST.get('shipping_address', ''),
+                save_seller_sku=request.POST.get('save_seller_sku') == 'on',
+            )
+        except (IntegrityError, MarketplaceOrderDispatchError) as error:
+            if isinstance(error, IntegrityError):
+                message = (
+                    'That seller SKU is already mapped to another product on this '
+                    'marketplace. Review the mapping before dispatching this order.'
                 )
-                if order.status == MarketplaceOrder.STATUS_DISPATCHED:
-                    messages.info(request, 'This order was already dispatched; stock was not changed.')
-                    return redirect('pdf_order_review', pk=order.pk)
-
-                item = get_object_or_404(JewelrySKU, pk=request.POST.get('sku_id'))
-                customer_name = request.POST.get('customer_name', '').strip()
-                shipping_address = request.POST.get('shipping_address', '').strip()
-                if not customer_name or not shipping_address:
-                    messages.error(request, 'Customer name and delivery address are required.')
-                    return redirect('pdf_order_review', pk=order.pk)
-
-                batches = list(
-                    StockBatch.objects.select_for_update().filter(
-                        sku=item,
-                        status='active',
-                        sales_enabled=True,
-                        quantity__gt=0,
-                    ).order_by('created_at', 'pk')
-                )
-                available_stock = sum(batch.quantity for batch in batches)
-                if available_stock < order.quantity:
-                    messages.error(
-                        request,
-                        f"Not enough sellable stock for {item.sku}: "
-                        f"{available_stock} available, {order.quantity} required.",
-                    )
-                    return redirect('pdf_order_review', pk=order.pk)
-
-                remaining = order.quantity
-                for batch in batches:
-                    dispatched = min(batch.quantity, remaining)
-                    batch.quantity -= dispatched
-                    remaining -= dispatched
-                    if batch.quantity == 0:
-                        batch.status = 'disabled'
-                        batch.finished_at = timezone.now()
-                    batch.save(update_fields=['quantity', 'status', 'finished_at', 'updated_at'])
-                    if remaining == 0:
-                        break
-
-                item.sync_stock_from_batches()
-                sold_price = PlatformPrice.objects.filter(
-                    sku=item,
-                    platform=order.platform,
-                ).values_list('price', flat=True).first()
-                if sold_price is None:
-                    sold_price = item.selling_price
-                dispatch_log = DispatchLog.objects.create(
-                    sku=item,
-                    platform=order.platform,
-                    platform_name=order.platform.name,
-                    quantity=order.quantity,
-                    sold_price=sold_price,
-                    stock_after=item.stock,
-                )
-
-                if request.POST.get('save_seller_sku') == 'on':
-                    MarketplaceListingSKU.objects.update_or_create(
-                        sku=item,
-                        platform=order.platform,
-                        defaults={
-                            'source': MarketplaceListingSKU.SOURCE_MANUAL,
-                            'listing_sku': order.seller_sku,
-                        },
-                    )
-
-                order.sku = item
-                order.customer_name = customer_name
-                order.shipping_address = shipping_address
-                order.dispatch_log = dispatch_log
-                order.status = MarketplaceOrder.STATUS_DISPATCHED
-                order.dispatched_at = timezone.now()
-                order.save(update_fields=[
-                    'sku',
-                    'customer_name',
-                    'shipping_address',
-                    'dispatch_log',
-                    'status',
-                    'dispatched_at',
-                ])
-        except IntegrityError:
+            else:
+                message = str(error)
             messages.error(
                 request,
-                'That seller SKU is already mapped to another product on Meesho. '
-                'Review the mapping before dispatching this order.',
+                message,
             )
             return redirect('pdf_order_review', pk=pk)
 
