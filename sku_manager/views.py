@@ -30,7 +30,7 @@ from .models import (
     StorageBox,
     StockBatch,
 )
-from .pdf_orders import LabelParseError, extract_meesho_label
+from .pdf_orders import LabelParseError, extract_labels
 
 DEFAULT_PLATFORMS = ['Flipkart', 'Amazon', 'Meesho', 'Website']
 
