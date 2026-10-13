@@ -945,6 +945,8 @@ def dispatch_marketplace_order(order_id, sku_id, customer_name, shipping_address
         if order.status == MarketplaceOrder.STATUS_DISPATCHED:
             raise MarketplaceOrderDispatchError('This order was already dispatched.')
 
+        if not str(sku_id or '').isdigit():
+            raise MarketplaceOrderDispatchError('Choose a valid Tatkal Pick product.')
         item = JewelrySKU.objects.filter(pk=sku_id).first()
         if item is None:
             raise MarketplaceOrderDispatchError('Choose a valid Tatkal Pick product.')
@@ -1046,8 +1048,15 @@ def pdf_order_batch(request):
     if request.method == 'POST':
         dispatched_count = 0
         failed_count = 0
+        available_ids = set(
+            MarketplaceOrder.objects.filter(pk__in=order_ids).values_list('pk', flat=True)
+        )
         for order_id in order_ids:
             if request.POST.get(f'include_{order_id}') != 'on':
+                continue
+            if order_id not in available_ids:
+                failed_count += 1
+                messages.error(request, f'Order {order_id}: scanned order was not found.')
                 continue
             try:
                 order, _ = dispatch_marketplace_order(
