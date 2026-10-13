@@ -504,6 +504,186 @@ TAX INVOICE Original For Recipient"""
 		self.assertFalse(DispatchLog.objects.filter(sku=self.item).exists())
 
 
+class MultiOrderParserTests(TestCase):
+	def meesho_page(self, number, quantity=1):
+		return f"""Customer Address
+Person {number}
+{number} Sample Street
+Sample City, State, 12345{number}
+If undelivered, return to:
+SELLER
+Product Details
+SKU Size Qty Color Order No.
+SKU-{number} Free Size {quantity} Gold 12345678901234567{number}_1
+TAX INVOICE Original For Recipient"""
+
+	def amazon_pages(self, number, sku='AMZ-SKU', quantity=2):
+		order_id = f'40{number}-1234567-7654321'
+		return [
+			f"""Ship To:
+Amz Buyer {number}
+Flat {number}, Some Road
+Surat, GUJARAT 39500{number}
+Order ID: {order_id}""",
+			f"""Amazon.in Packing Slip
+Order ID: {order_id}
+Quantity {quantity}
+SKU: {sku}-{number} | ASIN: B0ABC""",
+		]
+
+	def test_meesho_pages_extract_independent_orders_and_skip_unreadable_pages(self):
+		pages = [self.meesho_page(n) for n in range(1, 7)]
+		with patch('sku_manager.pdf_orders._read_pdf_pages', return_value=pages):
+			labels, skipped = extract_labels(SimpleUploadedFile('six.pdf', b'%PDF-test'))
+
+		self.assertEqual(len(labels), 6)
+		self.assertEqual({label['platform'] for label in labels}, {'Meesho'})
+		self.assertEqual(skipped, [])
+
+		with patch(
+			'sku_manager.pdf_orders._read_pdf_pages',
+			return_value=[self.meesho_page(1), 'random page', *self.amazon_pages(3)],
+		):
+			labels, skipped = extract_labels(SimpleUploadedFile('mixed.pdf', b'%PDF-test'))
+		self.assertEqual({label['platform'] for label in labels}, {'Meesho', 'Amazon'})
+		self.assertEqual(skipped, [2])
+
+	def test_amazon_label_and_packing_slip_pages_merge(self):
+		pages = self.amazon_pages(1) + self.amazon_pages(2)
+		with patch('sku_manager.pdf_orders._read_pdf_pages', return_value=pages):
+			labels, skipped = extract_labels(SimpleUploadedFile('amazon.pdf', b'%PDF-test'))
+
+		self.assertEqual(len(labels), 2)
+		self.assertEqual(skipped, [])
+		first = labels[0]
+		self.assertEqual(first['platform'], 'Amazon')
+		self.assertEqual(first['order_id'], '401-1234567-7654321')
+		self.assertEqual(first['seller_sku'], 'AMZ-SKU-1')
+		self.assertEqual(first['quantity'], 2)
+		self.assertEqual(first['customer_name'], 'Amz Buyer 1')
+		self.assertEqual(
+			first['shipping_address'],
+			'Flat 1, Some Road, Surat, GUJARAT 395001',
+		)
+
+	def test_amazon_parser_rejects_unrelated_text_and_extract_rejects_no_orders(self):
+		with self.assertRaises(LabelParseError):
+			parse_amazon_label_text('Unrelated PDF text')
+		with patch('sku_manager.pdf_orders._read_pdf_pages', return_value=['hello world']):
+			with self.assertRaises(LabelParseError):
+				extract_labels(SimpleUploadedFile('empty.pdf', b'%PDF-test'))
+
+
+class MultiOrderViewTests(TestCase):
+	def setUp(self):
+		user = get_user_model().objects.create_user(username='multi-order-user', password='test-password')
+		self.client.force_login(user)
+		self.item1 = JewelrySKU.objects.create(name='Multi Order One')
+		self.item2 = JewelrySKU.objects.create(name='Multi Order Two')
+		self.batch1 = StockBatch.objects.create(sku=self.item1, batch_no='MULTI-1', quantity=5)
+		self.batch2 = StockBatch.objects.create(sku=self.item2, batch_no='MULTI-2', quantity=1)
+		self.item1.sync_stock_from_batches()
+		self.item2.sync_stock_from_batches()
+		self.meesho = Platform.objects.create(name='Meesho')
+		self.amazon = Platform.objects.create(name='Amazon')
+		MarketplaceListingSKU.objects.create(
+			sku=self.item1,
+			platform=self.meesho,
+			source=MarketplaceListingSKU.SOURCE_MANUAL,
+			listing_sku='SKU-1',
+		)
+
+	def meesho_order(self, number, quantity=1):
+		return {
+			'platform': 'Meesho',
+			'order_id': f'12345678901234567{number}_1',
+			'seller_sku': f'SKU-{number}',
+			'quantity': quantity,
+			'customer_name': f'Person {number}',
+			'shipping_address': f'{number} Sample Street',
+		}
+
+	def upload_orders(self, labels):
+		with patch('sku_manager.views.extract_labels', return_value=(labels, [])):
+			return self.client.post(reverse('pdf_order_scan'), {
+				'label_pdf': SimpleUploadedFile('orders.pdf', b'%PDF-test'),
+			})
+
+	def test_multi_order_upload_creates_orders_and_does_not_deduct_stock(self):
+		response = self.upload_orders([
+			self.meesho_order(1),
+			self.meesho_order(2),
+			self.meesho_order(3),
+			{
+				'platform': 'Amazon',
+				'order_id': '401-1234567-7654321',
+				'seller_sku': 'AMZ-1',
+				'quantity': 1,
+				'customer_name': 'Amazon Buyer',
+				'shipping_address': 'Amazon Street',
+			},
+		])
+
+		self.assertEqual(MarketplaceOrder.objects.count(), 4)
+		self.assertEqual(MarketplaceOrder.objects.filter(platform=self.amazon).count(), 1)
+		self.assertTrue(response.url.startswith(reverse('pdf_order_batch')))
+		page = self.client.get(response.url)
+		self.assertContains(page, 'Review 4 orders')
+		self.item1.refresh_from_db()
+		self.assertEqual(self.item1.stock, 5)
+
+	def test_single_order_pdf_still_redirects_to_single_review(self):
+		response = self.upload_orders([self.meesho_order(1)])
+		order = MarketplaceOrder.objects.get()
+		self.assertRedirects(response, reverse('pdf_order_review', args=[order.pk]))
+
+	def test_batch_dispatches_available_orders_and_leaves_insufficient_order_pending(self):
+		self.upload_orders([self.meesho_order(1, quantity=2), self.meesho_order(2, quantity=3)])
+		order1 = MarketplaceOrder.objects.get(seller_sku='SKU-1')
+		order2 = MarketplaceOrder.objects.get(seller_sku='SKU-2')
+
+		response = self.client.post(reverse('pdf_order_batch'), {
+			'ids': f'{order1.pk},{order2.pk}',
+			f'include_{order1.pk}': 'on',
+			f'sku_{order1.pk}': self.item1.pk,
+			f'name_{order1.pk}': 'Person 1',
+			f'address_{order1.pk}': 'Address 1',
+			f'include_{order2.pk}': 'on',
+			f'sku_{order2.pk}': self.item2.pk,
+			f'name_{order2.pk}': 'Person 2',
+			f'address_{order2.pk}': 'Address 2',
+		}, follow=True)
+
+		order1.refresh_from_db()
+		order2.refresh_from_db()
+		self.item1.refresh_from_db()
+		self.item2.refresh_from_db()
+		self.assertEqual(order1.status, MarketplaceOrder.STATUS_DISPATCHED)
+		self.assertEqual(order2.status, MarketplaceOrder.STATUS_PENDING)
+		self.assertEqual(self.item1.stock, 3)
+		self.assertEqual(self.item2.stock, 1)
+		self.assertContains(response, 'Not enough sellable stock')
+
+	def test_rescanning_same_orders_does_not_duplicate_or_rededuct(self):
+		labels = [self.meesho_order(1), self.meesho_order(2)]
+		self.upload_orders(labels)
+		order1 = MarketplaceOrder.objects.get(seller_sku='SKU-1')
+		self.client.post(reverse('pdf_order_batch'), {
+			'ids': str(order1.pk),
+			f'include_{order1.pk}': 'on',
+			f'sku_{order1.pk}': self.item1.pk,
+			f'name_{order1.pk}': 'Person 1',
+			f'address_{order1.pk}': 'Address 1',
+		})
+
+		self.upload_orders(labels)
+
+		self.assertEqual(MarketplaceOrder.objects.count(), 2)
+		self.assertEqual(DispatchLog.objects.count(), 1)
+		self.item1.refresh_from_db()
+		self.assertEqual(self.item1.stock, 4)
+
+
 class LabelPrintingTests(TestCase):
 	def setUp(self):
 		user = get_user_model().objects.create_user(username='label-user', password='test-password')
