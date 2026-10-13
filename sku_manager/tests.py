@@ -287,6 +287,38 @@ class MarketplaceListingSKUTests(TestCase):
 		row = next(row for row in response.context['platform_rows'] if row['platform'] == self.platform)
 		self.assertEqual(row['listing_sku_source'], MarketplaceListingSKU.SOURCE_DATABASE)
 		self.assertEqual(row['listing_sku'], '')
+		self.assertContains(response, 'Jewelry Category Code')
+		self.assertContains(response, 'NCK - Necklaces / Chains / Chokers')
+		self.assertContains(response, 'BGL - Bangles / Kadas')
+		self.assertNotContains(response, 'APP - Apparel / Clothing')
+
+	def test_edit_form_preserves_legacy_category(self):
+		response = self.client.get(self.url)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.context['selected_category'], self.item.category)
+		self.assertContains(response, f'Existing category - {self.item.category}')
+
+	def test_invalid_category_is_rejected_without_changing_product(self):
+		response = self.client.post(self.url, self.product_data(
+			name='Should Not Save',
+			category='APP',
+		))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Choose a valid jewelry category.')
+		self.item.refresh_from_db()
+		self.assertEqual(self.item.name, 'Mapping Test Product')
+
+	def test_jewelry_category_can_be_selected_and_saved(self):
+		response = self.client.post(self.url, self.product_data(
+			name='Updated Jewelry Product',
+			category='NCK',
+		))
+
+		self.assertRedirects(response, reverse('product_list'))
+		self.item.refresh_from_db()
+		self.assertEqual(self.item.category, 'NCK')
 
 	def test_duplicate_marketplace_sku_is_rejected_without_saving_stock(self):
 		other_item = JewelrySKU.objects.create(name='Other Mapping Product')
