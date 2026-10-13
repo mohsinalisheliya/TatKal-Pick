@@ -26,6 +26,7 @@
           <th class="py-3 px-4 font-semibold">Date & Time</th>
           <th class="py-3 px-4 font-semibold">SKU Code</th>
           <th class="py-3 px-4 font-semibold">Channel</th>
+          <th class="py-3 px-4 font-semibold">Marketplace Order ID</th>
           <th class="py-3 px-4 text-center font-semibold">Qty</th>
           <th class="py-3 px-4 font-semibold">Sold Rate</th>
           <th class="py-3 px-4 text-center font-semibold">Stock Left</th>
@@ -41,13 +42,16 @@
                 {{ log.platform_name }}
               </span>
             </td>
+            <td class="py-3 px-4 font-mono whitespace-nowrap select-all">
+              {% if log.marketplace_order %}{{ log.marketplace_order.order_id }}{% else %}—{% endif %}
+            </td>
             <td class="py-3 px-4 text-center text-rose-500 dark:text-rose-400 font-bold">-{{ log.quantity }}</td>
             <td class="py-3 px-4 text-emerald-600 dark:text-emerald-400 font-bold">₹{{ log.sold_price }}</td>
             <td class="py-3 px-4 text-center text-slate-900 dark:text-white font-bold">{{ log.stock_after }}</td>
           </tr>
         {% empty %}
           <tr>
-            <td colspan="6" class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs font-sans">
+            <td colspan="7" class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs font-sans">
               No sales dispatches logged yet. Scan any tag to register your first sale!
             </td>
           </tr>

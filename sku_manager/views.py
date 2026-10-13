@@ -904,7 +904,7 @@ def sku_scanner(request):
 
 @login_required(login_url='login')
 def dispatch_logs(request):
-    logs = DispatchLog.objects.select_related('sku').all()
+    logs = DispatchLog.objects.select_related('sku', 'marketplace_order').all()
     return render(request, 'sku_manager/dispatch_logs.html', {
         'logs': logs,
         'total_dispatches': logs.count(),

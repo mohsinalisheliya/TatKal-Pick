@@ -7,7 +7,7 @@
   <header class="border-b border-slate-200 dark:border-slate-800 pb-4">
     <p class="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">{{ order.platform_name }} Order</p>
     <h1 class="mt-1 text-2xl font-extrabold text-slate-900 dark:text-white">Review before dispatch</h1>
-    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Order ID: <span class="font-mono font-bold">{{ order.order_id }}</span></p>
+    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Order ID: <span class="font-mono font-bold select-all whitespace-nowrap">{{ order.order_id }}</span></p>
   </header>
 
   {% if order.status == 'dispatched' %}
@@ -31,7 +31,7 @@
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
           <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Order ID</label>
-          <p class="mt-1 font-mono font-bold text-slate-900 dark:text-white">{{ order.order_id }}</p>
+          <p class="mt-1 font-mono font-bold text-slate-900 dark:text-white select-all whitespace-nowrap">{{ order.order_id }}</p>
         </div>
         <div>
           <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Platform seller SKU</label>
