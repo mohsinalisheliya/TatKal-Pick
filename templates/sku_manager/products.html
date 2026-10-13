@@ -64,7 +64,7 @@
             {% for code, label in jewelry_categories %}
               <option value="{{ code }}" {% if selected_category == code %}selected{% endif %}>{{ code }} - {{ label }}</option>
             {% endfor %}
-            {% if is_edit and selected_category and selected_category not in jewelry_categories|join:" " %}
+            {% if is_edit and selected_category and selected_category not in jewelry_category_codes %}
               <option value="{{ selected_category }}" selected>Existing category - {{ selected_category }}</option>
             {% endif %}
           </select>

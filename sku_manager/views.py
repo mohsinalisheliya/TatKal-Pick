@@ -277,6 +277,7 @@ def product_master(request, pk=None):
         'platform_rows': get_marketplace_rows(form_values),
         'form_errors': form_errors,
         'jewelry_categories': JEWELRY_CATEGORIES,
+        'jewelry_category_codes': [code for code, _ in JEWELRY_CATEGORIES],
         'selected_category': (
             form_values.get('category', '').strip().upper()
             if form_values is not None
