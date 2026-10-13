@@ -50,7 +50,6 @@ def parse_meesho_label_text(text):
         raise LabelParseError('The label contains an invalid item SKU or quantity.')
 
     return {
-        'platform': 'Meesho',
         'seller_sku': seller_sku,
         'order_id': row_match.group('order_id'),
         'quantity': quantity,
@@ -135,6 +134,7 @@ def extract_labels(uploaded_file):
             continue
         try:
             parsed = parse_meesho_label_text(text)
+            parsed['platform'] = 'Meesho'
             labels[(parsed['platform'], parsed['order_id'])] = parsed
             continue
         except LabelParseError:
