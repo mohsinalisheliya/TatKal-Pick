@@ -33,6 +33,17 @@ from .models import (
 from .pdf_orders import LabelParseError, extract_labels
 
 DEFAULT_PLATFORMS = ['Flipkart', 'Amazon', 'Meesho', 'Website']
+JEWELRY_CATEGORIES = [
+    ('BGL', 'Bangles / Kadas'),
+    ('BRC', 'Bracelets'),
+    ('NCK', 'Necklaces / Chains / Chokers'),
+    ('EAR', 'Earrings'),
+    ('SET', 'Jewelry Sets / Combos'),
+    ('JHK', 'Jhumkas'),
+    ('RNG', 'Rings'),
+    ('PAY', 'Anklets / Payal'),
+    ('TIK', 'Maang Tikka'),
+]
 
 
 def build_color_palette():
@@ -138,6 +149,11 @@ def product_master(request, pk=None):
         color = request.POST.get('color', '').strip().upper()
         size = request.POST.get('size', '').strip().upper()
         number = request.POST.get('number', '').strip()
+
+        if category not in {code for code, _ in JEWELRY_CATEGORIES} and not (
+            product and category == product.category
+        ):
+            form_errors.append('Choose a valid jewelry category.')
 
         if not name:
             messages.error(request, "Product name is required.")
@@ -260,6 +276,12 @@ def product_master(request, pk=None):
         'products_count': products_count,
         'platform_rows': get_marketplace_rows(form_values),
         'form_errors': form_errors,
+        'jewelry_categories': JEWELRY_CATEGORIES,
+        'selected_category': (
+            form_values.get('category', '').strip().upper()
+            if form_values is not None
+            else product.category if product else ''
+        ),
         'active_page': 'products',
     })
 
