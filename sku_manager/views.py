@@ -7,6 +7,8 @@ import re
 import qrcode
 from datetime import datetime, timedelta
 from decimal import Decimal
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
 from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
@@ -957,8 +959,77 @@ def pdf_order_scan(request):
 
     return render(request, 'sku_manager/pdf_order_scan.html', {
         'active_page': 'pdf_order_scan',
-        'orders': MarketplaceOrder.objects.select_related('sku')[:20],
     })
+
+
+@login_required(login_url='login')
+def pdf_order_history(request):
+    orders = MarketplaceOrder.objects.select_related('sku').order_by('-created_at', '-pk')
+    page_obj = Paginator(orders, 25).get_page(request.GET.get('page'))
+    return render(request, 'sku_manager/pdf_order_history.html', {
+        'page_obj': page_obj,
+        'orders': page_obj.object_list,
+        'total_orders': orders.count(),
+        'active_page': 'pdf_order_scan',
+    })
+
+
+@login_required(login_url='login')
+def pdf_order_export(request):
+    orders = MarketplaceOrder.objects.select_related('sku').order_by('-created_at', '-pk')
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = 'Scanned Orders'
+    sheet.append([
+        'Platform',
+        'Order ID',
+        'Seller SKU',
+        'Tatkal Pick SKU',
+        'Quantity',
+        'Recipient Name',
+        'Customer Phone',
+        'Delivery Address',
+        'Status',
+        'Scanned At',
+        'Dispatched At',
+    ])
+
+    def safe_text(value):
+        text = str(value or '')
+        return f"'{text}" if text.startswith(('=', '+', '-', '@')) else text
+
+    for order in orders:
+        sheet.append([
+            safe_text(order.platform_name),
+            safe_text(order.order_id),
+            safe_text(order.seller_sku),
+            safe_text(order.sku.sku if order.sku else ''),
+            order.quantity,
+            safe_text(order.customer_name),
+            safe_text(order.customer_phone),
+            safe_text(order.shipping_address),
+            order.get_status_display(),
+            timezone.localtime(order.created_at).strftime('%Y-%m-%d %H:%M:%S'),
+            (
+                timezone.localtime(order.dispatched_at).strftime('%Y-%m-%d %H:%M:%S')
+                if order.dispatched_at else ''
+            ),
+        ])
+
+    sheet.freeze_panes = 'A2'
+    sheet.auto_filter.ref = sheet.dimensions
+    for column_cells in sheet.columns:
+        width = min(max(max(len(str(cell.value or '')) for cell in column_cells) + 2, 12), 60)
+        sheet.column_dimensions[get_column_letter(column_cells[0].column)].width = width
+
+    output = io.BytesIO()
+    workbook.save(output)
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = 'attachment; filename="scanned-orders.xlsx"'
+    return response
 
 
 class MarketplaceOrderDispatchError(ValueError):

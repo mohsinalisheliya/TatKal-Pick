@@ -10,6 +10,9 @@
     <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
       One PDF can hold many orders. Every page is read, the marketplace is detected automatically, and you review all orders together before any stock is deducted.
     </p>
+    <a href="{% url 'pdf_order_history' %}" class="mt-4 inline-flex rounded-xl border border-slate-300 dark:border-slate-600 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
+      View scanned orders
+    </a>
   </header>
 
   <form method="post" enctype="multipart/form-data" class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 p-5 sm:p-7 space-y-4">
@@ -23,32 +26,5 @@
     <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-extrabold text-white hover:bg-emerald-500">Scan all orders</button>
   </form>
 
-  <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 overflow-hidden">
-    <div class="px-5 py-3 border-b border-slate-200 dark:border-slate-700"><h2 class="font-extrabold text-slate-900 dark:text-white">Recent scanned orders</h2></div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="text-left text-xs uppercase text-slate-500">
-          <tr><th class="px-4 py-2">Platform</th><th class="px-4 py-2">Order ID</th><th class="px-4 py-2">Recipient</th><th class="px-4 py-2">Product</th><th class="px-4 py-2">Qty</th><th class="px-4 py-2">Status</th><th class="px-4 py-2"></th></tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-          {% for order in orders %}
-            <tr>
-              <td class="px-4 py-2">{{ order.platform_name }}</td>
-              <td class="px-4 py-2 font-mono text-xs">{{ order.order_id }}</td>
-              <td class="px-4 py-2">{{ order.customer_name|default:"—" }}</td>
-              <td class="px-4 py-2 font-mono text-xs">{{ order.sku.sku|default:order.seller_sku }}</td>
-              <td class="px-4 py-2">{{ order.quantity }}</td>
-              <td class="px-4 py-2">
-                {% if order.status == 'dispatched' %}<span class="text-emerald-600 font-bold">Dispatched</span>{% else %}<span class="text-amber-600 font-bold">Pending</span>{% endif %}
-              </td>
-              <td class="px-4 py-2"><a class="font-bold text-blue-600 hover:underline" href="{% url 'pdf_order_review' order.pk %}">Open</a></td>
-            </tr>
-          {% empty %}
-            <tr><td colspan="7" class="px-4 py-6 text-center text-slate-500">No label PDFs scanned yet.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
 </section>
 {% endblock %}
