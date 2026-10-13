@@ -500,6 +500,14 @@ TAX INVOICE Original For Recipient"""
 		self.assertContains(second_page, 'Previous')
 
 	def test_excel_export_contains_all_orders_and_customer_details_as_text(self):
+		for number in range(26):
+			MarketplaceOrder.objects.create(
+				platform=self.platform,
+				platform_name=self.platform.name,
+				order_id=f'EXTRA-{number}',
+				seller_sku=f'EXTRA-SKU-{number}',
+				quantity=1,
+			)
 		order = MarketplaceOrder.objects.create(
 			platform=self.platform,
 			platform_name=self.platform.name,
@@ -522,7 +530,7 @@ TAX INVOICE Original For Recipient"""
 		self.assertIn('attachment; filename="scanned-orders.xlsx"', response['Content-Disposition'])
 		workbook = load_workbook(BytesIO(response.content), read_only=True, data_only=False)
 		sheet = workbook['Scanned Orders']
-		self.assertEqual(sheet.max_row, 2)
+		self.assertEqual(sheet.max_row, 28)
 		self.assertEqual(sheet['B2'].value, "'=HYPERLINK(\"https://example.com\")")
 		self.assertEqual(sheet['F2'].value, 'Sample Recipient')
 		self.assertEqual(sheet['G2'].value, '9876543210')
