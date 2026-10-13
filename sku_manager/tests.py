@@ -629,8 +629,34 @@ class MultiOrderViewTests(TestCase):
 		self.assertTrue(response.url.startswith(reverse('pdf_order_batch')))
 		page = self.client.get(response.url)
 		self.assertContains(page, '4 orders found')
+		self.assertContains(page, f'id="include_{MarketplaceOrder.objects.get(seller_sku="SKU-1").pk}" checked')
+		self.assertContains(page, 'No product matched this seller SKU')
+		self.assertEqual(page.context['pending_count'], 4)
 		self.item1.refresh_from_db()
 		self.assertEqual(self.item1.stock, 5)
+
+	def test_batch_review_hides_checkbox_for_dispatched_orders(self):
+		order = MarketplaceOrder.objects.create(
+			platform=self.meesho,
+			platform_name=self.meesho.name,
+			order_id='123456789012345678_1',
+			seller_sku='SKU-1',
+			sku=self.item1,
+			quantity=1,
+			customer_name='Person One',
+			shipping_address='1 Sample Street',
+			status=MarketplaceOrder.STATUS_DISPATCHED,
+		)
+
+		response = self.client.get(
+			reverse('pdf_order_batch'),
+			{'ids': str(order.pk)},
+		)
+
+		self.assertEqual(response.context['pending_count'], 0)
+		self.assertNotContains(response, f'name="include_{order.pk}"')
+		self.assertContains(response, 'Dispatched')
+		self.assertNotContains(response, 'Confirm selected orders and deduct stock')
 
 	def test_single_order_pdf_still_redirects_to_single_review(self):
 		response = self.upload_orders([self.meesho_order(1)])
