@@ -539,6 +539,61 @@ TAX INVOICE Original For Recipient"""
 				self.assertContains(page, f'src="{reverse("pdf_order_scan_file", args=[scan.pk])}"')
 				self.assertContains(page, f'name="scan_id" value="{scan.pk}"')
 
+	def test_stamped_pdf_embeds_configured_logo_and_store_qr_without_changing_page_count(self):
+		from PIL import Image
+		from pypdf import PdfReader
+		from reportlab.pdfgen import canvas
+
+		with tempfile.TemporaryDirectory() as media_root:
+			with override_settings(MEDIA_ROOT=media_root):
+				source_pdf = BytesIO()
+				pdf_canvas = canvas.Canvas(source_pdf, pagesize=(288, 432))
+				pdf_canvas.drawString(30, 390, 'Marketplace label')
+				pdf_canvas.showPage()
+				pdf_canvas.showPage()
+				pdf_canvas.save()
+
+				order = MarketplaceOrder.objects.create(
+					platform=self.platform,
+					platform_name=self.platform.name,
+					order_id='STAMP-ORDER-1',
+					seller_sku='STAMP-SKU',
+					quantity=1,
+				)
+				scan = MarketplaceLabelScan()
+				scan.pdf_file.save(
+					'original.pdf',
+					SimpleUploadedFile('original.pdf', source_pdf.getvalue(), content_type='application/pdf'),
+					save=True,
+				)
+				scan.orders.add(order)
+
+				logo_bytes = BytesIO()
+				Image.new('RGBA', (120, 60), (255, 0, 0, 180)).save(logo_bytes, format='PNG')
+				settings_obj = AppSettings.get_settings()
+				settings_obj.label_logo.save(
+					'brand.png',
+					SimpleUploadedFile('brand.png', logo_bytes.getvalue(), content_type='image/png'),
+					save=False,
+				)
+				settings_obj.meesho_store_url = 'https://www.meesho.com/store/test'
+				settings_obj.save()
+
+				review = self.client.get(reverse('pdf_order_review', args=[order.pk]))
+				self.assertContains(review, 'Stamp logo')
+				self.assertContains(review, 'Stamp Meesho store QR')
+
+				response = self.client.get(
+					reverse('pdf_order_stamped_file', args=[scan.pk]),
+					{'logo': '1', 'qr': '1'},
+				)
+				self.assertEqual(response.status_code, 200)
+				self.assertEqual(response['Content-Type'], 'application/pdf')
+				self.assertEqual(response['Cache-Control'], 'private, no-store')
+				stamped_pdf = PdfReader(BytesIO(b''.join(response.streaming_content)))
+				self.assertEqual(len(stamped_pdf.pages), 2)
+				self.assertEqual(len(stamped_pdf.pages[0]['/Resources']['/XObject']), 2)
+
 	def test_spaced_meesho_seller_sku_matches_listing_without_spaces(self):
 		MarketplaceListingSKU.objects.create(
 			sku=self.item,
