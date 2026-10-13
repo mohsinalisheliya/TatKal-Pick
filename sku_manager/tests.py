@@ -628,7 +628,7 @@ class MultiOrderViewTests(TestCase):
 		self.assertEqual(MarketplaceOrder.objects.filter(platform=self.amazon).count(), 1)
 		self.assertTrue(response.url.startswith(reverse('pdf_order_batch')))
 		page = self.client.get(response.url)
-		self.assertContains(page, 'Review 4 orders')
+		self.assertContains(page, '4 orders found')
 		self.item1.refresh_from_db()
 		self.assertEqual(self.item1.stock, 5)
 
