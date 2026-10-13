@@ -116,6 +116,8 @@ def parse_meesho_label_text(text):
     else:
         if len(upper_tokens) > 1 and _MEESHO_NUMERIC_SIZE_RE.fullmatch(sku_and_size[-1]):
             size_start -= 1
+        else:
+            size_start = 1
 
     # SKU is the variable-length first column; the known size column follows it.
     # Fall back to the legacy first-token parse when a label uses an unknown size.
