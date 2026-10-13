@@ -50,17 +50,23 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label class="block text-xs font-semibold uppercase text-rose-600 dark:text-rose-400 mb-1">Unit Purchase Cost (₹)</label>
+          <label class="block text-xs font-semibold uppercase text-rose-600 dark:text-rose-400 mb-1">Buying Price (₹)</label>
           <input type="number" step="0.01" min="0" name="purchase_price"
             value="{% if form_values %}{{ form_values.purchase_price }}{% elif is_edit %}{{ selected_batch.purchase_price }}{% else %}{{ item.purchase_price }}{% endif %}"
             class="w-full bg-slate-50 dark:bg-slate-900 border border-rose-500/30 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 dark:text-white">
         </div>
         <div>
-          <label class="block text-xs font-semibold uppercase text-emerald-600 dark:text-emerald-400 mb-1">Standard MRP (₹)</label>
-          <input type="number" step="0.01" min="0" name="selling_price"
-            value="{% if form_values %}{{ form_values.selling_price }}{% elif is_edit %}{{ selected_batch.selling_price }}{% else %}{{ item.selling_price }}{% endif %}"
+          <label class="block text-xs font-semibold uppercase text-amber-600 dark:text-amber-400 mb-1">Wholesale Price (₹)</label>
+          <input type="number" step="0.01" min="0" name="wholesale_price"
+            value="{% if form_values %}{{ form_values.wholesale_price }}{% elif is_edit %}{{ selected_batch.wholesale_price }}{% else %}{{ item.wholesale_price }}{% endif %}"
+            class="w-full bg-slate-50 dark:bg-slate-900 border border-amber-500/30 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 dark:text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-emerald-600 dark:text-emerald-400 mb-1">Reselling Price (₹)</label>
+          <input type="number" step="0.01" min="0" name="reselling_price"
+            value="{% if form_values %}{{ form_values.reselling_price }}{% elif is_edit %}{{ selected_batch.reselling_price }}{% else %}{{ item.reselling_price }}{% endif %}"
             class="w-full bg-slate-50 dark:bg-slate-900 border border-emerald-500/30 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 dark:text-white">
         </div>
       </div>
