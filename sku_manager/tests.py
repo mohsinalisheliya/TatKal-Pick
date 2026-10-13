@@ -870,8 +870,29 @@ class LabelPrintingTests(TestCase):
 		self.assertContains(response, self.item.sku)
 		self.assertContains(response, 'NEW-LABEL')
 		self.assertContains(response, 'data:image/png;base64,')
+		self.assertNotContains(response, 'Visit Meesho Store')
 		inventory_url = reverse('inventory_list')
 		self.assertContains(response, f'href="{inventory_url}"')
+
+	def test_label_includes_meesho_store_qr_when_url_is_configured(self):
+		settings_obj = AppSettings.get_settings()
+		settings_obj.meesho_store_url = 'https://www.meesho.com/store/test'
+		settings_obj.save()
+		payloads = []
+		original_add_data = qrcode.QRCode.add_data
+
+		def capture_payload(qr, data, *args, **kwargs):
+			payloads.append(data)
+			return original_add_data(qr, data, *args, **kwargs)
+
+		with patch('sku_manager.views.qrcode.QRCode.add_data', autospec=True, side_effect=capture_payload):
+			response = self.client.get(self.url)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(payloads, [self.item.sku, settings_obj.meesho_store_url])
+		self.assertTrue(response.context['store_qr_base64'])
+		self.assertContains(response, 'Visit Meesho Store')
+		self.assertContains(response, 'alt="Meesho Store QR"')
 
 	def test_label_qr_encodes_only_the_sku(self):
 		payloads = []
@@ -962,3 +983,35 @@ class LabelPrintingTests(TestCase):
 
 		settings_obj.refresh_from_db()
 		self.assertFalse(settings_obj.label_logo)
+
+	def test_settings_save_store_urls_and_reject_invalid_store_urls(self):
+		response = self.client.post(reverse('app_settings'), {
+			'brand_name': 'TEST BRAND',
+			'tagline': '',
+			'currency_symbol': '$',
+			'low_stock_threshold': '5',
+			'support_contact': '',
+			'meesho_store_url': 'https://meesho.com/store/test',
+			'amazon_store_url': 'https://amazon.in/shop/test',
+			'flipkart_store_url': 'https://flipkart.com/store/test',
+		})
+
+		self.assertRedirects(response, reverse('app_settings'))
+		settings_obj = AppSettings.get_settings()
+		self.assertEqual(settings_obj.meesho_store_url, 'https://meesho.com/store/test')
+		self.assertEqual(settings_obj.amazon_store_url, 'https://amazon.in/shop/test')
+		self.assertEqual(settings_obj.flipkart_store_url, 'https://flipkart.com/store/test')
+
+		response = self.client.post(reverse('app_settings'), {
+			'brand_name': 'TEST BRAND',
+			'tagline': '',
+			'currency_symbol': '$',
+			'low_stock_threshold': '5',
+			'support_contact': '',
+			'meesho_store_url': 'not-a-url',
+		})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'Enter a valid http:// or https:// URL')
+		settings_obj.refresh_from_db()
+		self.assertEqual(settings_obj.meesho_store_url, 'https://meesho.com/store/test')
