@@ -14,6 +14,7 @@ from .models import (
 	AppSettings,
 	DispatchLog,
 	JewelrySKU,
+	MarketplaceLabelScan,
 	MarketplaceListingSKU,
 	MarketplaceOrder,
 	Platform,
@@ -478,15 +479,58 @@ TAX INVOICE Original For Recipient"""
 				extract_meesho_label(SimpleUploadedFile('label.pdf', b'%PDF-test'))
 
 	def test_upload_creates_pending_review_without_changing_stock(self):
-		response = self.upload_label()
+		with tempfile.TemporaryDirectory() as media_root:
+			with override_settings(MEDIA_ROOT=media_root):
+				response = self.upload_label()
 
-		order = MarketplaceOrder.objects.get(order_id=self.parsed_label['order_id'])
-		self.assertRedirects(response, reverse('pdf_order_review', args=[order.pk]))
-		self.assertEqual(order.status, MarketplaceOrder.STATUS_PENDING)
-		self.assertIsNone(order.sku)
-		self.assertEqual(self.older_batch.quantity, 2)
-		self.assertEqual(self.newer_batch.quantity, 3)
-		self.assertContains(self.client.get(response.url), 'Review before dispatch')
+				order = MarketplaceOrder.objects.get(order_id=self.parsed_label['order_id'])
+				self.assertRedirects(response, reverse('pdf_order_review', args=[order.pk]))
+				self.assertEqual(order.status, MarketplaceOrder.STATUS_PENDING)
+				self.assertIsNone(order.sku)
+				self.assertEqual(self.older_batch.quantity, 2)
+				self.assertEqual(self.newer_batch.quantity, 3)
+				self.assertContains(self.client.get(response.url), 'Review before dispatch')
+
+				scan = MarketplaceLabelScan.objects.get()
+				self.assertEqual(list(scan.orders.all()), [order])
+				self.assertContains(self.client.get(response.url), 'Original label PDF')
+				pdf_response = self.client.get(reverse('pdf_order_scan_file', args=[scan.pk]))
+				self.assertEqual(pdf_response.status_code, 200)
+				self.assertEqual(pdf_response['Content-Type'], 'application/pdf')
+				self.assertIn('inline', pdf_response['Content-Disposition'])
+				self.assertEqual(b''.join(pdf_response.streaming_content), b'%PDF-test')
+
+	def test_batch_review_previews_and_prints_the_uploaded_pdf(self):
+		second_label = {
+			**self.parsed_label,
+			'order_id': '987654321098765432_1',
+			'seller_sku': 'MEESHO-PDF-456',
+		}
+		with tempfile.TemporaryDirectory() as media_root:
+			with override_settings(MEDIA_ROOT=media_root):
+				with patch(
+					'sku_manager.views.extract_labels',
+					return_value=([
+						{**self.parsed_label, 'platform': 'Meesho'},
+						{**second_label, 'platform': 'Meesho'},
+					], []),
+				):
+					response = self.client.post(self.upload_url, {
+						'label_pdf': SimpleUploadedFile(
+							'multi-order-label.pdf',
+							b'%PDF-multi-order',
+							content_type='application/pdf',
+						),
+					})
+
+				self.assertEqual(response.status_code, 302)
+				scan = MarketplaceLabelScan.objects.get()
+				self.assertEqual(scan.orders.count(), 2)
+				page = self.client.get(response.url)
+				self.assertContains(page, 'Original label PDF')
+				self.assertContains(page, 'Print PDF')
+				self.assertContains(page, f'src="{reverse("pdf_order_scan_file", args=[scan.pk])}"')
+				self.assertContains(page, f'name="scan_id" value="{scan.pk}"')
 
 	def test_spaced_meesho_seller_sku_matches_listing_without_spaces(self):
 		MarketplaceListingSKU.objects.create(
