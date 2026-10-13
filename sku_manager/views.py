@@ -1094,11 +1094,23 @@ def pdf_order_batch(request):
         messages.error(request, 'No scanned orders were found.')
         return redirect('pdf_order_scan')
 
+    rows = []
+    for order in orders:
+        matched = (
+            order.sku
+            if order.status == MarketplaceOrder.STATUS_DISPATCHED
+            else find_product_for_seller_sku(order.platform, order.seller_sku)
+        )
+        rows.append({'order': order, 'matched': matched})
+
     return render(request, 'sku_manager/pdf_order_batch.html', {
         'active_page': 'pdf_order_scan',
-        'orders': orders,
+        'rows': rows,
         'products': JewelrySKU.objects.filter(is_listed=True).order_by('name', 'sku'),
-        'orders_found': len(orders),
+        'pending_count': sum(
+            order.status == MarketplaceOrder.STATUS_PENDING for order in orders
+        ),
+        'ids': ','.join(str(order.pk) for order in orders),
         'skipped_pages': request.GET.get('skipped', ''),
     })
 
