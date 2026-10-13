@@ -1088,6 +1088,7 @@ def pdf_order_batch(request):
     return render(request, 'sku_manager/pdf_order_batch.html', {
         'active_page': 'pdf_order_scan',
         'orders': orders,
+        'products': JewelrySKU.objects.filter(is_listed=True).order_by('name', 'sku'),
         'orders_found': len(orders),
         'skipped_pages': request.GET.get('skipped', ''),
     })

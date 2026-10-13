@@ -2,7 +2,7 @@ import re
 
 
 MAX_LABEL_PDF_BYTES = 10 * 1024 * 1024
-MAX_LABEL_PDF_PAGES = 100
+MAX_LABEL_PDF_PAGES = 60
 AMAZON_ORDER_ID = re.compile(r'\b\d{3}-\d{7}-\d{7}\b')
 
 
