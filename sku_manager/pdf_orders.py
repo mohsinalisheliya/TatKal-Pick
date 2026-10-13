@@ -1,167 +1,302 @@
+# sku_manager/pdf_orders.py
+"""Read marketplace shipping-label PDFs (Meesho + Amazon) into order dicts.
+
+One PDF can hold many orders (one label per page, or several per page), so the
+public entry point is ``extract_labels`` which returns a *list* of dicts:
+
+    {
+        'platform': 'Meesho' | 'Amazon',
+        'order_id': str,
+        'seller_sku': str,
+        'quantity': int,
+        'customer_name': str,
+        'shipping_address': str,
+    }
+
+``extract_meesho_label`` / ``parse_meesho_label_text`` are kept for backwards
+compatibility (single order, no 'platform' key).
+"""
 import re
 
-
-MAX_LABEL_PDF_BYTES = 10 * 1024 * 1024
-MAX_LABEL_PDF_PAGES = 60
-AMAZON_ORDER_ID = re.compile(r'\b\d{3}-\d{7}-\d{7}\b')
+MAX_PDF_BYTES = 10 * 1024 * 1024
+MAX_PDF_PAGES = 60
 
 
-class LabelParseError(ValueError):
-    pass
+class LabelParseError(Exception):
+    """The PDF could not be read as a supported marketplace label."""
+
+
+# --------------------------------------------------------------------------
+# helpers
+# --------------------------------------------------------------------------
+def _lines(text):
+    return [re.sub(r'\s+', ' ', line).strip() for line in text.splitlines() if line.strip()]
+
+
+def _clean_address_line(line):
+    return line.strip().strip(',').strip()
+
+
+# --------------------------------------------------------------------------
+# Meesho
+# --------------------------------------------------------------------------
+_MEESHO_ORDER_RE = re.compile(r'(\d{10,}(?:_\d+)?)\s*$')
 
 
 def parse_meesho_label_text(text):
-    customer_match = re.search(
-        r'Customer Address\s*(.*?)\s*If undelivered, return to:',
-        text,
-        flags=re.IGNORECASE | re.DOTALL,
+    if 'Customer Address' not in text or 'Order No' not in text:
+        raise LabelParseError('This does not look like a Meesho shipping label.')
+
+    lines = _lines(text)
+    try:
+        start = next(i for i, line in enumerate(lines) if line.startswith('Customer Address'))
+    except StopIteration:
+        raise LabelParseError('Customer address block not found on the Meesho label.')
+
+    block = lines[start + 1:]
+    if not block:
+        raise LabelParseError('Recipient name not found on the Meesho label.')
+    customer_name = block[0]
+    address_lines = []
+    for line in block[1:]:
+        if line.lower().startswith('if undelivered') or line.lower().startswith('product details'):
+            break
+        address_lines.append(_clean_address_line(line))
+    shipping_address = ', '.join(part for part in address_lines if part)
+
+    header_idx = next(
+        (i for i, line in enumerate(lines) if line.startswith('SKU') and 'Order No' in line),
+        None,
     )
-    if not customer_match:
-        raise LabelParseError('Could not find the recipient details on this Meesho label.')
+    if header_idx is None:
+        raise LabelParseError('Product table (SKU / Qty / Order No.) not found on the Meesho label.')
 
-    customer_lines = [line.strip() for line in customer_match.group(1).splitlines() if line.strip()]
-    if len(customer_lines) < 2:
-        raise LabelParseError('The label does not contain a recipient name and address.')
+    row = ''
+    match = None
+    for extra in range(1, 4):  # long SKUs can wrap onto the next line
+        row = ' '.join(lines[header_idx + 1:header_idx + 1 + extra])
+        match = _MEESHO_ORDER_RE.search(row)
+        if match:
+            break
+    if not match:
+        raise LabelParseError('Order number not found on the Meesho label.')
 
-    details_match = re.search(
-        r'Product Details\s+SKU\s+Size\s+Qty\s+Color\s+Order No\.(.*?)TAX INVOICE',
-        text,
-        flags=re.IGNORECASE | re.DOTALL,
-    )
-    if not details_match:
-        raise LabelParseError('Could not find the product and order details on this Meesho label.')
-
-    product_text = ' '.join(details_match.group(1).split())
-    row_match = re.search(
-        r'(?P<seller_sku>.+?)\s+'
-        r'(?P<size>Free\s+Size|One\s+Size|[A-Za-z0-9]+(?:\s*[x×]\s*[A-Za-z0-9]+)?)\s+'
-        r'(?P<quantity>\d{1,5})\s+'
-        r'(?P<color>.+?)\s+'
-        r'(?P<order_id>\d{8,}(?:_\d+)?)$',
-        product_text,
-        flags=re.IGNORECASE,
-    )
-    if not row_match:
-        raise LabelParseError('Could not read the item SKU, quantity, and sub-order ID from this label.')
-
-    seller_sku = row_match.group('seller_sku').strip()
-    quantity = int(row_match.group('quantity'))
-    if not seller_sku or quantity < 1:
-        raise LabelParseError('The label contains an invalid item SKU or quantity.')
+    order_id = match.group(1)
+    tokens = row[:match.start()].split()
+    if len(tokens) < 2:
+        raise LabelParseError('SKU or quantity not found on the Meesho label.')
+    seller_sku = tokens[0]
+    middle = tokens[1:]
+    qty_index = max((i for i, token in enumerate(middle) if token.isdigit()), default=None)
+    if qty_index is None:
+        raise LabelParseError('Quantity not found on the Meesho label.')
+    quantity = int(middle[qty_index])
+    if quantity < 1:
+        raise LabelParseError('Quantity on the Meesho label must be at least 1.')
 
     return {
         'seller_sku': seller_sku,
-        'order_id': row_match.group('order_id'),
+        'order_id': order_id,
         'quantity': quantity,
-        'customer_name': customer_lines[0],
-        'shipping_address': ', '.join(customer_lines[1:]),
+        'customer_name': customer_name,
+        'shipping_address': shipping_address,
     }
+
+
+def _meesho_labels_from_page(text):
+    """A page may hold one label or several; split on the address heading."""
+    found = []
+    for block in re.split(r'(?=Customer Address)', text):
+        if 'Customer Address' not in block:
+            continue
+        try:
+            found.append(parse_meesho_label_text(block))
+        except LabelParseError:
+            continue  # e.g. an invoice section that repeats the heading
+    return found
+
+
+# --------------------------------------------------------------------------
+# Amazon
+# --------------------------------------------------------------------------
+_AMAZON_ORDER_RE = re.compile(r'\b(\d{3}-\d{7}-\d{7})\b')
+_AMAZON_ADDRESS_HEAD = re.compile(
+    r'^(?:ship(?:ping)?\s*to|deliver(?:y)?\s*to|shipping\s*address|delivery\s*address)\s*:?\s*(.*)$',
+    re.IGNORECASE,
+)
+_AMAZON_STOP = re.compile(
+    r'^(?:order\s*id|order\s*date|invoice|phone|mobile|tel|sold\s*by|seller|product|qty|quantity|'
+    r'item|asin|sku|bill(?:ing)?\s*to|payment|cod|prepaid|if\s+undelivered|return\s+address|state/ut|place\s+of)\b',
+    re.IGNORECASE,
+)
+_PIN_RE = re.compile(r'\b\d{6}\b')
+
+
+def _amazon_recipient(lines):
+    for idx, line in enumerate(lines):
+        match = _AMAZON_ADDRESS_HEAD.match(line)
+        if not match:
+            continue
+        rest = match.group(1).strip()
+        block = ([rest] if rest else []) + lines[idx + 1:idx + 10]
+        collected = []
+        for entry in block:
+            if collected and _AMAZON_STOP.match(entry):
+                break
+            if not collected and _AMAZON_STOP.match(entry):
+                continue
+            collected.append(entry)
+            if _PIN_RE.search(entry) and len(collected) > 1:
+                break
+        if len(collected) >= 2:
+            return collected[0], ', '.join(_clean_address_line(part) for part in collected[1:] if part)
+    return '', ''
 
 
 def parse_amazon_label_text(text):
-    order_match = AMAZON_ORDER_ID.search(text)
-    sku_match = re.search(r'\bSKU\s*:\s*([^|\s]+)', text, flags=re.IGNORECASE)
-    quantity_match = re.search(r'\bQuantity\s*:?\s*(\d{1,5})\b', text, flags=re.IGNORECASE)
-    ship_to_match = re.search(
-        r'Ship\s+To\s*:\s*(.*?)(?=\bOrder\s+ID\s*:|$)',
-        text,
-        flags=re.IGNORECASE | re.DOTALL,
+    order_match = (
+        re.search(r'Order\s*(?:Number|ID)\s*:?\s*(\d{3}-\d{7}-\d{7})', text, re.IGNORECASE)
+        or _AMAZON_ORDER_RE.search(text)
     )
-    if not order_match or not sku_match or not quantity_match:
-        raise LabelParseError('Could not read the Amazon order ID, seller SKU, and quantity.')
+    if not order_match or ('amazon' not in text.lower() and 'order id' not in text.lower()):
+        raise LabelParseError('This does not look like an Amazon shipping label or packing slip.')
 
-    recipient_lines = (
-        [line.strip() for line in ship_to_match.group(1).splitlines() if line.strip()]
-        if ship_to_match
-        else []
+    lines = _lines(text)
+    name, address = _amazon_recipient(lines)
+
+    # Invoice layout: "... | B0HHYW3PM4 ( MY-SELLER-SKU / 110 )"; packing slip: "SKU: MY-SKU"
+    sku_match = re.search(r'\bB0[A-Z0-9]{8}\s*\(\s*([^()]+?)\s*\)', text)
+    if sku_match:
+        seller_sku = re.sub(r'\s+', ' ', sku_match.group(1)).strip()
+    else:
+        plain = re.search(r'\bSKU\s*[:#]\s*([A-Za-z0-9][A-Za-z0-9._\-/]*)', text, re.IGNORECASE)
+        seller_sku = plain.group(1) if plain else ''
+
+    qty_match = (
+        re.search(r'-?\u20b9[\d,.]+\s+-?\u20b9[\d,.]+\s+(\d+)\s+\u20b9', text)  # unit price, discount, QTY, net
+        or re.search(r'\bQuantity\s*[:\-]?\s*(\d+)', text, re.IGNORECASE)
+        or re.search(r'\bQty\s*[:\-]?\s*(\d+)', text, re.IGNORECASE)
     )
-    if not recipient_lines:
-        raise LabelParseError('Could not find the recipient details on this Amazon label.')
+    quantity = int(qty_match.group(1)) if qty_match else 1
+
+    # Invoices repeat the recipient name as the first two lines; drop the duplicate.
+    if address.startswith(name + ', '):
+        address = address[len(name) + 2:]
 
     return {
-        'platform': 'Amazon',
-        'seller_sku': sku_match.group(1).strip(),
-        'order_id': order_match.group(0),
-        'quantity': int(quantity_match.group(1)),
-        'customer_name': recipient_lines[0],
-        'shipping_address': ', '.join(recipient_lines[1:]),
+        'seller_sku': seller_sku,
+        'order_id': order_match.group(1),
+        'quantity': max(1, quantity),
+        'customer_name': name,
+        'shipping_address': address,
     }
 
 
-def _read_pdf_pages(uploaded_file):
+def _merge_amazon_pages(parsed_pages):
+    """An Amazon order often spans label + packing-slip pages; merge by order id."""
+    merged = {}
+    for item in parsed_pages:
+        current = merged.setdefault(item['order_id'], dict(item))
+        for key, value in item.items():
+            if value and not current.get(key):
+                current[key] = value
+        if item['seller_sku'] and item['quantity'] > current['quantity'] and item['seller_sku'] == current['seller_sku']:
+            current['quantity'] = item['quantity']
+    return list(merged.values())
+
+
+# --------------------------------------------------------------------------
+# PDF reading
+# --------------------------------------------------------------------------
+def _read_pages(uploaded_file):
     try:
         from pypdf import PdfReader
         from pypdf.errors import PdfReadError
-    except ImportError as error:
+    except ImportError:
         raise LabelParseError(
-            'PDF scanning needs pypdf. Install the project dependencies with '
-            '"python -m pip install -r requirements.txt" using the same Python '
-            'environment that runs Django.'
-        ) from error
+            'PDF scanning needs the "pypdf" package. Install it with "pip install pypdf" '
+            'in the same Python environment that runs Django, then restart the server.'
+        )
 
-    uploaded_file.seek(0, 2)
-    file_size = getattr(uploaded_file, 'size', uploaded_file.tell())
-    uploaded_file.seek(0)
-    if file_size > MAX_LABEL_PDF_BYTES:
-        raise LabelParseError('PDF must be 10 MB or smaller.')
+    size = getattr(uploaded_file, 'size', None)
+    if size is not None and size > MAX_PDF_BYTES:
+        raise LabelParseError('This PDF is larger than 10 MB. Split it and upload again.')
 
-    if uploaded_file.read(5) != b'%PDF-':
-        raise LabelParseError('Upload a valid PDF shipping label.')
-    uploaded_file.seek(0)
-
+    if hasattr(uploaded_file, 'seek'):
+        uploaded_file.seek(0)
     try:
-        reader = PdfReader(uploaded_file, strict=True)
+        reader = PdfReader(uploaded_file)
         if reader.is_encrypted:
-            raise LabelParseError('Password-protected PDFs are not supported.')
-        if not reader.pages or len(reader.pages) > MAX_LABEL_PDF_PAGES:
-            raise LabelParseError(
-                f'PDF must contain between 1 and {MAX_LABEL_PDF_PAGES} pages.'
-            )
-        return [page.extract_text() or '' for page in reader.pages]
-    except PdfReadError as error:
-        raise LabelParseError('The uploaded file could not be read as a PDF.') from error
+            raise LabelParseError('This PDF is password-protected and cannot be read.')
+        if len(reader.pages) > MAX_PDF_PAGES:
+            raise LabelParseError(f'This PDF has more than {MAX_PDF_PAGES} pages. Split it and upload again.')
+        return [(page.extract_text() or '') for page in reader.pages]
+    except LabelParseError:
+        raise
+    except (PdfReadError, ValueError, OSError, KeyError):
+        raise LabelParseError('This file could not be read as a PDF.')
+
+
+def detect_platform(text):
+    if 'Customer Address' in text and 'Order No' in text:
+        return 'Meesho'
+    if _AMAZON_ORDER_RE.search(text) and ('amazon' in text.lower() or 'order id' in text.lower()):
+        return 'Amazon'
+    return None
 
 
 def extract_labels(uploaded_file):
-    pages = _read_pdf_pages(uploaded_file)
-    labels = {}
-    skipped_pages = set()
-    amazon_pages = {}
+    """Return (labels, skipped_pages). Raises LabelParseError if nothing readable."""
+    page_texts = _read_pages(uploaded_file)
 
-    for page_number, text in enumerate(pages, start=1):
+    labels = []
+    amazon_pages = []
+    skipped = []
+    seen = set()
+
+    for number, text in enumerate(page_texts, start=1):
+        platform = detect_platform(text)
         if not text.strip():
-            skipped_pages.add(page_number)
-            continue
-        try:
-            parsed = parse_meesho_label_text(text)
-            parsed['platform'] = 'Meesho'
-            labels[(parsed['platform'], parsed['order_id'])] = parsed
-            continue
-        except LabelParseError:
-            pass
-
-        order_match = AMAZON_ORDER_ID.search(text)
-        if order_match:
-            amazon_pages.setdefault(order_match.group(0), []).append((page_number, text))
+            continue  # image-only page (e.g. Amazon's shipping label); the invoice page has the data
+        if platform == 'Meesho':
+            parsed = _meesho_labels_from_page(text)
+            if not parsed:
+                skipped.append(number)
+            for item in parsed:
+                key = ('Meesho', item['order_id'])
+                if key not in seen:
+                    seen.add(key)
+                    labels.append({'platform': 'Meesho', **item})
+        elif platform == 'Amazon':
+            try:
+                amazon_pages.append(parse_amazon_label_text(text))
+            except LabelParseError:
+                skipped.append(number)
         else:
-            skipped_pages.add(page_number)
+            skipped.append(number)
 
-    for order_id, order_pages in amazon_pages.items():
-        combined_text = '\n'.join(text for _, text in order_pages)
-        try:
-            parsed = parse_amazon_label_text(combined_text)
-        except LabelParseError:
-            skipped_pages.update(page_number for page_number, _ in order_pages)
-            continue
-        labels[(parsed['platform'], parsed['order_id'])] = parsed
+    for item in _merge_amazon_pages(amazon_pages):
+        key = ('Amazon', item['order_id'])
+        if key not in seen:
+            seen.add(key)
+            labels.append({'platform': 'Amazon', **item})
 
     if not labels:
-        raise LabelParseError('No supported Meesho or Amazon orders were found in this PDF.')
-    return list(labels.values()), sorted(skipped_pages)
+        if not any(text.strip() for text in page_texts):
+            raise LabelParseError(
+                'No text found in this PDF. Image-only or scanned PDFs are not supported yet - '
+                'download the label PDF directly from the marketplace panel.'
+            )
+        raise LabelParseError('No Meesho or Amazon orders were found in this PDF.')
+    return labels, skipped
 
 
+# --------------------------------------------------------------------------
+# backwards compatible single-label helper
+# --------------------------------------------------------------------------
 def extract_meesho_label(uploaded_file):
-    labels, skipped_pages = extract_labels(uploaded_file)
-    if skipped_pages or len(labels) != 1 or labels[0]['platform'] != 'Meesho':
-        raise LabelParseError('Upload a PDF containing exactly one readable Meesho order.')
-    return labels[0]
+    labels, _ = extract_labels(uploaded_file)
+    first = next((item for item in labels if item['platform'] == 'Meesho'), None)
+    if first is None:
+        raise LabelParseError('No Meesho order was found in this PDF.')
+    return {key: value for key, value in first.items() if key != 'platform'}
