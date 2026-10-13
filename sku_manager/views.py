@@ -13,7 +13,7 @@ from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, JsonResponse
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -27,6 +27,7 @@ from .models import (
     AppSettings,
     DispatchLog,
     JewelrySKU,
+    MarketplaceLabelScan,
     MarketplaceListingSKU,
     MarketplaceOrder,
     Platform,
@@ -960,6 +961,11 @@ def pdf_order_scan(request):
             )
             orders.append(order)
 
+        uploaded_file.seek(0)
+        scan = MarketplaceLabelScan()
+        scan.pdf_file.save(uploaded_file.name, uploaded_file, save=True)
+        scan.orders.set(orders)
+
         if skipped_pages:
             messages.warning(
                 request,
@@ -969,7 +975,7 @@ def pdf_order_scan(request):
             return redirect('pdf_order_review', pk=orders[0].pk)
         batch_url = reverse('pdf_order_batch')
         order_ids = ','.join(str(order.pk) for order in orders)
-        query = f'{batch_url}?ids={order_ids}'
+        query = f'{batch_url}?ids={order_ids}&scan_id={scan.pk}'
         if skipped_pages:
             query += '&skipped=' + ','.join(map(str, skipped_pages))
         return redirect(query)
@@ -1162,6 +1168,14 @@ def pdf_order_batch(request):
         messages.error(request, 'No scanned orders were selected for review.')
         return redirect('pdf_order_scan')
 
+    raw_scan_id = request.POST.get('scan_id', '') if request.method == 'POST' else request.GET.get('scan_id', '')
+    scan = None
+    if raw_scan_id.isdigit():
+        scan = MarketplaceLabelScan.objects.filter(
+            pk=raw_scan_id,
+            orders__pk__in=order_ids,
+        ).distinct().first()
+
     if request.method == 'POST':
         dispatched_count = 0
         failed_count = 0
@@ -1200,7 +1214,10 @@ def pdf_order_batch(request):
         if not dispatched_count and not failed_count:
             messages.info(request, 'No orders were selected for dispatch.')
         query_ids = ','.join(str(order_id) for order_id in order_ids)
-        return redirect(f"{reverse('pdf_order_batch')}?ids={query_ids}")
+        query = f"{reverse('pdf_order_batch')}?ids={query_ids}"
+        if scan:
+            query += f'&scan_id={scan.pk}'
+        return redirect(query)
 
     orders = list(
         MarketplaceOrder.objects.filter(pk__in=order_ids).select_related('platform', 'sku')
@@ -1229,7 +1246,20 @@ def pdf_order_batch(request):
         ),
         'ids': ','.join(str(order.pk) for order in orders),
         'skipped_pages': request.GET.get('skipped', ''),
+        'pdf_url': reverse('pdf_order_scan_file', args=[scan.pk]) if scan else '',
+        'scan_id': scan.pk if scan else '',
     })
+
+
+@login_required(login_url='login')
+def pdf_order_scan_file(request, pk):
+    scan = get_object_or_404(MarketplaceLabelScan, pk=pk)
+    return FileResponse(
+        scan.pdf_file.open('rb'),
+        as_attachment=False,
+        filename=scan.pdf_file.name.rsplit('/', 1)[-1],
+        content_type='application/pdf',
+    )
 
 
 @login_required(login_url='login')
@@ -1267,6 +1297,7 @@ def pdf_order_review(request, pk):
         MarketplaceOrder.objects.select_related('platform', 'sku'),
         pk=pk,
     )
+    scan = order.label_scans.first()
     products = JewelrySKU.objects.filter(is_listed=True).order_by('name', 'sku')
     if order.status == MarketplaceOrder.STATUS_PENDING:
         matched_product = find_product_for_seller_sku(order.platform, order.seller_sku)
@@ -1276,6 +1307,7 @@ def pdf_order_review(request, pk):
         'order': order,
         'products': products,
         'matched_product': matched_product,
+        'pdf_url': reverse('pdf_order_scan_file', args=[scan.pk]) if scan else '',
         'active_page': 'pdf_order_scan',
     })
 
