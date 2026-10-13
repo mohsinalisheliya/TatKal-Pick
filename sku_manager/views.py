@@ -921,7 +921,10 @@ def pdf_order_scan(request):
             return redirect('pdf_order_review', pk=orders[0].pk)
         batch_url = reverse('pdf_order_batch')
         order_ids = ','.join(str(order.pk) for order in orders)
-        return redirect(f'{batch_url}?ids={order_ids}')
+        query = f'{batch_url}?ids={order_ids}'
+        if skipped_pages:
+            query += '&skipped=' + ','.join(map(str, skipped_pages))
+        return redirect(query)
 
     return render(request, 'sku_manager/pdf_order_scan.html', {
         'active_page': 'pdf_order_scan',

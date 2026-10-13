@@ -48,5 +48,6 @@ urlpatterns = [
     path('dispatch/<str:sku>/', views.scan_dispatch, name='scan_dispatch'),
     path('dispatch-logs/', views.dispatch_logs, name='dispatch_logs'),
     path('orders/scan-pdf/', views.pdf_order_scan, name='pdf_order_scan'),
+    path('orders/batch/', views.pdf_order_batch, name='pdf_order_batch'),
     path('orders/<int:pk>/review/', views.pdf_order_review, name='pdf_order_review'),
 ]
