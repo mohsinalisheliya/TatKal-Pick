@@ -697,6 +697,14 @@ SKU: {sku}-{number} | ASIN: B0ABC""",
 			'Flat 1, Some Road, Surat, GUJARAT 395001',
 		)
 
+	def test_amazon_parser_keeps_the_complete_order_id(self):
+		order_id = '407-9008698-2666731'
+		parsed = parse_amazon_label_text(
+			f'Amazon.in Packing Slip\nOrder ID: {order_id}\nSKU: AMZ-1'
+		)
+
+		self.assertEqual(parsed['order_id'], order_id)
+
 	def test_amazon_parser_rejects_unrelated_text_and_extract_rejects_no_orders(self):
 		with self.assertRaises(LabelParseError):
 			parse_amazon_label_text('Unrelated PDF text')
@@ -765,6 +773,45 @@ class MultiOrderViewTests(TestCase):
 		self.assertEqual(page.context['pending_count'], 4)
 		self.item1.refresh_from_db()
 		self.assertEqual(self.item1.stock, 5)
+
+	def test_amazon_order_id_is_preserved_in_database_history_and_dispatch_log(self):
+		order_id = '407-9008698-2666731'
+		response = self.upload_orders([
+			{
+				'platform': 'Amazon',
+				'order_id': order_id,
+				'seller_sku': 'AMZ-1',
+				'quantity': 1,
+				'customer_name': 'Amazon Buyer',
+				'shipping_address': 'Amazon Street',
+			},
+			self.meesho_order(1),
+		])
+
+		self.assertTrue(response.url.startswith(reverse('pdf_order_batch')))
+		order = MarketplaceOrder.objects.get(platform=self.amazon, order_id=order_id)
+		self.assertEqual(order.order_id, order_id)
+		self.assertContains(self.client.get(response.url), order_id)
+		self.assertContains(self.client.get(reverse('pdf_order_history')), order_id)
+		self.assertContains(
+			self.client.get(reverse('pdf_order_review', args=[order.pk])),
+			order_id,
+		)
+
+		dispatch_response = self.client.post(
+			reverse('pdf_order_review', args=[order.pk]),
+			{
+				'sku_id': self.item1.pk,
+				'customer_name': 'Amazon Buyer',
+				'shipping_address': 'Amazon Street',
+			},
+			follow=True,
+		)
+
+		order.refresh_from_db()
+		self.assertEqual(order.order_id, order_id)
+		self.assertContains(dispatch_response, order_id)
+		self.assertContains(self.client.get(reverse('dispatch_logs')), order_id)
 
 	def test_batch_review_hides_checkbox_for_dispatched_orders(self):
 		order = MarketplaceOrder.objects.create(
