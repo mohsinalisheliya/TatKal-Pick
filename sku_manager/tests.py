@@ -450,6 +450,23 @@ TAX INVOICE Original For Recipient"""
 			'shipping_address': '10 Sample Street, Sample City, State, 123456',
 		})
 
+	def test_parser_preserves_spaces_inside_meesho_seller_sku(self):
+		text = """Customer Address
+Sample Recipient
+10 Sample Street
+Sample City, State, 123456
+If undelivered, return to:
+SELLER
+Product Details
+SKU Size Qty Color Order No.
+VEL -HEART-002 Free Size 1 Gold 341168064498091392_1
+TAX INVOICE Original For Recipient"""
+
+		result = parse_meesho_label_text(text)
+
+		self.assertEqual(result['seller_sku'], 'VEL -HEART-002')
+		self.assertEqual(result['quantity'], 1)
+
 	def test_parser_rejects_labels_without_meesho_order_fields(self):
 		with self.assertRaises(LabelParseError):
 			parse_meesho_label_text('Unrelated PDF text')
@@ -470,6 +487,20 @@ TAX INVOICE Original For Recipient"""
 		self.assertEqual(self.older_batch.quantity, 2)
 		self.assertEqual(self.newer_batch.quantity, 3)
 		self.assertContains(self.client.get(response.url), 'Review before dispatch')
+
+	def test_spaced_meesho_seller_sku_matches_listing_without_spaces(self):
+		MarketplaceListingSKU.objects.create(
+			sku=self.item,
+			platform=self.platform,
+			listing_sku='VEL-HEART-002',
+		)
+		self.parsed_label['seller_sku'] = 'VEL -HEART-002'
+
+		self.upload_label()
+
+		order = MarketplaceOrder.objects.get(order_id=self.parsed_label['order_id'])
+		self.assertEqual(order.seller_sku, 'VEL -HEART-002')
+		self.assertEqual(order.sku, self.item)
 
 	def test_scan_page_links_to_separate_order_history(self):
 		response = self.client.get(self.upload_url)
