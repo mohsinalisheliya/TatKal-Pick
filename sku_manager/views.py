@@ -150,9 +150,11 @@ def product_master(request, pk=None):
         size = request.POST.get('size', '').strip().upper()
         number = request.POST.get('number', '').strip()
 
-        if category not in {code for code, _ in JEWELRY_CATEGORIES} and not (
-            product and category == product.category
-        ):
+        is_existing_legacy_category = (
+            product is not None
+            and category.casefold() == product.category.casefold()
+        )
+        if category not in {code for code, _ in JEWELRY_CATEGORIES} and not is_existing_legacy_category:
             form_errors.append('Choose a valid jewelry category.')
 
         if not name:
@@ -167,7 +169,11 @@ def product_master(request, pk=None):
             else:
                 candidate = JewelrySKU()
 
-            candidate.category = category or (product.category if product else 'GEN')
+            candidate.category = (
+                product.category
+                if is_existing_legacy_category
+                else category or (product.category if product else 'GEN')
+            )
             candidate.style = style or (product.style if product else 'STD')
             candidate.name = name
             candidate.design_model = design_model
