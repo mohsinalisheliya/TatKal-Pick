@@ -226,6 +226,19 @@ class MarketplaceOrder(models.Model):
     def __str__(self):
         return f"{self.platform_name} order {self.order_id}"
 
+
+class MarketplaceLabelScan(models.Model):
+    pdf_file = models.FileField(upload_to='marketplace_labels/%Y/%m/%d/')
+    orders = models.ManyToManyField(MarketplaceOrder, related_name='label_scans')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Marketplace label scan {self.pk}"
+
+
 class DispatchLog(models.Model):
     sku = models.ForeignKey(JewelrySKU, on_delete=models.CASCADE, related_name='dispatch_logs')
     platform = models.ForeignKey(Platform, on_delete=models.SET_NULL, null=True, blank=True)
