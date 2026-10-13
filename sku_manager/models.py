@@ -245,6 +245,9 @@ class AppSettings(models.Model):
     currency_symbol = models.CharField(max_length=10, default='₹')
     low_stock_threshold = models.PositiveIntegerField(default=5)
     support_contact = models.CharField(max_length=100, blank=True, default='')
+    meesho_store_url = models.URLField(max_length=500, blank=True, default='')
+    amazon_store_url = models.URLField(max_length=500, blank=True, default='')
+    flipkart_store_url = models.URLField(max_length=500, blank=True, default='')
     updated_at = models.DateTimeField(auto_now=True)
 
     @classmethod

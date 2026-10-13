@@ -10,6 +10,8 @@ from decimal import Decimal
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from django.core.paginator import Paginator
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
@@ -855,6 +857,20 @@ def sku_print_label(request, pk):
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    store_qr_base64 = ''
+    if settings_obj.meesho_store_url:
+        store_qr = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=4,
+            border=1,
+        )
+        store_qr.add_data(settings_obj.meesho_store_url)
+        store_qr.make(fit=True)
+        store_img = store_qr.make_image(fill_color="black", back_color="white")
+        store_buffer = io.BytesIO()
+        store_img.save(store_buffer, format="PNG")
+        store_qr_base64 = base64.b64encode(store_buffer.getvalue()).decode('utf-8')
 
     return render(request, 'sku_manager/label_print.html', {
         'item': item,
@@ -863,6 +879,7 @@ def sku_print_label(request, pk):
         'copies': copies,
         'rows': rows,
         'qr_base64': qr_base64,
+        'store_qr_base64': store_qr_base64,
         'qr_payload': item.sku,
         'qr_mm': 19,
         'label_logo_url': settings_obj.label_logo.url if settings_obj.label_logo else '',
@@ -1288,6 +1305,31 @@ def app_settings_view(request):
         threshold = request.POST.get('low_stock_threshold', '5').strip()
         settings_obj.low_stock_threshold = int(threshold) if threshold.isdigit() else 5
         settings_obj.support_contact = request.POST.get('support_contact', '').strip()
+        store_urls = {
+            'meesho_store_url': request.POST.get('meesho_store_url', '').strip(),
+            'amazon_store_url': request.POST.get('amazon_store_url', '').strip(),
+            'flipkart_store_url': request.POST.get('flipkart_store_url', '').strip(),
+        }
+        validate_url = URLValidator(schemes=['http', 'https'])
+        invalid_urls = []
+        for field, value in store_urls.items():
+            if value:
+                try:
+                    validate_url(value)
+                except ValidationError:
+                    invalid_urls.append(field.replace('_', ' ').replace(' store url', '').title())
+            setattr(settings_obj, field, value)
+
+        if invalid_urls:
+            messages.error(
+                request,
+                'Enter a valid http:// or https:// URL for: ' + ', '.join(invalid_urls) + '.',
+            )
+            return render(request, 'sku_manager/settings.html', {
+                'settings': settings_obj,
+                'active_page': 'settings',
+            })
+
         uploaded_logo = request.FILES.get('label_logo')
         if uploaded_logo:
             settings_obj.label_logo = uploaded_logo

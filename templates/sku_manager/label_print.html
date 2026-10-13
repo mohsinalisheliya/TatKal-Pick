@@ -69,9 +69,13 @@
   .pname { font-size: 7.4pt; font-weight: 800; line-height: 1.12; text-transform: uppercase;
            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
   .psku { font-family: "Courier New", monospace; font-size: 5.2pt; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; }
-  .pbatch { border-top: .25mm solid #000; padding-top: .5mm; overflow: hidden; }
+  .bottom-info { display: flex; justify-content: space-between; align-items: flex-end; border-top: .25mm solid #000; padding-top: .5mm; }
+  .pbatch { overflow: hidden; }
   .pbatch small { display: block; font-size: 4.4pt; font-weight: 700; letter-spacing: .05em; line-height: 1.1; }
   .pbatch b { display: block; font-size: 6.4pt; font-weight: 800; line-height: 1.15; white-space: nowrap; }
+  .store-qr-container { display: flex; flex-direction: column; align-items: center; }
+  .store-qr-container span { font-size: 3.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: .2px; margin-bottom: .5mm; }
+  .store-qr { width: 7.5mm; height: 7.5mm; image-rendering: pixelated; }
 
   /* screen preview only: show sticker outlines + gaps */
   @media screen {
@@ -142,7 +146,15 @@
                 <div class="pname">{{ item.name }}</div>
               </div>
               <div class="psku">{{ item.sku }}</div>
-              <div class="pbatch"><small>BATCH NO</small><b>{% if batch %}{{ batch.batch_no }}{% else %}—{% endif %}</b></div>
+              <div class="bottom-info">
+                <div class="pbatch"><small>BATCH NO</small><b>{% if batch %}{{ batch.batch_no }}{% else %}—{% endif %}</b></div>
+                {% if store_qr_base64 %}
+                  <div class="store-qr-container">
+                    <span>Visit Meesho Store</span>
+                    <img class="store-qr" src="data:image/png;base64,{{ store_qr_base64 }}" alt="Meesho Store QR">
+                  </div>
+                {% endif %}
+              </div>
             </div>
           </div>
         {% endfor %}
