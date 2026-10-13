@@ -490,6 +490,7 @@ TAX INVOICE Original For Recipient"""
 				self.assertEqual(self.older_batch.quantity, 2)
 				self.assertEqual(self.newer_batch.quantity, 3)
 				self.assertContains(self.client.get(response.url), 'Review before dispatch')
+				self.assertContains(self.client.get(response.url), 'Print PDF')
 
 				scan = MarketplaceLabelScan.objects.get()
 				self.assertEqual(list(scan.orders.all()), [order])
@@ -499,6 +500,11 @@ TAX INVOICE Original For Recipient"""
 				self.assertEqual(pdf_response['Content-Type'], 'application/pdf')
 				self.assertIn('inline', pdf_response['Content-Disposition'])
 				self.assertEqual(b''.join(pdf_response.streaming_content), b'%PDF-test')
+				self.client.logout()
+				self.assertEqual(
+					self.client.get(reverse('pdf_order_scan_file', args=[scan.pk])).status_code,
+					302,
+				)
 
 	def test_batch_review_previews_and_prints_the_uploaded_pdf(self):
 		second_label = {
