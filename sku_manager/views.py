@@ -996,7 +996,7 @@ def pdf_order_export(request):
 
     def safe_text(value):
         text = str(value or '')
-        return f"'{text}" if text.startswith(('=', '+', '-', '@')) else text
+        return f"'{text}" if text.lstrip().startswith(('=', '+', '-', '@')) else text
 
     for order in orders:
         sheet.append([
