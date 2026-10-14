@@ -267,6 +267,57 @@ class OrderCancellationTests(TestCase):
 		self.assertContains(response, 'was cancelled and cannot be dispatched')
 
 
+class CatalogGeneratorTests(TestCase):
+	def setUp(self):
+		user = get_user_model().objects.create_user(username='catalog-user', password='test-password')
+		self.client.force_login(user)
+		self.url = reverse('catalog_generator')
+
+	def test_catalog_lists_only_listed_products_and_filters_by_category(self):
+		ring = JewelrySKU.objects.create(
+			name='Catalog Ring',
+			category='RNG',
+			purchase_price='10.00',
+			wholesale_price='15.00',
+			selling_price='20.00',
+		)
+		JewelrySKU.objects.create(name='Catalog Bangle', category='BGL')
+		JewelrySKU.objects.create(name='Unlisted Ring', category='RNG', is_listed=False)
+		AppSettings.objects.create(id=1, brand_name='Catalog Brand', currency_symbol='$')
+
+		response = self.client.get(self.url, {'category': 'RNG'})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertTemplateUsed(response, 'sku_manager/catalog.html')
+		self.assertEqual(list(response.context['products']), [ring])
+		self.assertEqual(response.context['brand_name'], 'Catalog Brand')
+		self.assertEqual(response.context['currency'], '$')
+		self.assertContains(response, '$15.00')
+		self.assertContains(response, 'Catalog Ring')
+		self.assertNotContains(response, 'Catalog Bangle')
+		self.assertNotContains(response, 'Unlisted Ring')
+
+	def test_stock_action_saves_wholesale_price_to_batch_and_product(self):
+		item = JewelrySKU.objects.create(name='Wholesale Price Product')
+
+		response = self.client.post(reverse('stock_action', args=[item.pk]), {
+			'batch_no': 'WHOLESALE-BATCH',
+			'stock_qty': '4',
+			'purchase_price': '10.00',
+			'wholesale_price': '15.00',
+			'reselling_price': '20.00',
+		})
+
+		self.assertRedirects(response, reverse('inventory_list'))
+		batch = item.batches.get()
+		item.refresh_from_db()
+		self.assertEqual(batch.purchase_price, Decimal('10.00'))
+		self.assertEqual(batch.wholesale_price, Decimal('15.00'))
+		self.assertEqual(batch.selling_price, Decimal('20.00'))
+		self.assertEqual(item.wholesale_price, Decimal('15.00'))
+		self.assertEqual(item.selling_price, Decimal('20.00'))
+
+
 class BoxManagerColorTests(TestCase):
 	def setUp(self):
 		user = get_user_model().objects.create_user(username='box-user', password='test-password')
