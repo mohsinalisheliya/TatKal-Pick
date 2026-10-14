@@ -36,7 +36,13 @@
               <td class="px-4 py-3 font-mono text-xs">{{ order.sku.sku|default:order.seller_sku }}</td>
               <td class="px-4 py-3">{{ order.quantity }}</td>
               <td class="px-4 py-3">
-                {% if order.status == 'dispatched' %}<span class="font-bold text-emerald-600">Dispatched</span>{% else %}<span class="font-bold text-amber-600">Pending</span>{% endif %}
+                {% if order.status == 'dispatched' %}
+                  <span class="font-bold text-emerald-600">Dispatched</span>
+                {% elif order.status == 'cancelled' %}
+                  <span class="font-bold text-rose-600">Cancelled / RTO</span>
+                {% else %}
+                  <span class="font-bold text-amber-600">Pending</span>
+                {% endif %}
               </td>
               <td class="px-4 py-3"><a class="font-bold text-blue-600 hover:underline" href="{% url 'pdf_order_review' order.pk %}">Open</a></td>
             </tr>

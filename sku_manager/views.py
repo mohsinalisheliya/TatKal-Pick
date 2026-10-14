@@ -1166,8 +1166,12 @@ def dispatch_marketplace_order(order_id, sku_id, customer_name, shipping_address
             MarketplaceOrder.objects.select_for_update().select_related('platform'),
             pk=order_id,
         )
-        if order.status == MarketplaceOrder.STATUS_DISPATCHED:
-            raise MarketplaceOrderDispatchError('This order was already dispatched.')
+        if order.status != MarketplaceOrder.STATUS_PENDING:
+            if order.status == MarketplaceOrder.STATUS_DISPATCHED:
+                raise MarketplaceOrderDispatchError('This order was already dispatched.')
+            if order.status == MarketplaceOrder.STATUS_CANCELLED:
+                raise MarketplaceOrderDispatchError('This order was cancelled and cannot be dispatched.')
+            raise MarketplaceOrderDispatchError('This order cannot be dispatched in its current status.')
 
         if not str(sku_id or '').isdigit():
             raise MarketplaceOrderDispatchError('Choose a valid Tatkal Pick product.')
@@ -1247,6 +1251,149 @@ def dispatch_marketplace_order(order_id, sku_id, customer_name, shipping_address
             'dispatched_at',
         ])
     return order, item
+
+
+@login_required(login_url='login')
+def order_cancellation(request):
+    if request.method == 'POST':
+        mode = request.POST.get('mode')
+
+        if mode == 'auto':
+            order_id = request.POST.get('order_id', '').strip()
+            platform_id = request.POST.get('platform_id', '').strip()
+            if not order_id:
+                messages.error(request, 'Please enter an Order ID.')
+                return redirect('order_cancellation')
+
+            orders = MarketplaceOrder.objects.filter(order_id=order_id)
+            if platform_id:
+                if not platform_id.isdigit():
+                    messages.error(request, 'Choose a valid marketplace.')
+                    return redirect('order_cancellation')
+                orders = orders.filter(platform_id=platform_id)
+            else:
+                matches = list(orders.select_related('sku', 'platform')[:2])
+                if len(matches) > 1:
+                    messages.error(
+                        request,
+                        'This Order ID exists on multiple marketplaces. Choose the marketplace and try again.',
+                    )
+                    return redirect('order_cancellation')
+                order = matches[0] if matches else None
+
+            if platform_id:
+                order = orders.select_related('sku', 'platform').first()
+            if order is None:
+                messages.error(
+                    request,
+                    f"Order '{order_id}' not found. If it was dispatched before using this software, use Manual Restock.",
+                )
+                return redirect('order_cancellation')
+
+            with transaction.atomic():
+                order = MarketplaceOrder.objects.select_for_update().select_related('sku').get(pk=order.pk)
+                if order.status == MarketplaceOrder.STATUS_CANCELLED:
+                    messages.warning(request, f"Order '{order_id}' is already cancelled; stock was not restored again.")
+                    return redirect('order_cancellation')
+
+                if order.status == MarketplaceOrder.STATUS_PENDING:
+                    order.status = MarketplaceOrder.STATUS_CANCELLED
+                    order.save(update_fields=['status'])
+                    messages.success(request, f"Pending order '{order_id}' cancelled. No stock was deducted.")
+                    return redirect('order_cancellation')
+
+                if order.status != MarketplaceOrder.STATUS_DISPATCHED:
+                    messages.error(request, 'This order cannot be cancelled in its current status.')
+                    return redirect('order_cancellation')
+                if order.sku is None:
+                    messages.error(request, 'This dispatched order has no linked SKU. Use Manual Restock.')
+                    return redirect('order_cancellation')
+
+                sku = order.sku
+                batch_no = f'RTO-{order.order_id}'
+                StockBatch.objects.create(
+                    sku=sku,
+                    batch_no=batch_no,
+                    quantity=order.quantity,
+                    purchase_price=sku.purchase_price,
+                    selling_price=sku.selling_price,
+                    storage_box=sku.storage_box,
+                    section_name=sku.section_name,
+                    supplier_name='Customer RTO/Return',
+                    status='active',
+                )
+                order.status = MarketplaceOrder.STATUS_CANCELLED
+                order.save(update_fields=['status'])
+                sku.sync_stock_from_batches()
+
+            messages.success(
+                request,
+                f"Order '{order_id}' cancelled. {order.quantity} unit(s) of {sku.sku} restored as batch {batch_no}.",
+            )
+            return redirect('order_cancellation')
+
+        if mode == 'manual':
+            sku_id = request.POST.get('sku_id', '').strip()
+            order_id = request.POST.get('manual_order_id', '').strip()
+            quantity_raw = request.POST.get('quantity', '1').strip()
+            if not sku_id.isdigit():
+                messages.error(request, 'Choose a valid product.')
+                return redirect('order_cancellation')
+            try:
+                quantity = int(quantity_raw)
+                if quantity < 1:
+                    raise ValueError
+            except ValueError:
+                messages.error(request, 'Please enter a valid quantity.')
+                return redirect('order_cancellation')
+            if len(order_id) > 100:
+                messages.error(request, 'Order ID must be 100 characters or fewer.')
+                return redirect('order_cancellation')
+
+            sku = get_object_or_404(JewelrySKU, pk=sku_id)
+            batch_no = (
+                f'RTO-{order_id}'
+                if order_id
+                else f"RTO-MANUAL-{timezone.now():%Y%m%d%H%M%S%f}"
+            )
+            with transaction.atomic():
+                if order_id and StockBatch.objects.filter(batch_no=batch_no).exists():
+                    messages.error(request, f"A return batch for Order ID '{order_id}' already exists.")
+                    return redirect('order_cancellation')
+                StockBatch.objects.create(
+                    sku=sku,
+                    batch_no=batch_no,
+                    quantity=quantity,
+                    purchase_price=sku.purchase_price,
+                    selling_price=sku.selling_price,
+                    storage_box=sku.storage_box,
+                    section_name=sku.section_name,
+                    supplier_name='Manual Return/RTO',
+                    status='active',
+                )
+                sku.sync_stock_from_batches()
+
+            messages.success(
+                request,
+                f'Manual return processed: {quantity} unit(s) added back to {sku.sku}.',
+            )
+            return redirect('order_cancellation')
+
+        messages.error(request, 'Choose a valid return action.')
+        return redirect('order_cancellation')
+
+    products = JewelrySKU.objects.all().order_by('-created_at')
+    recent_returns = (
+        StockBatch.objects.filter(batch_no__startswith='RTO-')
+        .select_related('sku', 'storage_box')
+        .order_by('-created_at')[:15]
+    )
+    return render(request, 'sku_manager/cancellation.html', {
+        'active_page': 'cancellation',
+        'products': products,
+        'platforms': Platform.objects.order_by('name'),
+        'recent_returns': recent_returns,
+    })
 
 
 def parse_marketplace_order_ids(value):

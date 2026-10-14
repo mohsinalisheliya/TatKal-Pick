@@ -23,6 +23,12 @@
       <div><dt class="text-xs font-bold uppercase text-slate-500">Seller SKU</dt><dd class="mt-1 font-mono">{{ order.seller_sku }}</dd></div>
       <div class="sm:col-span-2"><dt class="text-xs font-bold uppercase text-slate-500">Delivery address</dt><dd class="mt-1 whitespace-pre-line">{{ order.shipping_address }}</dd></div>
     </dl>
+  {% elif order.status == 'cancelled' %}
+    <div class="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-800 dark:text-rose-300">
+      <h2 class="font-extrabold">Order cancelled / returned</h2>
+      <p class="mt-1 text-sm">This order cannot be dispatched. Any restored inventory is recorded as a separate RTO batch.</p>
+      <a class="mt-3 inline-flex font-bold underline" href="{% url 'order_cancellation' %}">View returns and cancellations</a>
+    </div>
   {% else %}
     <div class="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-200">
       Stock is unchanged. Confirming below deducts the requested quantity from the oldest sellable batch(es).

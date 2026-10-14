@@ -106,6 +106,167 @@ class SalesHoldTests(TestCase):
 		self.assertEqual(self.item.stock, 4)
 
 
+class OrderCancellationTests(TestCase):
+	def setUp(self):
+		user = get_user_model().objects.create_user(username='returns-user', password='test-password')
+		self.client.force_login(user)
+		self.item = JewelrySKU.objects.create(name='Return Test Product')
+		self.platform = Platform.objects.create(name='Return Test Marketplace')
+		self.url = reverse('order_cancellation')
+
+	def create_order(self, **fields):
+		defaults = {
+			'platform': self.platform,
+			'platform_name': self.platform.name,
+			'order_id': 'RETURN-ORDER-1',
+			'seller_sku': 'RETURN-SELLER-SKU',
+			'sku': self.item,
+			'quantity': 2,
+		}
+		defaults.update(fields)
+		return MarketplaceOrder.objects.create(**defaults)
+
+	def test_get_page_renders_forms_and_recent_returns(self):
+		response = self.client.get(self.url)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertTemplateUsed(response, 'sku_manager/cancellation.html')
+		self.assertContains(response, 'Smart Auto-Restock')
+		self.assertContains(response, 'Manual Restock')
+
+	def test_cancelling_pending_order_does_not_restore_stock(self):
+		batch = StockBatch.objects.create(sku=self.item, batch_no='AVAILABLE', quantity=4)
+		self.item.sync_stock_from_batches()
+		order = self.create_order(status=MarketplaceOrder.STATUS_PENDING)
+
+		response = self.client.post(self.url, {
+			'mode': 'auto',
+			'order_id': order.order_id,
+			'platform_id': self.platform.pk,
+		})
+
+		order.refresh_from_db()
+		self.item.refresh_from_db()
+		self.assertRedirects(response, self.url)
+		self.assertEqual(order.status, MarketplaceOrder.STATUS_CANCELLED)
+		self.assertEqual(self.item.stock, 4)
+		self.assertEqual(StockBatch.objects.filter(sku=self.item).count(), 1)
+		batch.refresh_from_db()
+		self.assertEqual(batch.quantity, 4)
+
+	def test_cancelling_dispatched_order_restores_stock_once_and_keeps_dispatch_log(self):
+		batch = StockBatch.objects.create(sku=self.item, batch_no='REMAINING', quantity=3)
+		self.item.sync_stock_from_batches()
+		dispatch = DispatchLog.objects.create(
+			sku=self.item,
+			platform=self.platform,
+			platform_name=self.platform.name,
+			quantity=2,
+			stock_after=3,
+		)
+		order = self.create_order(
+			status=MarketplaceOrder.STATUS_DISPATCHED,
+			dispatch_log=dispatch,
+		)
+
+		self.client.post(self.url, {
+			'mode': 'auto',
+			'order_id': order.order_id,
+			'platform_id': self.platform.pk,
+		})
+		self.client.post(self.url, {
+			'mode': 'auto',
+			'order_id': order.order_id,
+			'platform_id': self.platform.pk,
+		})
+
+		order.refresh_from_db()
+		self.item.refresh_from_db()
+		self.assertEqual(order.status, MarketplaceOrder.STATUS_CANCELLED)
+		self.assertEqual(order.dispatch_log, dispatch)
+		self.assertEqual(DispatchLog.objects.count(), 1)
+		self.assertEqual(self.item.stock, 5)
+		self.assertContains(self.client.get(reverse('pdf_order_history')), 'Cancelled / RTO')
+		self.assertContains(
+			self.client.get(reverse('pdf_order_review', args=[order.pk])),
+			'Order cancelled / returned',
+		)
+		self.assertEqual(
+			StockBatch.objects.filter(sku=self.item, batch_no='RTO-RETURN-ORDER-1').count(),
+			1,
+		)
+		self.assertEqual(batch.quantity, 3)
+
+	def test_duplicate_order_ids_require_marketplace_selection(self):
+		other_platform = Platform.objects.create(name='Other Return Marketplace')
+		first = self.create_order(status=MarketplaceOrder.STATUS_PENDING)
+		second = self.create_order(
+			platform=other_platform,
+			platform_name=other_platform.name,
+			status=MarketplaceOrder.STATUS_PENDING,
+		)
+
+		response = self.client.post(self.url, {'mode': 'auto', 'order_id': first.order_id}, follow=True)
+
+		first.refresh_from_db()
+		second.refresh_from_db()
+		self.assertEqual(first.status, MarketplaceOrder.STATUS_PENDING)
+		self.assertEqual(second.status, MarketplaceOrder.STATUS_PENDING)
+		self.assertContains(response, 'exists on multiple marketplaces')
+
+		self.client.post(self.url, {
+			'mode': 'auto',
+			'order_id': first.order_id,
+			'platform_id': other_platform.pk,
+		})
+		second.refresh_from_db()
+		self.assertEqual(second.status, MarketplaceOrder.STATUS_CANCELLED)
+		self.assertEqual(first.status, MarketplaceOrder.STATUS_PENDING)
+
+	def test_manual_restock_adds_batch_and_rejects_repeated_order_id(self):
+		StockBatch.objects.create(sku=self.item, batch_no='STARTING', quantity=1)
+		self.item.sync_stock_from_batches()
+		data = {
+			'mode': 'manual',
+			'sku_id': self.item.pk,
+			'manual_order_id': 'MANUAL-RETURN-1',
+			'quantity': '3',
+		}
+
+		self.client.post(self.url, data)
+		self.client.post(self.url, data)
+
+		self.item.refresh_from_db()
+		return_batch = StockBatch.objects.get(batch_no='RTO-MANUAL-RETURN-1')
+		self.assertEqual(return_batch.quantity, 3)
+		self.assertEqual(self.item.stock, 4)
+		self.assertEqual(StockBatch.objects.filter(batch_no='RTO-MANUAL-RETURN-1').count(), 1)
+
+	def test_cancelled_order_cannot_be_dispatched_again(self):
+		batch = StockBatch.objects.create(sku=self.item, batch_no='AVAILABLE', quantity=4)
+		self.item.sync_stock_from_batches()
+		order = self.create_order(status=MarketplaceOrder.STATUS_CANCELLED)
+
+		response = self.client.post(
+			reverse('pdf_order_review', args=[order.pk]),
+			{
+				'sku_id': self.item.pk,
+				'customer_name': 'Return Buyer',
+				'shipping_address': 'Return Address',
+			},
+			follow=True,
+		)
+
+		order.refresh_from_db()
+		batch.refresh_from_db()
+		self.item.refresh_from_db()
+		self.assertEqual(order.status, MarketplaceOrder.STATUS_CANCELLED)
+		self.assertEqual(batch.quantity, 4)
+		self.assertEqual(self.item.stock, 4)
+		self.assertFalse(DispatchLog.objects.exists())
+		self.assertContains(response, 'was cancelled and cannot be dispatched')
+
+
 class BoxManagerColorTests(TestCase):
 	def setUp(self):
 		user = get_user_model().objects.create_user(username='box-user', password='test-password')

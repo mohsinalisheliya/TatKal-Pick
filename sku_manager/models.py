@@ -116,7 +116,7 @@ class StockBatch(models.Model):
     ]
 
     sku = models.ForeignKey(JewelrySKU, on_delete=models.CASCADE, related_name='batches')
-    batch_no = models.CharField(max_length=50)
+    batch_no = models.CharField(max_length=120)
     quantity = models.PositiveIntegerField(default=0)
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -186,9 +186,11 @@ class MarketplaceListingSKU(models.Model):
 class MarketplaceOrder(models.Model):
     STATUS_PENDING = 'pending'
     STATUS_DISPATCHED = 'dispatched'
+    STATUS_CANCELLED = 'cancelled'
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pending review'),
         (STATUS_DISPATCHED, 'Dispatched'),
+        (STATUS_CANCELLED, 'Cancelled / RTO'),
     ]
 
     platform = models.ForeignKey(Platform, on_delete=models.PROTECT, related_name='orders')

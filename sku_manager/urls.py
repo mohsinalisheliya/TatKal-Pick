@@ -54,4 +54,5 @@ urlpatterns = [
     path('orders/scans/<int:pk>/pdf/', views.pdf_order_scan_file, name='pdf_order_scan_file'),
     path('orders/scans/<int:pk>/stamped-pdf/', views.pdf_order_stamped_file, name='pdf_order_stamped_file'),
     path('orders/<int:pk>/review/', views.pdf_order_review, name='pdf_order_review'),
+    path('cancellations/', views.order_cancellation, name='order_cancellation'),
 ]

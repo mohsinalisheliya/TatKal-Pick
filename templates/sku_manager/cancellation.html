@@ -1,0 +1,118 @@
+{% extends "sku_manager/base.html" %}
+
+{% block title %}Returns &amp; Cancellations - Tatkal Pick{% endblock %}
+
+{% block content %}
+<section class="max-w-6xl mx-auto space-y-6">
+  <header class="border-b border-slate-200 dark:border-slate-800 pb-4">
+    <div class="text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400 mb-2">Returns &amp; RTO Management</div>
+    <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white">Order Cancellations</h1>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      Cancel marketplace orders and track returned units as separate inventory batches.
+    </p>
+  </header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+    <form method="post" class="rounded-3xl border border-emerald-500/30 bg-emerald-500/5 p-6 shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="mode" value="auto">
+      <h2 class="text-lg font-black text-emerald-800 dark:text-emerald-400">Smart Auto-Restock</h2>
+      <p class="text-xs text-emerald-700 dark:text-emerald-500 mt-1 mb-5">
+        Enter an order ID to cancel it. Dispatched orders will have their units restored to inventory.
+      </p>
+      <div class="space-y-4">
+        <div>
+          <label for="order-id" class="block text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 mb-1.5">Order ID</label>
+          <input id="order-id" type="text" name="order_id" required autofocus
+            class="w-full bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white font-mono font-bold focus:outline-none focus:border-emerald-500">
+        </div>
+        <div>
+          <label for="platform-id" class="block text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 mb-1.5">Marketplace (if known)</label>
+          <select id="platform-id" name="platform_id"
+            class="w-full bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500">
+            <option value="">Search all marketplaces</option>
+            {% for platform in platforms %}
+              <option value="{{ platform.pk }}">{{ platform.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="w-full rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-black text-white hover:bg-emerald-500 shadow-md">
+          Cancel Order &amp; Restore Stock
+        </button>
+      </div>
+    </form>
+
+    <form method="post" class="rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/80 p-6 shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="mode" value="manual">
+      <h2 class="text-lg font-black text-slate-900 dark:text-white">Manual Restock</h2>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-5">
+        Use this for returns of orders not recorded in Tatkal Pick.
+      </p>
+      <div class="space-y-4">
+        <div>
+          <label for="sku-id" class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Returned Product</label>
+          <select id="sku-id" name="sku_id" required class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white">
+            <option value="">Choose product</option>
+            {% for product in products %}
+              <option value="{{ product.pk }}">{{ product.sku }} · {{ product.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="manual-order-id" class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Order ID (optional)</label>
+            <input id="manual-order-id" type="text" name="manual_order_id" maxlength="100"
+              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-white font-mono">
+          </div>
+          <div>
+            <label for="return-quantity" class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5">Quantity</label>
+            <input id="return-quantity" type="number" name="quantity" min="1" value="1" required
+              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-900 dark:text-white">
+          </div>
+        </div>
+        <button type="submit" class="w-full rounded-xl bg-slate-800 dark:bg-slate-700 px-5 py-3.5 text-sm font-black text-white hover:bg-slate-700 dark:hover:bg-slate-600 shadow-md">
+          Process Manual Return
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <section class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-6 shadow-sm">
+    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white border-b border-slate-100 dark:border-slate-700/60 pb-3 mb-4">
+      Recent Restored Returns
+    </h2>
+    <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+      <table class="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+        <thead class="bg-slate-50 dark:bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-800">
+          <tr>
+            <th class="py-3 px-4 font-semibold">Date &amp; Time</th>
+            <th class="py-3 px-4 font-semibold">RTO Batch</th>
+            <th class="py-3 px-4 font-semibold">Product / SKU</th>
+            <th class="py-3 px-4 text-center font-semibold">Units</th>
+            <th class="py-3 px-4 font-semibold">Location</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+          {% for rto in recent_returns %}
+            <tr>
+              <td class="py-3 px-4 text-slate-500">{{ rto.created_at|date:"d M Y, h:i A" }}</td>
+              <td class="py-3 px-4 font-mono font-bold text-rose-600 dark:text-rose-400">{{ rto.batch_no }}</td>
+              <td class="py-3 px-4">
+                <div class="font-bold text-slate-900 dark:text-white">{{ rto.sku.name }}</div>
+                <div class="text-[10px] font-mono text-slate-400">{{ rto.sku.sku }}</div>
+              </td>
+              <td class="py-3 px-4 text-center font-black text-emerald-600">+{{ rto.quantity }}</td>
+              <td class="py-3 px-4 font-semibold text-slate-600 dark:text-slate-400">
+                {% if rto.storage_box %}{{ rto.storage_box.name }}{% else %}Unassigned{% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="text-center py-10 text-slate-400">No returns have been processed yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+{% endblock %}
