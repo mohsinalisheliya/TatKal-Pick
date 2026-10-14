@@ -43,6 +43,7 @@ class JewelrySKU(models.Model):
     section_name = models.CharField(max_length=50, blank=True, default='Main Slot')
 
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    wholesale_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -81,6 +82,7 @@ class JewelrySKU(models.Model):
         latest = self.batches.filter(status='active').order_by('-created_at').first() or self.batches.order_by('-created_at').first()
         if latest:
             self.purchase_price = latest.purchase_price
+            self.wholesale_price = latest.wholesale_price
             self.selling_price = latest.selling_price
             self.batch_no = latest.batch_no
             if latest.storage_box:
@@ -88,7 +90,16 @@ class JewelrySKU(models.Model):
             if latest.section_name:
                 self.section_name = latest.section_name
 
-        self.save(update_fields=['stock', 'purchase_price', 'selling_price', 'batch_no', 'storage_box', 'section_name', 'updated_at'])
+        self.save(update_fields=[
+            'stock',
+            'purchase_price',
+            'wholesale_price',
+            'selling_price',
+            'batch_no',
+            'storage_box',
+            'section_name',
+            'updated_at',
+        ])
 
     def generate_sku(self):
         clean_cat = re.sub(r'[^A-Z0-9]', '', self.category.upper()) or 'GEN'
@@ -119,6 +130,7 @@ class StockBatch(models.Model):
     batch_no = models.CharField(max_length=120)
     quantity = models.PositiveIntegerField(default=0)
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    wholesale_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     storage_box = models.ForeignKey(StorageBox, on_delete=models.SET_NULL, null=True, blank=True)
     section_name = models.CharField(max_length=50, blank=True, default='Main Section')

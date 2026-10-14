@@ -569,8 +569,13 @@ def stock_action(request, pk):
         stock_qty = int(qty_raw) if qty_raw.isdigit() else 0
 
         p_cost = request.POST.get('purchase_price', '').strip()
-        s_price = request.POST.get('selling_price', '').strip()
+        w_cost = request.POST.get('wholesale_price', '').strip()
+        s_price = request.POST.get(
+            'selling_price',
+            request.POST.get('reselling_price', ''),
+        ).strip()
         purchase_price = Decimal(p_cost) if p_cost else Decimal('0.00')
+        wholesale_price = Decimal(w_cost) if w_cost else Decimal('0.00')
         selling_price = Decimal(s_price) if s_price else Decimal('0.00')
 
         box_id = request.POST.get('existing_box_id', '').strip()
@@ -584,6 +589,7 @@ def stock_action(request, pk):
                 batch.batch_no = batch_no
                 batch.quantity = stock_qty
                 batch.purchase_price = purchase_price
+                batch.wholesale_price = wholesale_price
                 batch.selling_price = selling_price
                 batch.storage_box = storage_box
                 batch.section_name = section_name
@@ -598,7 +604,9 @@ def stock_action(request, pk):
             else:
                 new_batch = StockBatch.objects.create(
                     sku=item, batch_no=batch_no, quantity=stock_qty,
-                    purchase_price=purchase_price, selling_price=selling_price,
+                    purchase_price=purchase_price,
+                    wholesale_price=wholesale_price,
+                    selling_price=selling_price,
                     storage_box=storage_box, section_name=section_name,
                     status='active' if stock_qty > 0 else 'disabled',
                     finished_at=timezone.now() if stock_qty == 0 else None,
@@ -1316,6 +1324,7 @@ def order_cancellation(request):
                     batch_no=batch_no,
                     quantity=order.quantity,
                     purchase_price=sku.purchase_price,
+                    wholesale_price=sku.wholesale_price,
                     selling_price=sku.selling_price,
                     storage_box=sku.storage_box,
                     section_name=sku.section_name,
@@ -1365,6 +1374,7 @@ def order_cancellation(request):
                     batch_no=batch_no,
                     quantity=quantity,
                     purchase_price=sku.purchase_price,
+                    wholesale_price=sku.wholesale_price,
                     selling_price=sku.selling_price,
                     storage_box=sku.storage_box,
                     section_name=sku.section_name,
@@ -1595,6 +1605,29 @@ def export_csv(request):
             obj.stock, box_name, obj.section_name, obj.purchase_price, obj.selling_price
         ])
     return response
+
+
+@login_required(login_url='login')
+def catalog_generator(request):
+    selected_category = request.GET.get('category', '').strip()
+    categories = JewelrySKU.objects.values_list(
+        'category',
+        flat=True,
+    ).distinct().order_by('category')
+    products = JewelrySKU.objects.filter(is_listed=True).order_by('-created_at')
+    if selected_category:
+        products = products.filter(category=selected_category)
+
+    settings_obj = AppSettings.get_settings()
+    return render(request, 'sku_manager/catalog.html', {
+        'active_page': 'catalog',
+        'categories': categories,
+        'selected_category': selected_category,
+        'products': products,
+        'currency': settings_obj.currency_symbol,
+        'brand_name': settings_obj.brand_name,
+    })
+
 
 @login_required(login_url='login')
 def app_settings_view(request):

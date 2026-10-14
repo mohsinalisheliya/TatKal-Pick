@@ -141,6 +141,10 @@
           <input type="number" step="0.01" min="0" name="purchase_price" value="{{ item.purchase_price }}" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-500">
         </div>
         <div>
+          <label class="block text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase mb-1">Wholesale Price (₹)</label>
+          <input type="number" step="0.01" min="0" name="wholesale_price" value="{{ item.wholesale_price }}" class="w-full bg-slate-50 dark:bg-slate-800 border border-indigo-500/30 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-500">
+        </div>
+        <div>
           <label class="block text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase mb-1">Selling Price (MRP)</label>
           <input type="number" step="0.01" min="0" name="selling_price" value="{{ item.selling_price }}" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-500">
         </div>

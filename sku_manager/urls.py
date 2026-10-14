@@ -12,6 +12,7 @@ urlpatterns = [
     path('products/edit/<int:pk>/', views.product_master, name='product_edit_details'),
     path('products/list/', views.product_list_view, name='product_list'),
     path('products/delete/<int:pk>/', views.product_delete_secure, name='product_delete_secure'),
+    path('catalog/', views.catalog_generator, name='catalog_generator'),
 
     # Part 2: Inventory Dashboard (Matches view_inventory.html)
     path('', views.inventory_list, name='inventory_list'),
