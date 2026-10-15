@@ -1609,20 +1609,26 @@ def export_csv(request):
 
 @login_required(login_url='login')
 def catalog_generator(request):
+    """Generates a printable Catalog filtered by Category and Price Type"""
     selected_category = request.GET.get('category', '').strip()
-    categories = JewelrySKU.objects.values_list(
-        'category',
-        flat=True,
-    ).distinct().order_by('category')
-    products = JewelrySKU.objects.filter(is_listed=True).order_by('-created_at')
+    price_type = request.GET.get('price_type', 'all').strip()
+
+    # Fetch all unique categories from the database
+    categories = JewelrySKU.objects.values_list('category', flat=True).distinct().order_by('category')
+
+    # Fetch ALL products (Removed is_listed=True so every product shows up)
+    products = JewelrySKU.objects.all().order_by('-created_at')
+
     if selected_category:
         products = products.filter(category=selected_category)
 
     settings_obj = AppSettings.get_settings()
+
     return render(request, 'sku_manager/catalog.html', {
         'active_page': 'catalog',
         'categories': categories,
         'selected_category': selected_category,
+        'price_type': price_type,
         'products': products,
         'currency': settings_obj.currency_symbol,
         'brand_name': settings_obj.brand_name,
