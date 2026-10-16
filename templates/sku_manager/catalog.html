@@ -4,45 +4,69 @@
 
 {% block content %}
 <style>
-  /* Instant Price Hiding Class */
-  .hide-prices .price-section { display: none !important; }
+  /* --- INSTANT PRICE VISIBILITY TOGGLES --- */
+  .price-section { display: grid; gap: 6px; text-align: center; }
+  
+  /* Mode: All Prices */
+  body.price-mode-all .price-section { grid-template-columns: repeat(3, 1fr); }
+  
+  /* Mode: Hide All */
+  body.price-mode-none .price-section { display: none !important; }
+  
+  /* Mode: Single Prices (Centers the price beautifully) */
+  body.price-mode-buying .price-section,
+  body.price-mode-wholesale .price-section,
+  body.price-mode-reselling .price-section { grid-template-columns: 1fr; }
 
-  /* Print Optimization (Fixes Blank Page Issue) */
+  /* Hide irrelevant prices based on mode */
+  body.price-mode-buying .price-wholesale,
+  body.price-mode-buying .price-reselling { display: none !important; }
+
+  body.price-mode-wholesale .price-buying,
+  body.price-mode-wholesale .price-reselling { display: none !important; }
+
+  body.price-mode-reselling .price-buying,
+  body.price-mode-wholesale { display: none !important; }
+
+  /* --- PRINT OPTIMIZATION (Fixes Blank Page & Formats A4) --- */
   @media print {
     @page { size: A4 portrait; margin: 10mm; }
     body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
+    
     /* Hide UI Elements */
     aside, header.no-print, .no-print, .print-hide { display: none !important; }
     main { margin-left: 0 !important; padding: 0 !important; }
-
-    /* Fix Blank Page Bug by using inline-block instead of CSS Grid for printing */
+    
+    /* Fix Blank Page Bug by using inline-block */
     .catalog-grid { display: block !important; font-size: 0; }
-    .catalog-card {
-      display: inline-block !important;
+    .catalog-card { 
+      display: inline-block !important; 
       width: 23% !important; /* 4 columns per row */
-      margin: 1% !important;
+      margin: 1% !important; 
       vertical-align: top;
-      break-inside: avoid;
-      page-break-inside: avoid;
-      border: 1px solid #e2e8f0 !important;
-      padding: 8px !important;
-      border-radius: 8px !important;
-      box-shadow: none !important;
-      background: white !important;
+      break-inside: avoid; 
+      page-break-inside: avoid; 
+      border: 1px solid #e2e8f0 !important; 
+      padding: 8px !important; 
+      border-radius: 8px !important; 
+      box-shadow: none !important; 
+      background: white !important; 
       font-size: 12px;
     }
     .catalog-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
-
+    
     /* Show Print Header with Logo */
     .print-header { display: block !important; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #cbd5e1; padding-bottom: 10px; }
     .print-header h1 { font-size: 24pt; font-weight: 900; color: #0f172a; margin-top: 5px; }
     .print-header p { font-size: 10pt; color: #475569; margin-top: 4px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
-
+    
     .text-white { color: #0f172a !important; }
     .text-slate-400 { color: #475569 !important; }
   }
 </style>
+
+<!-- Add default mode class to body -->
+<script>document.body.classList.add('price-mode-all');</script>
 
 <div class="max-w-7xl mx-auto space-y-6">
 
@@ -53,14 +77,17 @@
         <span>📖</span> B2B Catalog Engine
       </div>
       <h1 class="text-2xl font-black text-slate-900 dark:text-white">Catalog Generator</h1>
-      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Select products and instantly save as a PDF catalog.</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Select products and customize pricing display for instant PDF export.</p>
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
-      <!-- Price Visibility Dropdown (No page reload needed) -->
+      <!-- FULL Price Visibility Dropdown (Instant Toggle) -->
       <select onchange="togglePrices(this.value)" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-indigo-500 transition shadow-sm">
-        <option value="show">Show All Prices</option>
-        <option value="hide">Hide All Prices</option>
+        <option value="all">Show All Prices</option>
+        <option value="wholesale">Show Wholesale Price Only</option>
+        <option value="reselling">Show Reselling (MRP) Only</option>
+        <option value="buying">Show Buying Price Only</option>
+        <option value="none">Hide All Prices (Images Only)</option>
       </select>
 
       <!-- Category Filter -->
@@ -93,7 +120,7 @@
   <!-- Print Only Header with LOGO -->
   <div class="hidden print-header">
     {% if settings.label_logo %}
-      <img src="{{ settings.label_logo.url }}" alt="Brand Logo" style="max-height: 50px; margin: 0 auto; object-fit: contain;">
+      <img src="{{ settings.label_logo.url }}" alt="Brand Logo" style="max-height: 55px; margin: 0 auto; object-fit: contain;">
     {% endif %}
     <h1>{{ brand_name }}</h1>
     <p>Product Catalog {% if selected_category %}- {{ selected_category }}{% else %}- All Items{% endif %}</p>
@@ -104,7 +131,7 @@
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 catalog-grid">
       {% for item in products %}
         <div class="catalog-card bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 shadow-sm flex flex-col justify-between h-full relative group">
-
+          
           <!-- Specific Selection Checkbox (Hidden in PDF) -->
           <div class="absolute top-2 left-2 z-10 no-print">
             <input type="checkbox" class="product-checkbox w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 shadow-sm cursor-pointer" checked>
@@ -132,20 +159,24 @@
             </div>
           </div>
 
-          <!-- Pricing Table (Can be hidden via JS class) -->
-          <div class="price-section mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/80 grid grid-cols-3 gap-1 text-center">
-            <div class="bg-slate-50 dark:bg-slate-900 rounded p-1 border border-slate-100 dark:border-slate-800">
-              <span class="block text-[7px] font-bold uppercase text-slate-400">Buying</span>
-              <span class="block text-[10px] font-black text-slate-800 dark:text-slate-200 mt-0.5 font-mono">{{ currency }}{{ item.purchase_price }}</span>
+          <!-- Pricing Table (Dynamically controlled via CSS classes) -->
+          <div class="price-section mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
+            
+            <div class="price-buying bg-slate-50 dark:bg-slate-900 rounded p-1 border border-slate-100 dark:border-slate-800">
+              <span class="block text-[8px] font-bold uppercase text-slate-400">Buying</span>
+              <span class="block text-[11px] font-black text-slate-800 dark:text-slate-200 mt-0.5 font-mono">{{ currency }}{{ item.purchase_price }}</span>
             </div>
-            <div class="bg-indigo-50 dark:bg-indigo-950/20 rounded p-1 border border-indigo-100 dark:border-indigo-900/50">
-              <span class="block text-[7px] font-bold uppercase text-indigo-500">Wholesale</span>
-              <span class="block text-[10px] font-black text-indigo-700 dark:text-indigo-400 mt-0.5 font-mono">{{ currency }}{{ item.wholesale_price }}</span>
+            
+            <div class="price-wholesale bg-indigo-50 dark:bg-indigo-950/20 rounded p-1 border border-indigo-100 dark:border-indigo-900/50">
+              <span class="block text-[8px] font-bold uppercase text-indigo-500">Wholesale</span>
+              <span class="block text-[11px] font-black text-indigo-700 dark:text-indigo-400 mt-0.5 font-mono">{{ currency }}{{ item.wholesale_price }}</span>
             </div>
-            <div class="bg-emerald-50 dark:bg-emerald-950/20 rounded p-1 border border-emerald-100 dark:border-emerald-900/50">
-              <span class="block text-[7px] font-bold uppercase text-emerald-500">Reselling</span>
-              <span class="block text-[10px] font-black text-emerald-700 dark:text-emerald-400 mt-0.5 font-mono">{{ currency }}{{ item.selling_price }}</span>
+            
+            <div class="price-reselling bg-emerald-50 dark:bg-emerald-950/20 rounded p-1 border border-emerald-100 dark:border-emerald-900/50">
+              <span class="block text-[8px] font-bold uppercase text-emerald-500">Reselling</span>
+              <span class="block text-[11px] font-black text-emerald-700 dark:text-emerald-400 mt-0.5 font-mono">{{ currency }}{{ item.selling_price }}</span>
             </div>
+
           </div>
 
         </div>
@@ -165,13 +196,12 @@
 
 {% block extra_scripts %}
 <script>
-  // 1. Instant Hide/Show Prices Logic
-  function togglePrices(val) {
-    if (val === 'hide') {
-      document.body.classList.add('hide-prices');
-    } else {
-      document.body.classList.remove('hide-prices');
-    }
+  // 1. Instant Pricing Display Logic
+  function togglePrices(mode) {
+    // Remove all previous price modes
+    document.body.classList.remove('price-mode-all', 'price-mode-buying', 'price-mode-wholesale', 'price-mode-reselling', 'price-mode-none');
+    // Add the selected mode
+    document.body.classList.add(`price-mode-${mode}`);
   }
 
   // 2. Handle Select/Deselect Checkboxes
