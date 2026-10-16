@@ -5,28 +5,16 @@
 {% block content %}
 <style>
   /* --- INSTANT PRICE VISIBILITY TOGGLES --- */
-  .price-section { display: grid; gap: 6px; text-align: center; }
+  .price-section { display: flex; gap: 6px; text-align: center; width: 100%; }
+  .price-item { flex: 1; min-width: 0; }
   
-  /* Mode: All Prices */
-  body.price-mode-all .price-section { grid-template-columns: repeat(3, 1fr); }
+  /* Hide irrelevant prices based on body classes */
+  body:not(.show-buying) .price-buying { display: none !important; }
+  body:not(.show-wholesale) .price-wholesale { display: none !important; }
+  body:not(.show-reselling) .price-reselling { display: none !important; }
   
-  /* Mode: Hide All */
-  body.price-mode-none .price-section { display: none !important; }
-  
-  /* Mode: Single Prices (Centers the price beautifully) */
-  body.price-mode-buying .price-section,
-  body.price-mode-wholesale .price-section,
-  body.price-mode-reselling .price-section { grid-template-columns: 1fr; }
-
-  /* Hide irrelevant prices based on mode */
-  body.price-mode-buying .price-wholesale,
-  body.price-mode-buying .price-reselling { display: none !important; }
-
-  body.price-mode-wholesale .price-buying,
-  body.price-mode-wholesale .price-reselling { display: none !important; }
-
-  body.price-mode-reselling .price-buying,
-  body.price-mode-wholesale { display: none !important; }
+  /* Hide entire section if no prices are selected */
+  body.hide-all-prices .price-section { display: none !important; }
 
   /* --- PRINT OPTIMIZATION (Fixes Blank Page & Formats A4) --- */
   @media print {
@@ -65,9 +53,6 @@
   }
 </style>
 
-<!-- Add default mode class to body -->
-<script>document.body.classList.add('price-mode-all');</script>
-
 <div class="max-w-7xl mx-auto space-y-6">
 
   <!-- Screen Header (Hidden on Print) -->
@@ -81,14 +66,26 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
-      <!-- FULL Price Visibility Dropdown (Instant Toggle) -->
-      <select onchange="togglePrices(this.value)" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer focus:border-indigo-500 transition shadow-sm">
-        <option value="all">Show All Prices</option>
-        <option value="wholesale">Show Wholesale Price Only</option>
-        <option value="reselling">Show Reselling (MRP) Only</option>
-        <option value="buying">Show Buying Price Only</option>
-        <option value="none">Hide All Prices (Images Only)</option>
-      </select>
+      
+      <!-- CUSTOM PRICING CHECKBOXES (Replaced Dropdown) -->
+      <div class="flex flex-wrap items-center gap-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl shadow-sm">
+        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1">Show Prices:</span>
+        
+        <label class="flex items-center gap-1.5 text-xs font-bold cursor-pointer text-slate-700 dark:text-slate-300">
+          <input type="checkbox" id="chkBuying" checked onchange="updatePriceVisibility()" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer">
+          Buying
+        </label>
+        
+        <label class="flex items-center gap-1.5 text-xs font-bold cursor-pointer text-slate-700 dark:text-slate-300">
+          <input type="checkbox" id="chkWholesale" checked onchange="updatePriceVisibility()" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer">
+          Wholesale
+        </label>
+        
+        <label class="flex items-center gap-1.5 text-xs font-bold cursor-pointer text-slate-700 dark:text-slate-300">
+          <input type="checkbox" id="chkReselling" checked onchange="updatePriceVisibility()" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer">
+          Reselling
+        </label>
+      </div>
 
       <!-- Category Filter -->
       <form method="GET" class="flex items-center m-0">
@@ -159,22 +156,22 @@
             </div>
           </div>
 
-          <!-- Pricing Table (Dynamically controlled via CSS classes) -->
+          <!-- Pricing Flexbox (Auto-Adjusts based on Checkboxes) -->
           <div class="price-section mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
             
-            <div class="price-buying bg-slate-50 dark:bg-slate-900 rounded p-1 border border-slate-100 dark:border-slate-800">
-              <span class="block text-[8px] font-bold uppercase text-slate-400">Buying</span>
-              <span class="block text-[11px] font-black text-slate-800 dark:text-slate-200 mt-0.5 font-mono">{{ currency }}{{ item.purchase_price }}</span>
+            <div class="price-item price-buying bg-slate-50 dark:bg-slate-900 rounded p-1.5 border border-slate-100 dark:border-slate-800">
+              <span class="block text-[7px] font-bold uppercase text-slate-400">Buying</span>
+              <span class="block text-[10px] font-black text-slate-800 dark:text-slate-200 mt-0.5 font-mono">{{ currency }}{{ item.purchase_price }}</span>
             </div>
             
-            <div class="price-wholesale bg-indigo-50 dark:bg-indigo-950/20 rounded p-1 border border-indigo-100 dark:border-indigo-900/50">
-              <span class="block text-[8px] font-bold uppercase text-indigo-500">Wholesale</span>
-              <span class="block text-[11px] font-black text-indigo-700 dark:text-indigo-400 mt-0.5 font-mono">{{ currency }}{{ item.wholesale_price }}</span>
+            <div class="price-item price-wholesale bg-indigo-50 dark:bg-indigo-950/20 rounded p-1.5 border border-indigo-100 dark:border-indigo-900/50">
+              <span class="block text-[7px] font-bold uppercase text-indigo-500">Wholesale</span>
+              <span class="block text-[10px] font-black text-indigo-700 dark:text-indigo-400 mt-0.5 font-mono">{{ currency }}{{ item.wholesale_price }}</span>
             </div>
             
-            <div class="price-reselling bg-emerald-50 dark:bg-emerald-950/20 rounded p-1 border border-emerald-100 dark:border-emerald-900/50">
-              <span class="block text-[8px] font-bold uppercase text-emerald-500">Reselling</span>
-              <span class="block text-[11px] font-black text-emerald-700 dark:text-emerald-400 mt-0.5 font-mono">{{ currency }}{{ item.selling_price }}</span>
+            <div class="price-item price-reselling bg-emerald-50 dark:bg-emerald-950/20 rounded p-1.5 border border-emerald-100 dark:border-emerald-900/50">
+              <span class="block text-[7px] font-bold uppercase text-emerald-500">Reselling</span>
+              <span class="block text-[10px] font-black text-emerald-700 dark:text-emerald-400 mt-0.5 font-mono">{{ currency }}{{ item.selling_price }}</span>
             </div>
 
           </div>
@@ -196,13 +193,26 @@
 
 {% block extra_scripts %}
 <script>
-  // 1. Instant Pricing Display Logic
-  function togglePrices(mode) {
-    // Remove all previous price modes
-    document.body.classList.remove('price-mode-all', 'price-mode-buying', 'price-mode-wholesale', 'price-mode-reselling', 'price-mode-none');
-    // Add the selected mode
-    document.body.classList.add(`price-mode-${mode}`);
+  // 1. Instant Custom Pricing Checkbox Logic
+  function updatePriceVisibility() {
+    const showBuying = document.getElementById('chkBuying').checked;
+    const showWholesale = document.getElementById('chkWholesale').checked;
+    const showReselling = document.getElementById('chkReselling').checked;
+
+    document.body.classList.toggle('show-buying', showBuying);
+    document.body.classList.toggle('show-wholesale', showWholesale);
+    document.body.classList.toggle('show-reselling', showReselling);
+
+    // If all are unchecked, hide the entire price section line
+    if (!showBuying && !showWholesale && !showReselling) {
+      document.body.classList.add('hide-all-prices');
+    } else {
+      document.body.classList.remove('hide-all-prices');
+    }
   }
+
+  // Set initial state on load
+  document.addEventListener('DOMContentLoaded', updatePriceVisibility);
 
   // 2. Handle Select/Deselect Checkboxes
   const selectAll = document.getElementById('selectAll');
