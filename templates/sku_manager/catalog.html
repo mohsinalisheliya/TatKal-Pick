@@ -3,6 +3,9 @@
 {% block title %}Catalog Generator - Tatkal Pick{% endblock %}
 
 {% block content %}
+<!-- Include html2pdf library for Direct PDF Download -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <style>
   /* --- INSTANT PRICE VISIBILITY TOGGLES --- */
   .price-section { display: flex; gap: 6px; text-align: center; width: 100%; }
@@ -16,46 +19,42 @@
   /* Hide entire section if no prices are selected */
   body.hide-all-prices .price-section { display: none !important; }
 
-  /* --- PRINT OPTIMIZATION (Fixes Blank Page & Formats A4) --- */
-  @media print {
-    @page { size: A4 portrait; margin: 10mm; }
-    body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    
-    /* Hide UI Elements */
-    aside, header.no-print, .no-print, .print-hide { display: none !important; }
-    main { margin-left: 0 !important; padding: 0 !important; }
-    
-    /* Fix Blank Page Bug by using inline-block */
-    .catalog-grid { display: block !important; font-size: 0; }
-    .catalog-card { 
-      display: inline-block !important; 
-      width: 23% !important; /* 4 columns per row */
-      margin: 1% !important; 
-      vertical-align: top;
-      break-inside: avoid; 
-      page-break-inside: avoid; 
-      border: 1px solid #e2e8f0 !important; 
-      padding: 8px !important; 
-      border-radius: 8px !important; 
-      box-shadow: none !important; 
-      background: white !important; 
-      font-size: 12px;
-    }
-    .catalog-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
-    
-    /* Show Print Header with Logo */
-    .print-header { display: block !important; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #cbd5e1; padding-bottom: 10px; }
-    .print-header h1 { font-size: 24pt; font-weight: 900; color: #0f172a; margin-top: 5px; }
-    .print-header p { font-size: 10pt; color: #475569; margin-top: 4px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
-    
-    .text-white { color: #0f172a !important; }
-    .text-slate-400 { color: #475569 !important; }
+  /* --- DIRECT PDF EXPORT STYLES (No Print Popup) --- */
+  .print-header { display: none; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #cbd5e1; padding-bottom: 10px; }
+  .print-header h1 { font-size: 24pt; font-weight: 900; color: #0f172a; margin-top: 5px; }
+  .print-header p { font-size: 10pt; color: #475569; margin-top: 4px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
+
+  /* When exporting to PDF, apply these classes dynamically */
+  body.pdf-export-active .no-print { display: none !important; }
+  body.pdf-export-active { background: white !important; }
+  body.pdf-export-active .print-header { display: block !important; }
+  
+  body.pdf-export-active .catalog-grid { display: block !important; font-size: 0; }
+  body.pdf-export-active .catalog-card { 
+    display: inline-block !important; 
+    width: 23% !important; /* 4 columns per row */
+    margin: 1% !important; 
+    vertical-align: top;
+    break-inside: avoid; 
+    page-break-inside: avoid; 
+    border: 1px solid #e2e8f0 !important; 
+    padding: 8px !important; 
+    border-radius: 8px !important; 
+    box-shadow: none !important; 
+    background: white !important; 
+    font-size: 12px;
   }
+  body.pdf-export-active .catalog-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
+  body.pdf-export-active .text-white { color: #0f172a !important; }
+  body.pdf-export-active .text-slate-400 { color: #475569 !important; }
 </style>
+
+<!-- Add default mode class to body -->
+<script>document.body.classList.add('price-mode-all');</script>
 
 <div class="max-w-7xl mx-auto space-y-6">
 
-  <!-- Screen Header (Hidden on Print) -->
+  <!-- Screen Header -->
   <header class="no-print flex flex-col lg:flex-row lg:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-4">
     <div>
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-xs font-semibold uppercase tracking-wider mb-2">
@@ -67,7 +66,7 @@
 
     <div class="flex flex-wrap items-center gap-3">
       
-      <!-- CUSTOM PRICING CHECKBOXES (Replaced Dropdown) -->
+      <!-- CUSTOM PRICING CHECKBOXES -->
       <div class="flex flex-wrap items-center gap-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl shadow-sm">
         <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1">Show Prices:</span>
         
@@ -97,10 +96,10 @@
         </select>
       </form>
 
-      <!-- Save as PDF Button -->
-      <button type="button" onclick="triggerPDFSave()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 transition shadow-md shadow-indigo-600/20">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-        Save as PDF
+      <!-- Direct Save as PDF Button -->
+      <button type="button" id="pdfBtn" onclick="triggerPDFSave()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs flex items-center gap-2 transition shadow-md shadow-indigo-600/20 whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        Download PDF Directly
       </button>
     </div>
   </header>
@@ -114,79 +113,83 @@
     <span class="text-xs text-slate-500 font-mono"><span id="selectedCount">{{ products|length }}</span> / {{ products|length }} Selected</span>
   </div>
 
-  <!-- Print Only Header with LOGO -->
-  <div class="hidden print-header">
-    {% if settings.label_logo %}
-      <img src="{{ settings.label_logo.url }}" alt="Brand Logo" style="max-height: 55px; margin: 0 auto; object-fit: contain;">
+  <!-- PDF CONTENT WRAPPER -->
+  <div id="catalog-content">
+    
+    <!-- Print Only Header with LOGO -->
+    <div class="print-header">
+      {% if settings.label_logo %}
+        <img src="{{ settings.label_logo.url }}" alt="Brand Logo" style="max-height: 55px; margin: 0 auto; object-fit: contain;">
+      {% endif %}
+      <h1>{{ brand_name }}</h1>
+      <p>Product Catalog {% if selected_category %}- {{ selected_category }}{% else %}- All Items{% endif %}</p>
+    </div>
+
+    <!-- Catalog Grid -->
+    {% if products %}
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 catalog-grid">
+        {% for item in products %}
+          <div class="catalog-card bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 shadow-sm flex flex-col justify-between h-full relative group">
+            
+            <!-- Specific Selection Checkbox (Hidden in PDF) -->
+            <div class="absolute top-2 left-2 z-10 no-print">
+              <input type="checkbox" class="product-checkbox w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 shadow-sm cursor-pointer" checked>
+            </div>
+
+            <!-- Image -->
+            <div class="w-full aspect-square rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden mb-3">
+              {% if item.image %}
+                <img src="{{ item.image.url }}" class="catalog-img w-full h-full object-cover">
+              {% else %}
+                <div class="w-full h-full flex items-center justify-center text-[10px] text-slate-400 font-mono">No Image</div>
+              {% endif %}
+            </div>
+
+            <!-- Product Info -->
+            <div>
+              <div class="font-mono text-[10px] font-bold text-amber-600 dark:text-amber-400 tracking-tight leading-none mb-1">
+                {{ item.sku }}
+              </div>
+              <div class="text-xs font-extrabold text-slate-900 dark:text-white leading-snug line-clamp-2">
+                {{ item.name }}
+              </div>
+              <div class="text-[9px] text-slate-500 mt-1 uppercase font-semibold">
+                {{ item.category }} • {{ item.color }} • {{ item.size }}
+              </div>
+            </div>
+
+            <!-- Pricing Flexbox -->
+            <div class="price-section mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
+              
+              <div class="price-item price-buying bg-slate-50 dark:bg-slate-900 rounded p-1.5 border border-slate-100 dark:border-slate-800">
+                <span class="block text-[7px] font-bold uppercase text-slate-400">Buying</span>
+                <span class="block text-[10px] font-black text-slate-800 dark:text-slate-200 mt-0.5 font-mono">{{ currency }}{{ item.purchase_price }}</span>
+              </div>
+              
+              <div class="price-item price-wholesale bg-indigo-50 dark:bg-indigo-950/20 rounded p-1.5 border border-indigo-100 dark:border-indigo-900/50">
+                <span class="block text-[7px] font-bold uppercase text-indigo-500">Wholesale</span>
+                <span class="block text-[10px] font-black text-indigo-700 dark:text-indigo-400 mt-0.5 font-mono">{{ currency }}{{ item.wholesale_price }}</span>
+              </div>
+              
+              <div class="price-item price-reselling bg-emerald-50 dark:bg-emerald-950/20 rounded p-1.5 border border-emerald-100 dark:border-emerald-900/50">
+                <span class="block text-[7px] font-bold uppercase text-emerald-500">Reselling</span>
+                <span class="block text-[10px] font-black text-emerald-700 dark:text-emerald-400 mt-0.5 font-mono">{{ currency }}{{ item.selling_price }}</span>
+              </div>
+
+            </div>
+
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-16 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-3xl no-print">
+        <span class="text-4xl">📖</span>
+        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-3">No products found in this category</h3>
+        <p class="text-xs text-slate-500 mt-1">Please select another category or add products to the catalog.</p>
+      </div>
     {% endif %}
-    <h1>{{ brand_name }}</h1>
-    <p>Product Catalog {% if selected_category %}- {{ selected_category }}{% else %}- All Items{% endif %}</p>
+
   </div>
-
-  <!-- Catalog Grid -->
-  {% if products %}
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 catalog-grid">
-      {% for item in products %}
-        <div class="catalog-card bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 shadow-sm flex flex-col justify-between h-full relative group">
-          
-          <!-- Specific Selection Checkbox (Hidden in PDF) -->
-          <div class="absolute top-2 left-2 z-10 no-print">
-            <input type="checkbox" class="product-checkbox w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 shadow-sm cursor-pointer" checked>
-          </div>
-
-          <!-- Image -->
-          <div class="w-full aspect-square rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden mb-3">
-            {% if item.image %}
-              <img src="{{ item.image.url }}" class="catalog-img w-full h-full object-cover">
-            {% else %}
-              <div class="w-full h-full flex items-center justify-center text-[10px] text-slate-400 font-mono">No Image</div>
-            {% endif %}
-          </div>
-
-          <!-- Product Info -->
-          <div>
-            <div class="font-mono text-[10px] font-bold text-amber-600 dark:text-amber-400 tracking-tight leading-none mb-1">
-              {{ item.sku }}
-            </div>
-            <div class="text-xs font-extrabold text-slate-900 dark:text-white leading-snug line-clamp-2">
-              {{ item.name }}
-            </div>
-            <div class="text-[9px] text-slate-500 mt-1 uppercase font-semibold">
-              {{ item.category }} • {{ item.color }} • {{ item.size }}
-            </div>
-          </div>
-
-          <!-- Pricing Flexbox (Auto-Adjusts based on Checkboxes) -->
-          <div class="price-section mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/80">
-            
-            <div class="price-item price-buying bg-slate-50 dark:bg-slate-900 rounded p-1.5 border border-slate-100 dark:border-slate-800">
-              <span class="block text-[7px] font-bold uppercase text-slate-400">Buying</span>
-              <span class="block text-[10px] font-black text-slate-800 dark:text-slate-200 mt-0.5 font-mono">{{ currency }}{{ item.purchase_price }}</span>
-            </div>
-            
-            <div class="price-item price-wholesale bg-indigo-50 dark:bg-indigo-950/20 rounded p-1.5 border border-indigo-100 dark:border-indigo-900/50">
-              <span class="block text-[7px] font-bold uppercase text-indigo-500">Wholesale</span>
-              <span class="block text-[10px] font-black text-indigo-700 dark:text-indigo-400 mt-0.5 font-mono">{{ currency }}{{ item.wholesale_price }}</span>
-            </div>
-            
-            <div class="price-item price-reselling bg-emerald-50 dark:bg-emerald-950/20 rounded p-1.5 border border-emerald-100 dark:border-emerald-900/50">
-              <span class="block text-[7px] font-bold uppercase text-emerald-500">Reselling</span>
-              <span class="block text-[10px] font-black text-emerald-700 dark:text-emerald-400 mt-0.5 font-mono">{{ currency }}{{ item.selling_price }}</span>
-            </div>
-
-          </div>
-
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <div class="text-center py-16 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-3xl no-print">
-      <span class="text-4xl">📖</span>
-      <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-3">No products found in this category</h3>
-      <p class="text-xs text-slate-500 mt-1">Please select another category or add products to the catalog.</p>
-    </div>
-  {% endif %}
-
 </div>
 
 {% endblock %}
@@ -203,7 +206,6 @@
     document.body.classList.toggle('show-wholesale', showWholesale);
     document.body.classList.toggle('show-reselling', showReselling);
 
-    // If all are unchecked, hide the entire price section line
     if (!showBuying && !showWholesale && !showReselling) {
       document.body.classList.add('hide-all-prices');
     } else {
@@ -211,7 +213,6 @@
     }
   }
 
-  // Set initial state on load
   document.addEventListener('DOMContentLoaded', updatePriceVisibility);
 
   // 2. Handle Select/Deselect Checkboxes
@@ -233,7 +234,7 @@
     checkboxes.forEach(cb => cb.addEventListener('change', updateCount));
   }
 
-  // 3. Trigger Native PDF Print Logic
+  // 3. Direct PDF Download using html2pdf (No Print Popup!)
   function triggerPDFSave() {
     const checkedCount = document.querySelectorAll('.product-checkbox:checked').length;
     if (checkedCount === 0) {
@@ -241,23 +242,38 @@
       return;
     }
 
-    // Hide unchecked cards before printing
+    const btn = document.getElementById('pdfBtn');
+    const origText = btn.innerHTML;
+    btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Downloading PDF...`;
+    btn.disabled = true;
+
+    // Hide unchecked cards
     document.querySelectorAll('.catalog-card').forEach(card => {
-      const isChecked = card.querySelector('.product-checkbox').checked;
-      if (!isChecked) {
-        card.classList.add('print-hide');
+      if (!card.querySelector('.product-checkbox').checked) {
+        card.style.display = 'none';
       }
     });
 
-    // Open browser native "Save as PDF" dialog
-    window.print();
-  }
+    // Apply PDF formatting classes
+    document.body.classList.add('pdf-export-active');
+    const content = document.getElementById('catalog-content');
 
-  // 4. Restore hidden cards after print dialog closes
-  window.addEventListener('afterprint', () => {
-    document.querySelectorAll('.catalog-card').forEach(card => {
-      card.classList.remove('print-hide');
+    const opt = {
+      margin:       [10, 10, 10, 10], // top, left, bottom, right
+      filename:     '{{ brand_name }}_Catalog.pdf',
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: 'css', avoid: '.catalog-card' } // Stops cards from splitting and fixes blank page
+    };
+
+    html2pdf().set(opt).from(content).save().then(() => {
+      // Restore UI after download
+      document.body.classList.remove('pdf-export-active');
+      document.querySelectorAll('.catalog-card').forEach(card => card.style.display = '');
+      btn.innerHTML = origText;
+      btn.disabled = false;
     });
-  });
+  }
 </script>
 {% endblock %}
