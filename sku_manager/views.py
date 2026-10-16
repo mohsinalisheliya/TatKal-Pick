@@ -1609,14 +1609,13 @@ def export_csv(request):
 
 @login_required(login_url='login')
 def catalog_generator(request):
-    """Generates a printable Catalog filtered by Category and Price Type"""
+    """Generates a printable Catalog filtered by Category"""
     selected_category = request.GET.get('category', '').strip()
-    price_type = request.GET.get('price_type', 'all').strip()
 
     # Fetch all unique categories from the database
     categories = JewelrySKU.objects.values_list('category', flat=True).distinct().order_by('category')
 
-    # Fetch ALL products (Removed is_listed=True so every product shows up)
+    # Fetch ALL products
     products = JewelrySKU.objects.all().order_by('-created_at')
 
     if selected_category:
@@ -1628,10 +1627,10 @@ def catalog_generator(request):
         'active_page': 'catalog',
         'categories': categories,
         'selected_category': selected_category,
-        'price_type': price_type,
         'products': products,
         'currency': settings_obj.currency_symbol,
         'brand_name': settings_obj.brand_name,
+        'settings': settings_obj,  # Settings object passed for Logo
     })
 
 
