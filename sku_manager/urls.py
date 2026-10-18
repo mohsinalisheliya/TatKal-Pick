@@ -8,6 +8,7 @@ urlpatterns = [
     path('logout/', views.user_logout, name='logout'),
 
 
+    path('', views.dashboard_home, name='dashboard'),
     
     # Part 1: Product Master & Listing
     path('products/', views.product_master, name='product_master'),
