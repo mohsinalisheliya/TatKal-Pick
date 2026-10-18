@@ -22,7 +22,7 @@ from django.db.models import Q, Count, OuterRef, Subquery, Sum, Max, Min, F, Dec
 from django.urls import reverse, NoReverseMatch
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
-
+from django.db.models import Sum, F
 from .models import (
     AppSettings,
     DispatchLog,
