@@ -59,78 +59,7 @@
         </div>
       </a>
 
-      <!-- Main Navigation Links -->
-      <nav class="space-y-1.5">
-        <!-- 1. Inventory & Stock (Part 2) -->
-        <a href="{% url 'inventory_list' %}" title="Inventory"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'inventory' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <svg class="w-5 h-5 min-w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7zm0 4h16M9 4v4m6-4v4"></path></svg>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Inventory</span>
-        </a>
 
-        <!-- 2. Product Master & Listing (Part 1) -->
-        <a href="{% url 'product_master' %}" title="Add Products & Catalog"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'products' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <svg class="w-5 h-5 min-w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Products</span>
-        </a>
-
-        <a href="{% url 'catalog_generator' %}" title="Catalog Generator"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'catalog' %}bg-indigo-500 text-white font-bold shadow-md shadow-indigo-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <svg class="w-5 h-5 min-w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Catalog Generator</span>
-        </a>
-
-        <!-- 3. Live Camera Scanner -->
-        <a href="{% url 'sku_scanner' %}" title="Camera Scanner"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'scanner' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-amber-600 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800{% endif %}">
-          <svg class="w-5 h-5 min-w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          </svg>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Fast Scanner</span>
-        </a>
-
-        <a href="{% url 'pdf_order_scan' %}" title="Scan Marketplace PDF"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'pdf_order_scan' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <svg class="w-5 h-5 min-w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3H5a2 2 0 00-2 2v3m13-5h3a2 2 0 012 2v3M3 16v3a2 2 0 002 2h3m13-5v3a2 2 0 01-2 2h-3M7 12h10m-5-5v10"></path></svg>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">PDF Order Scan</span>
-        </a>
-
-        <a href="{% url 'order_cancellation' %}" title="Returns & Cancellations"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'cancellation' %}bg-rose-500 text-white font-bold shadow-md shadow-rose-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <svg class="w-5 h-5 min-w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">RTO &amp; Cancellations</span>
-        </a>
-
-        <!-- 4. Storage Boxes -->
-        <a href="{% url 'box_manager' %}" title="Storage Boxes"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'boxes' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <svg class="w-5 h-5 min-w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs">Storage Units</span>
-        </a>
-
-        <!-- 5. Dispatch Audit Logs -->
-        <a href="{% url 'dispatch_logs' %}" title="Dispatch Logs"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'dispatch_logs' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <svg class="w-5 h-5 min-w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs">Dispatch Audit</span>
-        </a>
-
-        <!-- 6. Marketplace Channels -->
-        <a href="{% url 'platform_manager' %}" title="Marketplace Channels"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'platforms' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <svg class="w-5 h-5 min-w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs">Marketplaces</span>
-        </a>
-
-        <!-- 7. Export CSV -->
-        <a href="{% url 'sku_export_csv' %}" title="Export CSV"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white">
-          <svg class="w-5 h-5 min-w-[20px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs">Export CSV</span>
-        </a>
-      </nav>
     </div>
 
     <!-- Bottom Controls: Settings, Theme Toggle & User Info -->
