@@ -84,7 +84,7 @@ def get_next_serial():
         return str(last_item.id + 1).zfill(3)
 
 
-
+#--- Dashboard View ---
 @login_required(login_url='login')
 def dashboard_home(request):
     """Main Dashboard with Charts and Low Stock Alerts"""
