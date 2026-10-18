@@ -83,6 +83,49 @@ def get_next_serial():
     except (ValueError, IndexError):
         return str(last_item.id + 1).zfill(3)
 
+
+
+@login_required(login_url='login')
+def dashboard_home(request):
+    """Main Dashboard with Charts and Low Stock Alerts"""
+    settings_obj = AppSettings.get_settings()
+    threshold = settings_obj.low_stock_threshold
+
+    # Quick Stats
+    total_products = JewelrySKU.objects.count()
+    total_stock = JewelrySKU.objects.aggregate(Sum('stock'))['stock__sum'] or 0
+    total_boxes = StorageBox.objects.count()
+
+    # Low Stock Alerts
+    low_stock_items = JewelrySKU.objects.filter(stock__lte=threshold, is_listed=True).order_by('stock')[:8]
+
+    # Recent Dispatches
+    recent_dispatches = DispatchLog.objects.select_related('sku').order_by('-dispatched_at')[:6]
+
+    # Chart Data: Sales by Platform (Last 30 Days)
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    platform_sales = DispatchLog.objects.filter(dispatched_at__gte=thirty_days_ago) \
+        .values('platform_name') \
+        .annotate(total_units=Sum('quantity'), total_revenue=Sum(F('quantity') * F('sold_price'))) \
+        .order_by('-total_units')
+
+    chart_labels = [p['platform_name'] for p in platform_sales]
+    chart_data = [p['total_units'] for p in platform_sales]
+
+    return render(request, 'sku_manager/index.html', {
+        'active_page': 'dashboard',
+        'total_products': total_products,
+        'total_stock': total_stock,
+        'total_boxes': total_boxes,
+        'low_stock_items': low_stock_items,
+        'recent_dispatches': recent_dispatches,
+        'currency': settings_obj.currency_symbol,
+        'threshold': threshold,
+        'chart_labels': json.dumps(chart_labels),
+        'chart_data': json.dumps(chart_data),
+    })
+
+
 # --- Authentication Views ---
 def user_login(request):
     if request.user.is_authenticated:
