@@ -3,83 +3,101 @@
 {% block title %}Storage Units & Bin Management - Tatkal Pick{% endblock %}
 
 {% block content %}
-<!-- Top Header -->
-<header class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-4">
-  <div>
-    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-semibold uppercase tracking-wider mb-2">
-      <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-      Warehouse Bins & Storage
-    </div>
-    <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Storage Unit Manager</h1>
-    <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Create physical bins with unique names and non-duplicating visual color codes.</p>
-  </div>
 
+<!-- Page Header -->
+<header class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5 gap-4 mb-6">
+  <div>
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold uppercase tracking-wider mb-2">
+      <i class="fa-solid fa-box-archive text-xs"></i>
+      Warehouse Storage
+    </div>
+    <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Storage Unit Manager</h1>
+    <p class="text-slate-500 dark:text-slate-400 text-xs mt-1">Create physical bins with unique names and non-duplicating visual color codes.</p>
+  </div>
+  <!-- Stats Pill -->
+  <div class="flex items-center gap-3">
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2.5 text-center shadow-sm">
+      <div class="text-lg font-black text-amber-500">{{ boxes.count }}</div>
+      <div class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Units</div>
+    </div>
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2.5 text-center shadow-sm">
+      <div class="text-lg font-black text-indigo-500">{{ color_swatches|length }}</div>
+      <div class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Colors Left</div>
+    </div>
+  </div>
 </header>
 
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-  
-  <!-- Add Box Form Card -->
-  <div class="lg:col-span-6 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-5 shadow-sm dark:shadow-xl space-y-4">
-    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2.5">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
-        <span>📦</span> Create Storage Unit
+
+  <!-- ===== LEFT: Add Box Form ===== -->
+  <div class="lg:col-span-5 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-sm overflow-hidden">
+
+    <!-- Card Header -->
+    <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700/60 px-5 py-3.5">
+      <h2 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+        <i class="fa-solid fa-plus-circle text-amber-500"></i>
+        Create Storage Unit
       </h2>
-      <span class="text-[10px] text-amber-600 dark:text-amber-400 font-mono font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
-        Unique Names & Colors Only
+      <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg">
+        Unique Only
       </span>
     </div>
 
-    <form method="POST" action="{% url 'box_manager' %}" class="space-y-4">
+    <form method="POST" action="{% url 'box_manager' %}" class="p-5 space-y-4">
       {% csrf_token %}
 
       <!-- Box Name -->
       <div>
-        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
+        <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+          <i class="fa-solid fa-tag mr-1 text-slate-400"></i>
           Unit Name / ID <span class="text-rose-500">*</span>
         </label>
-        <input type="text" name="box_name" id="inputBoxName" required placeholder="e.g. Box 5, Drawer B, Velvet Tray 1" 
-          class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-amber-500 transition">
-        <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Must be unique (cannot match any existing storage unit).</p>
+        <input type="text" name="box_name" id="inputBoxName" required placeholder="e.g. Box 5, Drawer B, Velvet Tray 1"
+          class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition">
+        <p class="text-[10px] text-slate-400 mt-1">Must be unique — cannot match any existing storage unit.</p>
       </div>
 
-      <!-- Color Palette & Custom Picker -->
+      <!-- Color Picker -->
       <div class="space-y-2">
         <div class="flex items-center justify-between">
-          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase">
+          <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+            <i class="fa-solid fa-palette mr-1 text-slate-400"></i>
             Color Tag <span class="text-rose-500">*</span>
           </label>
-          <span class="text-[10px] text-slate-400 dark:text-slate-500">Locked colors (🔒) are already taken</span>
+          <span class="text-[10px] text-slate-400 dark:text-slate-500">
+            <i class="fa-solid fa-lock text-[9px] mr-0.5"></i> = already taken
+          </span>
         </div>
 
-        <!-- Custom Color Picker Strip -->
-        <div class="flex items-center gap-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2 rounded-xl">
-          <input type="color" id="nativeColorPicker" value="#3B82F6" 
-            class="w-9 h-9 rounded-lg bg-transparent cursor-pointer border-0 p-0">
+        <!-- Color Picker Row -->
+        <div class="flex items-center gap-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl">
+          <input type="color" id="nativeColorPicker" value="#3B82F6"
+            class="w-10 h-10 rounded-xl bg-transparent cursor-pointer border-0 p-0 flex-shrink-0">
           <div class="flex-1">
             <input type="text" name="color_tag" id="inputColorTag" value="#3B82F6" required maxlength="7"
-              class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-slate-900 dark:text-amber-300 uppercase focus:outline-none focus:border-amber-500 transition">
+              class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-amber-300 uppercase focus:outline-none focus:border-amber-500 transition">
           </div>
-          <span id="customColorStatus" class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold px-2">Available</span>
+          <span id="customColorStatus" class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold px-1 whitespace-nowrap">
+            <i class="fa-solid fa-circle-check mr-0.5"></i> Available
+          </span>
         </div>
 
         <!-- Curated Palette Swatches -->
-        <div class="pt-1">
+        <div>
           <span class="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-1.5">
-            Or Pick from Curated Swatches ({{ color_swatches|length }} Available):
+            Curated Swatches ({{ color_swatches|length }} available):
           </span>
-          <div class="grid grid-cols-8 sm:grid-cols-12 gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl max-h-48 overflow-y-auto">
+          <div class="grid grid-cols-10 sm:grid-cols-12 gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2.5 rounded-xl max-h-44 overflow-y-auto">
             {% for swatch in color_swatches %}
               {% if swatch.is_taken %}
-                <!-- Already Used / Locked Color -->
-                <button type="button" disabled title="Already used by '{{ swatch.used_by }}'"
+                <button type="button" disabled title="Taken by '{{ swatch.used_by }}'"
                   class="w-7 h-7 rounded-lg relative cursor-not-allowed opacity-30 border border-slate-300 dark:border-slate-700 flex items-center justify-center"
                   style="background-color: {{ swatch.hex }};">
-                  <span class="text-[9px] text-white drop-shadow">🔒</span>
+                  <i class="fa-solid fa-lock text-[8px] text-white drop-shadow"></i>
                 </button>
               {% else %}
-                <!-- Available Color Swatch -->
-                <button type="button" onclick="selectPresetColor('{{ swatch.hex }}')" title="Select {{ swatch.hex }}"
-                  class="color-swatch-btn w-7 h-7 rounded-lg transition-transform hover:scale-110 active:scale-95 border-2 border-transparent hover:border-slate-900 dark:hover:border-white shadow-xs flex items-center justify-center"
+                <button type="button" onclick="selectPresetColor('{{ swatch.hex }}')" title="{{ swatch.hex }}"
+                  class="color-swatch-btn w-7 h-7 rounded-lg transition-transform hover:scale-110 active:scale-95 border-2 border-transparent hover:border-slate-900 dark:hover:border-white shadow-sm"
                   style="background-color: {{ swatch.hex }};" data-color="{{ swatch.hex }}">
                 </button>
               {% endif %}
@@ -89,85 +107,110 @@
       </div>
 
       <!-- Live Badge Preview -->
-      <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl flex items-center justify-between">
-        <span class="text-[11px] uppercase font-bold text-slate-500 dark:text-slate-400">Live Preview:</span>
-        <div id="previewBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold font-mono transition-all"
+      <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3.5 rounded-xl flex items-center justify-between">
+        <span class="text-[11px] uppercase font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+          <i class="fa-solid fa-eye text-xs"></i> Live Preview
+        </span>
+        <div id="previewBadge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold font-mono transition-all"
              style="background-color: #3B82F625; color: #3B82F6; border: 1px solid #3B82F666;">
-          <span>📍</span>
+          <i class="fa-solid fa-box-archive text-[11px]"></i>
           <span id="previewName">Unit Name</span>
         </div>
       </div>
 
-      <!-- Notes / Description -->
+      <!-- Description -->
       <div>
-        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase mb-1">Notes / Description (Optional)</label>
-        <input type="text" name="description" placeholder="e.g. Top shelf, Accessories only" 
-          class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-amber-500 transition">
+        <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+          <i class="fa-solid fa-note-sticky mr-1 text-slate-400"></i>
+          Notes / Description <span class="text-slate-400 font-normal normal-case">(optional)</span>
+        </label>
+        <input type="text" name="description" placeholder="e.g. Top shelf, Accessories only"
+          class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition">
       </div>
 
-      <button type="submit" id="submitBtn" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition text-xs uppercase tracking-wider shadow-md shadow-amber-500/20">
-        + Save Unique Storage Unit
+      <button type="submit" id="submitBtn"
+        class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition text-xs uppercase tracking-wider shadow-md shadow-amber-500/20 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-floppy-disk"></i>
+        Save Storage Unit
       </button>
     </form>
   </div>
 
-  <!-- Right: Existing Boxes List -->
-  <div class="lg:col-span-6 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-5 shadow-sm dark:shadow-xl space-y-4">
-    <div class="flex items-center justify-between">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white">Configured Units ({{ boxes.count }})</h2>
-      <span class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{{ color_swatches|length }} total palette colors</span>
+  <!-- ===== RIGHT: Existing Boxes List ===== -->
+  <div class="lg:col-span-7 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-sm overflow-hidden">
+
+    <!-- Card Header -->
+    <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700/60 px-5 py-3.5">
+      <h2 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+        <i class="fa-solid fa-layer-group text-indigo-500"></i>
+        Configured Units
+        <span class="ml-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[10px] font-bold px-2 py-0.5 rounded-lg">{{ boxes.count }}</span>
+      </h2>
+      <span class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{{ color_swatches|length }} palette colors</span>
     </div>
 
-    <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-      <table class="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-        <thead class="bg-slate-50 dark:bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-          <tr>
-            <th class="py-2.5 px-3">Storage Unit</th>
-            <th class="py-2.5 px-3">Assigned Color</th>
-            <th class="py-2.5 px-3 text-center">Items</th>
-            <th class="py-2.5 px-3 text-right">Action</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
-          {% for box in boxes %}
-            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
-              <td class="py-3 px-3">
-                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg font-bold font-mono text-xs"
-                     style="background-color: {{ box.color_tag }}20; color: {{ box.color_tag }}; border: 1px solid {{ box.color_tag }}50;">
-                  <span>📍</span>
-                  <span>{{ box.name }}</span>
+    {% if boxes %}
+      <!-- Box Cards Grid -->
+      <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {% for box in boxes %}
+          <div class="group relative bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 hover:shadow-md transition-all duration-200"
+               style="border-left: 3px solid {{ box.color_tag }};">
+
+            <!-- Color Dot + Name -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                     style="background-color: {{ box.color_tag }}25; border: 1.5px solid {{ box.color_tag }}60;">
+                  <i class="fa-solid fa-box-archive text-sm" style="color: {{ box.color_tag }};"></i>
                 </div>
-                {% if box.description %}
-                  <div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate max-w-xs">{{ box.description }}</div>
-                {% endif %}
-              </td>
-              <td class="py-3 px-3 font-mono font-bold text-[11px] flex items-center gap-2">
-                <span class="w-3.5 h-3.5 rounded-full inline-block border border-slate-300 dark:border-white/20 shadow-xs" style="background-color: {{ box.color_tag }};"></span>
-                <span class="text-slate-700 dark:text-slate-300">{{ box.color_tag }}</span>
-              </td>
-              <td class="py-3 px-3 text-center font-mono font-bold text-amber-600 dark:text-amber-400">
-                {{ box.total_skus }} SKUs
-              </td>
-              <td class="py-3 px-3 text-right">
-                <a href="{% url 'box_delete' box.pk %}" onclick="return confirm('Delete \'{{ box.name }}\'? Items will be unassigned.')" 
-                   class="text-[10px] text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 bg-rose-500/10 border border-rose-500/20 px-2 py-1 rounded transition font-semibold">
-                  Delete
-                </a>
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="4" class="text-center py-8 text-slate-400 dark:text-slate-500">
-                No storage units created yet. Fill the form to create your first unit.
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+                <div class="min-w-0">
+                  <div class="font-bold text-sm text-slate-900 dark:text-white truncate font-mono">{{ box.name }}</div>
+                  {% if box.description %}
+                    <div class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">{{ box.description }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Delete Button -->
+              <a href="{% url 'box_delete' box.pk %}"
+                 onclick="return confirm('Delete \'{{ box.name }}\'? Items will be unassigned.')"
+                 class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 flex items-center justify-center rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-colors"
+                 title="Delete {{ box.name }}">
+                <i class="fa-solid fa-trash text-[11px]"></i>
+              </a>
+            </div>
+
+            <!-- Footer: Color + SKU count -->
+            <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-200 dark:border-slate-700/60">
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-full inline-block border border-white/40 shadow-xs" style="background-color: {{ box.color_tag }};"></span>
+                <span class="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase">{{ box.color_tag }}</span>
+              </div>
+              <div class="inline-flex items-center gap-1 text-[10px] font-bold font-mono text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg">
+                <i class="fa-solid fa-tags text-[9px]"></i>
+                {{ box.total_skus }} SKU{% if box.total_skus != 1 %}s{% endif %}
+              </div>
+            </div>
+
+          </div>
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <!-- Empty State -->
+      <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-box-open text-2xl text-slate-300 dark:text-slate-600"></i>
+        </div>
+        <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300">No Storage Units Yet</h3>
+        <p class="text-xs text-slate-400 mt-1 max-w-xs">Fill the form on the left to create your first physical storage bin or drawer.</p>
+      </div>
+    {% endif %}
+
   </div>
 
 </div>
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -178,13 +221,13 @@
     {% endfor %}
   };
 
-  const inputBoxName = document.getElementById('inputBoxName');
-  const inputColorTag = document.getElementById('inputColorTag');
+  const inputBoxName      = document.getElementById('inputBoxName');
+  const inputColorTag     = document.getElementById('inputColorTag');
   const nativeColorPicker = document.getElementById('nativeColorPicker');
   const customColorStatus = document.getElementById('customColorStatus');
-  const previewBadge = document.getElementById('previewBadge');
-  const previewName = document.getElementById('previewName');
-  const submitBtn = document.getElementById('submitBtn');
+  const previewBadge      = document.getElementById('previewBadge');
+  const previewName       = document.getElementById('previewName');
+  const submitBtn         = document.getElementById('submitBtn');
 
   function updateColor(hex) {
     hex = hex.toUpperCase();
@@ -198,13 +241,13 @@
     previewBadge.style.borderColor = hex + '66';
 
     if (usedColors[hex]) {
-      customColorStatus.innerText = `Taken by "${usedColors[hex]}" ❌`;
-      customColorStatus.className = 'text-[10px] font-mono text-rose-500 dark:text-rose-400 font-bold px-2';
+      customColorStatus.innerHTML = `<i class="fa-solid fa-circle-xmark mr-0.5"></i> Taken by "${usedColors[hex]}"`;
+      customColorStatus.className = 'text-[10px] font-mono text-rose-500 dark:text-rose-400 font-bold px-1 whitespace-nowrap';
       submitBtn.disabled = true;
       submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
     } else {
-      customColorStatus.innerText = 'Available ✓';
-      customColorStatus.className = 'text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold px-2';
+      customColorStatus.innerHTML = `<i class="fa-solid fa-circle-check mr-0.5"></i> Available`;
+      customColorStatus.className = 'text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold px-1 whitespace-nowrap';
       submitBtn.disabled = false;
       submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     }
@@ -218,30 +261,22 @@
     });
   }
 
-  function selectPresetColor(hex) {
-    updateColor(hex);
-  }
+  function selectPresetColor(hex) { updateColor(hex); }
 
   inputBoxName.addEventListener('input', (e) => {
     previewName.innerText = e.target.value.trim() || 'Unit Name';
   });
 
-  nativeColorPicker.addEventListener('input', (e) => {
-    updateColor(e.target.value);
-  });
+  nativeColorPicker.addEventListener('input', (e) => updateColor(e.target.value));
 
   inputColorTag.addEventListener('input', (e) => {
     let val = e.target.value.trim().toUpperCase();
-    if (val.length === 7) {
-      updateColor(val);
-    }
+    if (val.length === 7) updateColor(val);
   });
 
   window.addEventListener('DOMContentLoaded', () => {
     const swatches = document.querySelectorAll('.color-swatch-btn');
-    if (swatches.length > 0) {
-      updateColor(swatches[0].getAttribute('data-color'));
-    }
+    if (swatches.length > 0) updateColor(swatches[0].getAttribute('data-color'));
   });
 </script>
 {% endblock %}
