@@ -3,176 +3,240 @@
 {% block title %}Inventory Stock - Tatkal Pick{% endblock %}
 
 {% block content %}
-<div class="space-y-4 max-w-6xl mx-auto">
+<div class="flex flex-col h-full" style="height: calc(100vh - 40px);">
 
-  <!-- Header -->
-  <header class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-4">
+  <!-- ===== HEADER ===== -->
+  <header class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-3 gap-3 flex-shrink-0">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2"><span>📦</span> Inventory</h1>
+      <div class="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold uppercase tracking-wider mb-1">
+        <i class="fa-solid fa-boxes-stacked text-xs"></i>
+        Stock Control
+      </div>
+      <h1 class="text-xl font-black text-slate-900 dark:text-white">Inventory</h1>
       <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-        View, sort and manage your current stock levels. Total products:
-        <strong class="text-amber-600 dark:text-amber-400 font-mono">{{ total_count }}</strong>
+        Manage stock levels &mdash; <strong class="text-amber-600 dark:text-amber-400 font-mono">{{ total_count }}</strong> products total
       </p>
     </div>
-    <a href="{% url 'product_master' %}" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm">+ Add Product</a>
+    <a href="{% url 'product_master' %}"
+       class="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm shadow-amber-500/20 self-start sm:self-auto">
+      <i class="fa-solid fa-plus"></i> Add Product
+    </a>
   </header>
 
-  <!-- Summary cards -->
-  <div class="grid grid-cols-3 gap-3">
-    <div class="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-2xl p-4 flex items-center justify-between">
+  <!-- ===== STAT CARDS ===== -->
+  <div class="grid grid-cols-3 gap-3 mb-3 flex-shrink-0">
+    <div class="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-2xl px-4 py-2.5 flex items-center justify-between">
       <div>
         <p class="text-[10px] uppercase font-bold tracking-wider text-rose-500">Out of Stock</p>
-        <h3 class="text-2xl font-black text-rose-700 dark:text-rose-400">{{ out_count }}</h3>
+        <h3 class="text-2xl font-black text-rose-700 dark:text-rose-400 leading-none mt-0.5">{{ out_count }}</h3>
       </div>
-      <div class="w-9 h-9 rounded-full bg-rose-200 dark:bg-rose-900/60 flex items-center justify-center">❗</div>
+      <div class="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-900/60 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-circle-xmark text-rose-500 text-lg"></i>
+      </div>
     </div>
-    <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-2xl p-4 flex items-center justify-between">
+    <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-2xl px-4 py-2.5 flex items-center justify-between">
       <div>
         <p class="text-[10px] uppercase font-bold tracking-wider text-amber-500">Low Stock</p>
-        <h3 class="text-2xl font-black text-amber-700 dark:text-amber-400">{{ low_count }}</h3>
+        <h3 class="text-2xl font-black text-amber-700 dark:text-amber-400 leading-none mt-0.5">{{ low_count }}</h3>
       </div>
-      <div class="w-9 h-9 rounded-full bg-amber-200 dark:bg-amber-900/60 flex items-center justify-center">⚠️</div>
+      <div class="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg"></i>
+      </div>
     </div>
-    <div class="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-2xl p-4 flex items-center justify-between">
+    <div class="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-2xl px-4 py-2.5 flex items-center justify-between">
       <div>
         <p class="text-[10px] uppercase font-bold tracking-wider text-emerald-500">Sufficient</p>
-        <h3 class="text-2xl font-black text-emerald-700 dark:text-emerald-400">{{ ok_count }}</h3>
+        <h3 class="text-2xl font-black text-emerald-700 dark:text-emerald-400 leading-none mt-0.5">{{ ok_count }}</h3>
       </div>
-      <div class="w-9 h-9 rounded-full bg-emerald-200 dark:bg-emerald-900/60 flex items-center justify-center">✅</div>
+      <div class="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-circle-check text-emerald-500 text-lg"></i>
+      </div>
     </div>
   </div>
 
-  <!-- Table card -->
-  <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl shadow-sm overflow-hidden">
+  <!-- ===== TABLE CARD (fills remaining height) ===== -->
+  <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
 
     <!-- Toolbar -->
-    <div class="p-3 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col sm:flex-row justify-between items-center gap-3">
-      <input type="text" id="searchInput" placeholder="Search SKU or name..."
-        class="w-full sm:max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500">
+    <div class="px-3 py-2 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col sm:flex-row justify-between items-center gap-2 flex-shrink-0">
+      <div class="relative w-full sm:max-w-xs">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+        <input type="text" id="searchInput" placeholder="Search SKU or name..."
+          class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500">
+      </div>
 
       <div class="flex items-center gap-2 w-full sm:w-auto">
         <button type="button" id="openLimit"
-          class="shrink-0 px-3 py-2 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-xs">
-          ⚙️ Limit: <span class="font-black text-blue-600 dark:text-blue-400">{{ threshold }}</span>
+          class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-xs">
+          <i class="fa-solid fa-sliders text-slate-400"></i>
+          Limit: <span class="font-black text-blue-600 dark:text-blue-400">{{ threshold }}</span>
         </button>
         <select id="sortSelect"
-          class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 px-3 py-2 outline-none cursor-pointer">
-          <option value="stock-asc">Sort: Low to High Stock</option>
-          <option value="stock-desc">Sort: High to Low Stock</option>
-          <option value="name-asc">Sort: Name (A-Z)</option>
-          <option value="name-desc">Sort: Name (Z-A)</option>
+          class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 px-3 py-1.5 outline-none cursor-pointer">
+          <option value="stock-asc">Low → High Stock</option>
+          <option value="stock-desc">High → Low Stock</option>
+          <option value="name-asc">Name (A–Z)</option>
+          <option value="name-desc">Name (Z–A)</option>
         </select>
         <button type="button" id="scanBtn"
-          class="shrink-0 px-3 py-2 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-xl font-bold text-xs">
-          ▥ Scan
+          class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-xl font-bold text-xs">
+          <i class="fa-solid fa-qrcode"></i> Scan
         </button>
       </div>
     </div>
 
-    <div class="overflow-x-auto">
+    <!-- Table (scrollable within card) -->
+    <div class="overflow-y-auto flex-1 min-h-0">
       <table class="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-        <thead class="bg-slate-50 dark:bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-800">
+        <thead class="sticky top-0 bg-slate-50 dark:bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-800 z-10">
           <tr>
-            <th class="py-3.5 px-4 font-semibold">SKU ID</th>
-            <th class="py-3.5 px-4 font-semibold">Product Name</th>
-            <th class="py-3.5 px-4 font-semibold text-center">Current Stock</th>
-            <th class="py-3.5 px-4 text-right font-semibold">Actions</th>
+            <th class="py-2.5 px-4 font-semibold">SKU ID</th>
+            <th class="py-2.5 px-4 font-semibold">Product</th>
+            <th class="py-2.5 px-4 font-semibold text-center">Stock</th>
+            <th class="py-2.5 px-4 font-semibold text-right">Actions</th>
           </tr>
         </thead>
         <tbody id="invBody" class="divide-y divide-slate-100 dark:divide-slate-800/60">
           {% for item in items %}
             <tr class="inv-row hover:bg-slate-50 dark:hover:bg-slate-800/30 transition"
                 data-stock="{{ item.stock }}" data-name="{{ item.name|lower }}" data-sku="{{ item.sku|lower }}">
-              <td class="py-3.5 px-4 font-mono font-bold">
-                <a href="{% url 'product_detail' item.pk %}" class="text-amber-600 dark:text-amber-400 hover:underline underline-offset-4" title="View product details">{{ item.sku }}</a>
+
+              <!-- SKU -->
+              <td class="py-2.5 px-4 font-mono font-bold">
+                <a href="{% url 'product_detail' item.pk %}" class="text-amber-600 dark:text-amber-400 hover:underline underline-offset-4" title="View details">{{ item.sku }}</a>
               </td>
 
-              <td class="py-3 px-4">
-                <div class="flex items-center gap-3">
+              <!-- Product Name + Image -->
+              <td class="py-2 px-4">
+                <div class="flex items-center gap-2.5">
                   {% if item.image %}
-                    <img src="{{ item.image.url }}" alt="{{ item.name }}" loading="lazy" class="w-11 h-11 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0">
+                    <img src="{{ item.image.url }}" alt="{{ item.name }}" loading="lazy" class="w-9 h-9 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0">
                   {% else %}
-                    <div class="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-lg shrink-0">💎</div>
+                    <div class="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
+                      <i class="fa-solid fa-gem text-slate-400 text-sm"></i>
+                    </div>
                   {% endif %}
                   <div>
-                    <div class="font-extrabold text-slate-900 dark:text-white">{{ item.name }}</div>
-                    <div class="text-[10px] text-slate-400 font-normal">{{ item.category }} • {{ item.color }} • {{ item.size }}</div>
+                    <div class="font-extrabold text-slate-900 dark:text-white text-xs leading-tight">{{ item.name }}</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">{{ item.category }} &bull; {{ item.color }} &bull; {{ item.size }}</div>
                   </div>
                 </div>
               </td>
 
-              <td class="py-3.5 px-4 text-center">
+              <!-- Stock Badge -->
+              <td class="py-2.5 px-4 text-center">
                 {% if item.stock == 0 %}
-                  <span class="inline-flex px-3 py-1 rounded-lg font-mono font-bold text-xs bg-rose-50 dark:bg-rose-950/40 text-rose-600 border border-rose-200 dark:border-rose-900">0 Units</span>
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-mono font-bold text-xs bg-rose-50 dark:bg-rose-950/40 text-rose-600 border border-rose-200 dark:border-rose-900">
+                    <i class="fa-solid fa-circle-xmark text-[10px]"></i> 0 Units
+                  </span>
                 {% elif item.stock <= threshold %}
-                  <span class="inline-flex px-3 py-1 rounded-lg font-mono font-bold text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-600 border border-amber-200 dark:border-amber-900">{{ item.stock }} Units</span>
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-mono font-bold text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-600 border border-amber-200 dark:border-amber-900">
+                    <i class="fa-solid fa-triangle-exclamation text-[10px]"></i> {{ item.stock }} Units
+                  </span>
                 {% else %}
-                  <span class="inline-flex px-3 py-1 rounded-lg font-mono font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border border-emerald-200 dark:border-emerald-900">{{ item.stock }} Units</span>
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-mono font-bold text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border border-emerald-200 dark:border-emerald-900">
+                    <i class="fa-solid fa-circle-check text-[10px]"></i> {{ item.stock }} Units
+                  </span>
                 {% endif %}
               </td>
 
-              <td class="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
-                {% if item.edit_batch_id %}
-                  <a href="{% url 'stock_action' item.pk %}?edit_batch={{ item.edit_batch_id }}"
-                     class="inline-flex items-center gap-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-lg font-bold transition">✏️ Edit</a>
-                {% else %}
-                  <span class="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 text-slate-400 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg font-bold cursor-not-allowed" title="No active batch to edit">✏️ Edit</span>
-                {% endif %}
-                <a href="{% url 'sku_print_label' item.pk %}" target="_blank" title="Print QR label"
-                   class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg font-bold transition">🏷️ Label</a>
-                <a href="{% url 'stock_action' item.pk %}"
-                   class="inline-flex items-center gap-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-lg font-black transition shadow-xs">+ Add</a>
+              <!-- Actions -->
+              <td class="py-2.5 px-4 text-right whitespace-nowrap">
+                <div class="inline-flex items-center gap-1.5">
+                  {% if item.edit_batch_id %}
+                    <a href="{% url 'stock_action' item.pk %}?edit_batch={{ item.edit_batch_id %}"
+                       class="inline-flex items-center gap-1 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-2.5 py-1 rounded-lg font-bold transition text-[11px]">
+                      <i class="fa-solid fa-pen text-[10px]"></i> Edit
+                    </a>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 text-slate-400 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-lg font-bold cursor-not-allowed text-[11px]" title="No active batch">
+                      <i class="fa-solid fa-pen text-[10px]"></i> Edit
+                    </span>
+                  {% endif %}
+                  <a href="{% url 'sku_print_label' item.pk %}" target="_blank" title="Print QR label"
+                     class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-lg font-bold transition text-[11px]">
+                    <i class="fa-solid fa-tag text-[10px]"></i> Label
+                  </a>
+                  <a href="{% url 'stock_action' item.pk %}"
+                     class="inline-flex items-center gap-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-2.5 py-1 rounded-lg font-black transition text-[11px]">
+                    <i class="fa-solid fa-plus text-[10px]"></i> Add
+                  </a>
+                </div>
               </td>
             </tr>
           {% empty %}
             <tr>
               <td colspan="4" class="text-center py-12 text-slate-400">
-                <div class="text-base mb-1">📦 No inventory records found.</div>
-                <div class="text-xs text-slate-500 mb-3">Add a product from the Products page to see it here.</div>
-                <a href="{% url 'product_master' %}" class="inline-block bg-amber-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs">+ Add Product</a>
+                <i class="fa-solid fa-box-open text-4xl text-slate-300 dark:text-slate-600 mb-3 block"></i>
+                <div class="text-xs font-bold text-slate-500 mb-1">No inventory records found.</div>
+                <div class="text-xs text-slate-400 mb-3">Add a product from the Products page to see it here.</div>
+                <a href="{% url 'product_master' %}" class="inline-flex items-center gap-1.5 bg-amber-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs">
+                  <i class="fa-solid fa-plus"></i> Add Product
+                </a>
               </td>
             </tr>
           {% endfor %}
-          <tr id="noResults" class="hidden"><td colspan="4" class="text-center py-10 text-slate-400">No items match your search.</td></tr>
+          <tr id="noResults" class="hidden">
+            <td colspan="4" class="text-center py-8 text-slate-400 text-xs">
+              <i class="fa-solid fa-magnifying-glass text-2xl text-slate-300 dark:text-slate-600 mb-2 block"></i>
+              No items match your search.
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Pagination -->
-    <div class="bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700/60 p-3 flex items-center justify-between">
-      <div class="text-xs text-slate-500">Showing <b id="pgStart">0</b> to <b id="pgEnd">0</b> of <b id="pgTotal">0</b> entries</div>
+    <!-- Pagination Footer -->
+    <div class="bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700/60 px-4 py-2 flex items-center justify-between flex-shrink-0">
+      <div class="text-xs text-slate-500">
+        Showing <b id="pgStart">0</b>–<b id="pgEnd">0</b> of <b id="pgTotal">0</b>
+      </div>
       <div class="flex gap-2">
-        <button id="prevPage" class="px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-xs font-bold disabled:opacity-50">Prev</button>
-        <button id="nextPage" class="px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-xs font-bold disabled:opacity-50">Next</button>
+        <button id="prevPage" class="inline-flex items-center gap-1.5 px-3 py-1 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-xs font-bold disabled:opacity-40">
+          <i class="fa-solid fa-chevron-left text-[10px]"></i> Prev
+        </button>
+        <button id="nextPage" class="inline-flex items-center gap-1.5 px-3 py-1 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-xs font-bold disabled:opacity-40">
+          Next <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Low stock limit modal -->
+<!-- ===== Low Stock Limit Modal ===== -->
 <div id="limitModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
   <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 border border-slate-100 dark:border-slate-700">
-    <h3 class="text-base font-bold text-slate-900 dark:text-white mb-3">Low Stock Alert Setting</h3>
+    <div class="flex items-center gap-2 mb-4">
+      <i class="fa-solid fa-sliders text-blue-500"></i>
+      <h3 class="text-base font-bold text-slate-900 dark:text-white">Low Stock Alert Setting</h3>
+    </div>
     <form method="POST" action="{% url 'update_universal_threshold' %}">
       {% csrf_token %}
       <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Universal Low Stock Limit</label>
       <input type="number" name="low_stock_threshold" min="1" max="1000" required value="{{ threshold }}"
-        class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none">
+        class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-amber-500">
       <p class="text-[11px] text-slate-400 mt-1">Products with stock at or below this number show as Low Stock (yellow).</p>
       <div class="flex gap-3 mt-4">
         <button type="button" id="closeLimit" class="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold">Cancel</button>
-        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold">Save Limit</button>
+        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold">
+          <i class="fa-solid fa-floppy-disk mr-1"></i> Save Limit
+        </button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Scanner modal -->
+<!-- ===== Scanner Modal ===== -->
 <div id="scanModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
   <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 border border-slate-100 dark:border-slate-700">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-base font-bold text-slate-900 dark:text-white">Scan to Search</h3>
-      <button id="closeScan" class="text-slate-400 hover:text-rose-500 text-lg">✕</button>
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-qrcode text-blue-500"></i>
+        <h3 class="text-base font-bold text-slate-900 dark:text-white">Scan to Search</h3>
+      </div>
+      <button id="closeScan" class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
     </div>
     <div class="rounded-xl overflow-hidden border-2 border-dashed border-slate-300 bg-slate-900 aspect-video">
       <video id="scanVideo" class="w-full h-full object-cover" autoplay playsinline></video>
@@ -186,13 +250,13 @@
   import { BrowserMultiFormatReader } from 'https://cdn.jsdelivr.net/npm/@zxing/browser@latest/+esm';
 
   const ROWS_PER_PAGE = 10;
-  const tbody = document.getElementById('invBody');
+  const tbody    = document.getElementById('invBody');
   const noResults = document.getElementById('noResults');
-  const search = document.getElementById('searchInput');
-  const sortSel = document.getElementById('sortSelect');
-  const allRows = Array.from(document.querySelectorAll('.inv-row'));
-  let filtered = [...allRows];
-  let page = 1;
+  const search   = document.getElementById('searchInput');
+  const sortSel  = document.getElementById('sortSelect');
+  const allRows  = Array.from(document.querySelectorAll('.inv-row'));
+  let filtered   = [...allRows];
+  let page       = 1;
 
   function applySort() {
     const c = sortSel.value;
@@ -214,10 +278,10 @@
     const pages = Math.max(1, Math.ceil(total / ROWS_PER_PAGE));
     page = Math.min(Math.max(page, 1), pages);
     const start = (page - 1) * ROWS_PER_PAGE;
-    const end = Math.min(start + ROWS_PER_PAGE, total);
+    const end   = Math.min(start + ROWS_PER_PAGE, total);
     for (let i = start; i < end; i++) filtered[i].style.display = '';
     document.getElementById('pgStart').textContent = total ? start + 1 : 0;
-    document.getElementById('pgEnd').textContent = end;
+    document.getElementById('pgEnd').textContent   = end;
     document.getElementById('pgTotal').textContent = total;
     document.getElementById('prevPage').disabled = page <= 1;
     document.getElementById('nextPage').disabled = page >= pages || total === 0;
@@ -241,11 +305,11 @@
   document.getElementById('closeLimit').addEventListener('click', () => limitModal.classList.add('hidden'));
   limitModal.addEventListener('click', e => { if (e.target === limitModal) limitModal.classList.add('hidden'); });
 
-  // Scanner (QR / barcode -> fills the search box)
-  const reader = new BrowserMultiFormatReader();
+  // Scanner
+  const reader    = new BrowserMultiFormatReader();
   const scanModal = document.getElementById('scanModal');
-  const video = document.getElementById('scanVideo');
-  let controls = null;
+  const video     = document.getElementById('scanVideo');
+  let controls    = null;
 
   function stopScan() {
     if (controls) { controls.stop(); controls = null; }
@@ -257,7 +321,6 @@
       controls = await reader.decodeFromVideoDevice(undefined, video, (result) => {
         if (!result) return;
         let text = result.getText().trim();
-        // our QR codes hold a dispatch URL ending with the SKU
         try { const parts = new URL(text).pathname.split('/').filter(Boolean); text = decodeURIComponent(parts[parts.length - 1]); } catch (e) {}
         search.value = text;
         stopScan();
