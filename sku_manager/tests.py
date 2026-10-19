@@ -317,6 +317,20 @@ class CatalogGeneratorTests(TestCase):
 		self.assertEqual(item.wholesale_price, Decimal('15.00'))
 		self.assertEqual(item.selling_price, Decimal('20.00'))
 
+	def test_stock_action_defaults_to_latest_active_batch_for_edit(self):
+		item = JewelrySKU.objects.create(name='Default Batch Product')
+		StockBatch.objects.create(sku=item, batch_no='OLDER', quantity=3)
+		latest_batch = StockBatch.objects.create(sku=item, batch_no='LATEST', quantity=5)
+		StockBatch.objects.create(sku=item, batch_no='DISABLED', quantity=0, status='disabled')
+
+		for query in ({}, {'edit_batch': 'invalid'}):
+			with self.subTest(query=query):
+				response = self.client.get(reverse('stock_action', args=[item.pk]), query)
+
+				self.assertEqual(response.status_code, 200)
+				self.assertTrue(response.context['is_edit'])
+				self.assertEqual(response.context['selected_batch'], latest_batch)
+
 
 class BoxManagerColorTests(TestCase):
 	def setUp(self):

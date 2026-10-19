@@ -580,8 +580,19 @@ def stock_action(request, pk):
     platforms = get_or_seed_platforms()
     boxes = get_all_boxes()
 
+    active_batches = item.batches.filter(status='active')
     edit_id = request.GET.get('edit_batch')
-    selected_batch = item.batches.filter(pk=edit_id).first() if edit_id else None
+    selected_batch = None
+
+    if edit_id:
+        try:
+            selected_batch = item.batches.filter(pk=int(edit_id)).first()
+        except ValueError:
+            selected_batch = None
+
+    if not selected_batch:
+        selected_batch = active_batches.first()
+
     is_edit = selected_batch is not None
 
     def render_form(form_values=None):
