@@ -14,6 +14,7 @@ from .models import (
 	AppSettings,
 	DispatchLog,
 	JewelrySKU,
+	ManualStockReturn,
 	MarketplaceLabelScan,
 	MarketplaceListingSKU,
 	MarketplaceOrder,
@@ -133,6 +134,7 @@ class OrderCancellationTests(TestCase):
 		self.assertTemplateUsed(response, 'sku_manager/cancellation.html')
 		self.assertContains(response, 'Smart Auto-Restock')
 		self.assertContains(response, 'Manual Restock')
+		self.assertContains(response, 'Recent Cancelled Orders')
 
 	def test_cancelling_pending_order_does_not_restore_stock(self):
 		batch = StockBatch.objects.create(sku=self.item, batch_no='AVAILABLE', quantity=4)
@@ -149,6 +151,8 @@ class OrderCancellationTests(TestCase):
 		self.item.refresh_from_db()
 		self.assertRedirects(response, self.url)
 		self.assertEqual(order.status, MarketplaceOrder.STATUS_CANCELLED)
+		self.assertIsNotNone(order.cancelled_at)
+		self.assertFalse(order.stock_restored)
 		self.assertEqual(self.item.stock, 4)
 		self.assertEqual(StockBatch.objects.filter(sku=self.item).count(), 1)
 		batch.refresh_from_db()
@@ -183,6 +187,8 @@ class OrderCancellationTests(TestCase):
 		order.refresh_from_db()
 		self.item.refresh_from_db()
 		self.assertEqual(order.status, MarketplaceOrder.STATUS_CANCELLED)
+		self.assertIsNotNone(order.cancelled_at)
+		self.assertTrue(order.stock_restored)
 		self.assertEqual(order.dispatch_log, dispatch)
 		self.assertEqual(DispatchLog.objects.count(), 1)
 		self.assertEqual(self.item.stock, 5)
@@ -191,11 +197,10 @@ class OrderCancellationTests(TestCase):
 			self.client.get(reverse('pdf_order_review', args=[order.pk])),
 			'Order cancelled / returned',
 		)
-		self.assertEqual(
-			StockBatch.objects.filter(sku=self.item, batch_no='RTO-RETURN-ORDER-1').count(),
-			1,
-		)
-		self.assertEqual(batch.quantity, 3)
+		self.assertContains(self.client.get(self.url), '+2')
+		self.assertEqual(StockBatch.objects.filter(sku=self.item).count(), 1)
+		batch.refresh_from_db()
+		self.assertEqual(batch.quantity, 5)
 
 	def test_duplicate_order_ids_require_marketplace_selection(self):
 		other_platform = Platform.objects.create(name='Other Return Marketplace')
@@ -224,7 +229,7 @@ class OrderCancellationTests(TestCase):
 		self.assertEqual(first.status, MarketplaceOrder.STATUS_PENDING)
 
 	def test_manual_restock_adds_batch_and_rejects_repeated_order_id(self):
-		StockBatch.objects.create(sku=self.item, batch_no='STARTING', quantity=1)
+		batch = StockBatch.objects.create(sku=self.item, batch_no='STARTING', quantity=1)
 		self.item.sync_stock_from_batches()
 		data = {
 			'mode': 'manual',
@@ -237,10 +242,11 @@ class OrderCancellationTests(TestCase):
 		self.client.post(self.url, data)
 
 		self.item.refresh_from_db()
-		return_batch = StockBatch.objects.get(batch_no='RTO-MANUAL-RETURN-1')
-		self.assertEqual(return_batch.quantity, 3)
+		batch.refresh_from_db()
+		self.assertEqual(batch.quantity, 4)
 		self.assertEqual(self.item.stock, 4)
-		self.assertEqual(StockBatch.objects.filter(batch_no='RTO-MANUAL-RETURN-1').count(), 1)
+		self.assertEqual(StockBatch.objects.filter(sku=self.item).count(), 1)
+		self.assertEqual(ManualStockReturn.objects.filter(order_id='MANUAL-RETURN-1').count(), 1)
 
 	def test_cancelled_order_cannot_be_dispatched_again(self):
 		batch = StockBatch.objects.create(sku=self.item, batch_no='AVAILABLE', quantity=4)
