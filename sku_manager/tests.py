@@ -159,7 +159,14 @@ class OrderCancellationTests(TestCase):
 		self.assertEqual(batch.quantity, 4)
 
 	def test_cancelling_dispatched_order_restores_stock_once_and_keeps_dispatch_log(self):
-		batch = StockBatch.objects.create(sku=self.item, batch_no='REMAINING', quantity=3)
+		batch = StockBatch.objects.create(
+			sku=self.item,
+			batch_no='REMAINING',
+			quantity=3,
+			purchase_price=Decimal('12.50'),
+			wholesale_price=Decimal('18.00'),
+			selling_price=Decimal('25.00'),
+		)
 		self.item.sync_stock_from_batches()
 		dispatch = DispatchLog.objects.create(
 			sku=self.item,
@@ -201,6 +208,39 @@ class OrderCancellationTests(TestCase):
 		self.assertEqual(StockBatch.objects.filter(sku=self.item).count(), 1)
 		batch.refresh_from_db()
 		self.assertEqual(batch.quantity, 5)
+		self.assertEqual(batch.purchase_price, Decimal('12.50'))
+		self.assertEqual(batch.wholesale_price, Decimal('18.00'))
+
+	def test_cancelling_dispatched_order_without_batches_uses_product_costs(self):
+		self.item.purchase_price = Decimal('9.50')
+		self.item.wholesale_price = Decimal('14.00')
+		self.item.selling_price = Decimal('20.00')
+		self.item.save()
+		dispatch = DispatchLog.objects.create(
+			sku=self.item,
+			platform=self.platform,
+			platform_name=self.platform.name,
+			quantity=2,
+			stock_after=0,
+		)
+		order = self.create_order(
+			status=MarketplaceOrder.STATUS_DISPATCHED,
+			dispatch_log=dispatch,
+		)
+
+		self.client.post(self.url, {
+			'mode': 'auto',
+			'order_id': order.order_id,
+			'platform_id': self.platform.pk,
+		})
+
+		batch = StockBatch.objects.get(sku=self.item)
+		self.item.refresh_from_db()
+		self.assertEqual(batch.quantity, 2)
+		self.assertEqual(batch.purchase_price, Decimal('9.50'))
+		self.assertEqual(batch.wholesale_price, Decimal('14.00'))
+		self.assertEqual(batch.selling_price, Decimal('20.00'))
+		self.assertEqual(self.item.stock, 2)
 
 	def test_duplicate_order_ids_require_marketplace_selection(self):
 		other_platform = Platform.objects.create(name='Other Return Marketplace')
