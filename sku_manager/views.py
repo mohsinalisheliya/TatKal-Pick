@@ -581,7 +581,7 @@ def stock_action(request, pk):
     platforms = get_or_seed_platforms()
     boxes = get_all_boxes()
 
-    active_batches = item.batches.filter(status='active')
+    active_batches = item.batches.filter(status='active').order_by('-created_at', '-pk')
     edit_id = request.GET.get('edit_batch')
     selected_batch = None
 
@@ -1461,7 +1461,10 @@ def order_cancellation(request):
 
 
 def _restore_returned_stock(sku, quantity, fallback_batch_no, supplier_name):
-    batch = sku.batches.filter(status='active').first() or sku.batches.first()
+    batch = (
+        sku.batches.filter(status='active').order_by('-created_at', '-pk').first()
+        or sku.batches.order_by('-created_at', '-pk').first()
+    )
     if batch:
         batch.quantity += quantity
         batch.status = 'active'
