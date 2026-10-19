@@ -30,6 +30,7 @@ from .models import (
     AppSettings,
     DispatchLog,
     JewelrySKU,
+    ManualStockReturn,
     MarketplaceLabelScan,
     MarketplaceListingSKU,
     MarketplaceOrder,
