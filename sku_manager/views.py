@@ -1363,7 +1363,8 @@ def order_cancellation(request):
 
                 if order.status == MarketplaceOrder.STATUS_PENDING:
                     order.status = MarketplaceOrder.STATUS_CANCELLED
-                    order.save(update_fields=['status'])
+                    order.cancelled_at = timezone.now()
+                    order.save(update_fields=['status', 'cancelled_at'])
                     messages.success(request, f"Pending order '{order_id}' cancelled. No stock was deducted.")
                     return redirect('order_cancellation')
 
@@ -1375,26 +1376,21 @@ def order_cancellation(request):
                     return redirect('order_cancellation')
 
                 sku = order.sku
-                batch_no = f'RTO-{order.order_id}'
-                StockBatch.objects.create(
-                    sku=sku,
-                    batch_no=batch_no,
-                    quantity=order.quantity,
-                    purchase_price=sku.purchase_price,
-                    wholesale_price=sku.wholesale_price,
-                    selling_price=sku.selling_price,
-                    storage_box=sku.storage_box,
-                    section_name=sku.section_name,
-                    supplier_name='Customer RTO/Return',
-                    status='active',
+                batch = _restore_returned_stock(
+                    sku,
+                    order.quantity,
+                    f"RST-{order.order_id}",
+                    'Customer RTO/Return',
                 )
                 order.status = MarketplaceOrder.STATUS_CANCELLED
-                order.save(update_fields=['status'])
+                order.cancelled_at = timezone.now()
+                order.stock_restored = True
+                order.save(update_fields=['status', 'cancelled_at', 'stock_restored'])
                 sku.sync_stock_from_batches()
 
             messages.success(
                 request,
-                f"Order '{order_id}' cancelled. {order.quantity} unit(s) of {sku.sku} restored as batch {batch_no}.",
+                f"Order '{order_id}' cancelled. {order.quantity} unit(s) of {sku.sku} restored to batch {batch.batch_no}.",
             )
             return redirect('order_cancellation')
 
@@ -1417,32 +1413,32 @@ def order_cancellation(request):
                 return redirect('order_cancellation')
 
             sku = get_object_or_404(JewelrySKU, pk=sku_id)
-            batch_no = (
-                f'RTO-{order_id}'
-                if order_id
-                else f"RTO-MANUAL-{timezone.now():%Y%m%d%H%M%S%f}"
-            )
             with transaction.atomic():
-                if order_id and StockBatch.objects.filter(batch_no=batch_no).exists():
+                if order_id and (
+                    ManualStockReturn.objects.filter(order_id=order_id).exists()
+                    or StockBatch.objects.filter(batch_no=f'RTO-{order_id}').exists()
+                ):
                     messages.error(request, f"A return batch for Order ID '{order_id}' already exists.")
                     return redirect('order_cancellation')
-                StockBatch.objects.create(
-                    sku=sku,
-                    batch_no=batch_no,
-                    quantity=quantity,
-                    purchase_price=sku.purchase_price,
-                    wholesale_price=sku.wholesale_price,
-                    selling_price=sku.selling_price,
-                    storage_box=sku.storage_box,
-                    section_name=sku.section_name,
-                    supplier_name='Manual Return/RTO',
-                    status='active',
+                if order_id:
+                    _, created = ManualStockReturn.objects.get_or_create(
+                        order_id=order_id,
+                        defaults={'sku': sku, 'quantity': quantity},
+                    )
+                    if not created:
+                        messages.error(request, f"A return for Order ID '{order_id}' has already been processed.")
+                        return redirect('order_cancellation')
+                batch = _restore_returned_stock(
+                    sku,
+                    quantity,
+                    f"RST-MANUAL-{timezone.now():%Y%m%d%H%M%S%f}",
+                    'Manual Return/RTO',
                 )
                 sku.sync_stock_from_batches()
 
             messages.success(
                 request,
-                f'Manual return processed: {quantity} unit(s) added back to {sku.sku}.',
+                f'Manual return processed: {quantity} unit(s) added back to {sku.sku} in batch {batch.batch_no}.',
             )
             return redirect('order_cancellation')
 
@@ -1450,17 +1446,40 @@ def order_cancellation(request):
         return redirect('order_cancellation')
 
     products = JewelrySKU.objects.all().order_by('-created_at')
-    recent_returns = (
-        StockBatch.objects.filter(batch_no__startswith='RTO-')
-        .select_related('sku', 'storage_box')
-        .order_by('-created_at')[:15]
+    cancelled_orders = (
+        MarketplaceOrder.objects.filter(status=MarketplaceOrder.STATUS_CANCELLED)
+        .select_related('sku')
+        .order_by('-cancelled_at', '-created_at')[:15]
     )
     return render(request, 'sku_manager/cancellation.html', {
         'active_page': 'cancellation',
         'products': products,
         'platforms': Platform.objects.order_by('name'),
-        'recent_returns': recent_returns,
+        'cancelled_orders': cancelled_orders,
     })
+
+
+def _restore_returned_stock(sku, quantity, fallback_batch_no, supplier_name):
+    batch = sku.batches.filter(status='active').first() or sku.batches.first()
+    if batch:
+        batch.quantity += quantity
+        batch.status = 'active'
+        batch.finished_at = None
+        batch.save(update_fields=['quantity', 'status', 'finished_at', 'updated_at'])
+        return batch
+
+    return StockBatch.objects.create(
+        sku=sku,
+        batch_no=fallback_batch_no,
+        quantity=quantity,
+        purchase_price=sku.purchase_price,
+        wholesale_price=sku.wholesale_price,
+        selling_price=sku.selling_price,
+        storage_box=sku.storage_box,
+        section_name=sku.section_name,
+        supplier_name=supplier_name,
+        status='active',
+    )
 
 
 def parse_marketplace_order_ids(value):

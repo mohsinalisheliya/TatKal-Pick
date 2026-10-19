@@ -8,7 +8,7 @@
     <div class="text-xs font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400 mb-2">Returns &amp; RTO Management</div>
     <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white">Order Cancellations</h1>
     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-      Cancel marketplace orders and track returned units as separate inventory batches.
+      Cancel marketplace orders and merge returned units into your existing inventory batches.
     </p>
   </header>
 
@@ -18,7 +18,7 @@
       <input type="hidden" name="mode" value="auto">
       <h2 class="text-lg font-black text-emerald-800 dark:text-emerald-400">Smart Auto-Restock</h2>
       <p class="text-xs text-emerald-700 dark:text-emerald-500 mt-1 mb-5">
-        Enter an order ID to cancel it. Dispatched orders will have their units restored to inventory.
+        Enter an order ID to cancel it. Dispatched units are merged into the latest active batch.
       </p>
       <div class="space-y-4">
         <div>
@@ -80,35 +80,31 @@
 
   <section class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-6 shadow-sm">
     <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white border-b border-slate-100 dark:border-slate-700/60 pb-3 mb-4">
-      Recent Restored Returns
+      Recent Cancelled Orders
     </h2>
     <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
       <table class="w-full text-left text-xs text-slate-700 dark:text-slate-300">
         <thead class="bg-slate-50 dark:bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-800">
           <tr>
-            <th class="py-3 px-4 font-semibold">Date &amp; Time</th>
-            <th class="py-3 px-4 font-semibold">RTO Batch</th>
+            <th class="py-3 px-4 font-semibold">Cancelled On</th>
+            <th class="py-3 px-4 font-semibold">Order ID</th>
             <th class="py-3 px-4 font-semibold">Product / SKU</th>
-            <th class="py-3 px-4 text-center font-semibold">Units</th>
-            <th class="py-3 px-4 font-semibold">Location</th>
+            <th class="py-3 px-4 text-center font-semibold">Units Restored</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
-          {% for rto in recent_returns %}
+          {% for order in cancelled_orders %}
             <tr>
-              <td class="py-3 px-4 text-slate-500">{{ rto.created_at|date:"d M Y, h:i A" }}</td>
-              <td class="py-3 px-4 font-mono font-bold text-rose-600 dark:text-rose-400">{{ rto.batch_no }}</td>
+              <td class="py-3 px-4 text-slate-500">{% if order.cancelled_at %}{{ order.cancelled_at|date:"d M Y, h:i A" }}{% else %}{{ order.created_at|date:"d M Y, h:i A" }}{% endif %}</td>
+              <td class="py-3 px-4 font-mono font-bold text-slate-800 dark:text-slate-200">{{ order.order_id }}</td>
               <td class="py-3 px-4">
-                <div class="font-bold text-slate-900 dark:text-white">{{ rto.sku.name }}</div>
-                <div class="text-[10px] font-mono text-slate-400">{{ rto.sku.sku }}</div>
+                <div class="font-bold text-slate-900 dark:text-white">{% if order.sku %}{{ order.sku.name }}{% else %}{{ order.seller_sku }}{% endif %}</div>
+                {% if order.sku %}<div class="text-[10px] font-mono text-slate-400">{{ order.sku.sku }}</div>{% endif %}
               </td>
-              <td class="py-3 px-4 text-center font-black text-emerald-600">+{{ rto.quantity }}</td>
-              <td class="py-3 px-4 font-semibold text-slate-600 dark:text-slate-400">
-                {% if rto.storage_box %}{{ rto.storage_box.name }}{% else %}Unassigned{% endif %}
-              </td>
+              <td class="py-3 px-4 text-center font-black text-emerald-600">{% if order.stock_restored %}+{{ order.quantity }}{% else %}No stock deducted{% endif %}</td>
             </tr>
           {% empty %}
-            <tr><td colspan="5" class="text-center py-10 text-slate-400">No returns have been processed yet.</td></tr>
+            <tr><td colspan="4" class="text-center py-10 text-slate-400">No cancelled orders found.</td></tr>
           {% endfor %}
         </tbody>
       </table>

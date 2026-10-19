@@ -154,6 +154,23 @@ class StockBatch(models.Model):
     def __str__(self):
         return f"{self.sku.sku} - {self.batch_no} ({self.quantity} units)"
 
+
+class ManualStockReturn(models.Model):
+    sku = models.ForeignKey(JewelrySKU, on_delete=models.CASCADE, related_name='manual_stock_returns')
+    order_id = models.CharField(max_length=100, blank=True, default='')
+    quantity = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order_id'],
+                condition=~models.Q(order_id=''),
+                name='uniq_manual_stock_return_order_id',
+            ),
+        ]
+
+
 class PlatformPrice(models.Model):
     sku = models.ForeignKey(JewelrySKU, on_delete=models.CASCADE, related_name='platform_prices')
     platform = models.ForeignKey(Platform, on_delete=models.CASCADE)
@@ -230,6 +247,8 @@ class MarketplaceOrder(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     dispatched_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    stock_restored = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
