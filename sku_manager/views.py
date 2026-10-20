@@ -607,7 +607,7 @@ def stock_action(request, pk):
                     else price_map.get(platform.id, '')
                 ),
             }
-            for platform in platforms
+            for platform in platforms  
         ]
         return render(request, 'sku_manager/stock_action.html', {
             'item': item,
