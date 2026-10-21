@@ -5,38 +5,36 @@
 {% block content %}
 <div class="space-y-6 max-w-6xl mx-auto">
 
-  {# ── Top bar: back + actions ───────────────────────────────────────── #}
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <a href="{% url 'inventory_list' %}" class="inline-flex items-center gap-2 self-start rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold px-4 py-2 text-xs transition">
-      <i class="fas fa-arrow-left"></i> Inventory
+      <i class="fa-solid fa-arrow-left"></i> Inventory
     </a>
     <div class="flex flex-wrap items-center gap-2">
       <a href="{% url 'stock_action' item.pk %}" class="inline-flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 text-xs transition shadow-sm">
-        <i class="fas fa-plus"></i> Add Stock
+        <i class="fa-solid fa-plus"></i> Add Stock
       </a>
       <a href="{% url 'product_batches' item.pk %}" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 py-2 text-xs transition shadow-sm">
-        <i class="fas fa-layer-group"></i> Batches
+        <i class="fa-solid fa-layer-group"></i> Batches
         <span class="rounded-md bg-blue-800/70 px-1.5 py-0.5 text-[10px] font-mono">{{ batches|length }}</span>
       </a>
       {% if edit_url %}
         <a href="{{ edit_url }}" class="inline-flex items-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 text-xs transition shadow-sm">
-          <i class="fas fa-pen"></i> Edit Product
+          <i class="fa-solid fa-pen"></i> Edit Product
         </a>
       {% endif %}
       {% if label_url %}
         <a href="{{ label_url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500 text-slate-700 dark:text-slate-300 font-bold px-4 py-2 text-xs transition">
-          <i class="fas fa-print"></i> Print Label
+          <i class="fa-solid fa-print"></i> Print Label
         </a>
       {% endif %}
       {% if qr_url %}
         <a href="{{ qr_url }}" class="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500 text-slate-700 dark:text-slate-300 font-bold px-4 py-2 text-xs transition">
-          <i class="fas fa-qrcode"></i> QR
+          <i class="fa-solid fa-qrcode"></i> QR
         </a>
       {% endif %}
     </div>
   </div>
 
-  {# ── Hero: image + identity ────────────────────────────────────────── #}
   <section class="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/80 shadow-sm">
     <div class="h-1.5 bg-gradient-to-r from-amber-400 via-rose-400 to-indigo-500"></div>
     <div class="flex flex-col md:flex-row gap-6 p-5 sm:p-6">
@@ -44,112 +42,106 @@
         {% if item.image %}
           <a href="{{ item.image.url }}" target="_blank" rel="noopener" class="group relative block">
             <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-full aspect-square object-cover rounded-2xl border border-slate-200 dark:border-slate-700">
-            <span class="absolute bottom-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900/70 text-white text-xs opacity-0 group-hover:opacity-100 transition"><i class="fas fa-expand"></i></span>
+            <span class="absolute bottom-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900/70 text-white text-xs opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-expand"></i></span>
           </a>
         {% else %}
           <div class="w-full aspect-square rounded-2xl bg-slate-50 dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center text-slate-400">
-            <i class="far fa-gem text-5xl"></i>
+            <i class="fa-solid fa-gem text-5xl"></i>
             <span class="text-xs mt-3">No image uploaded</span>
           </div>
         {% endif %}
       </div>
-
       <div class="flex-1 min-w-0 space-y-4">
         <div class="flex flex-wrap items-center gap-2">
           {% if stock_state == 'out' %}
-            <span class="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 px-3 py-1 text-xs font-bold text-rose-600"><i class="fas fa-times-circle"></i> Out of Stock</span>
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 px-3 py-1 text-xs font-bold text-rose-600"><i class="fa-solid fa-circle-xmark"></i> Out of Stock</span>
           {% elif stock_state == 'low' %}
-            <span class="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-3 py-1 text-xs font-bold text-amber-600"><i class="fas fa-exclamation-triangle"></i> Low Stock</span>
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-3 py-1 text-xs font-bold text-amber-600"><i class="fa-solid fa-triangle-exclamation"></i> Low Stock</span>
           {% else %}
-            <span class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 text-xs font-bold text-emerald-600"><i class="fas fa-check-circle"></i> In Stock</span>
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 text-xs font-bold text-emerald-600"><i class="fa-solid fa-circle-check"></i> In Stock</span>
           {% endif %}
           {% if item.is_listed %}
-            <span class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-3 py-1 text-xs font-bold text-blue-600"><i class="fas fa-store"></i> Listed for sale</span>
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-3 py-1 text-xs font-bold text-blue-600"><i class="fa-solid fa-shop"></i> Listed for sale</span>
           {% else %}
-            <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 px-3 py-1 text-xs font-bold text-slate-500"><i class="fas fa-eye-slash"></i> Unlisted</span>
+            <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 px-3 py-1 text-xs font-bold text-slate-500"><i class="fa-solid fa-eye-slash"></i> Unlisted</span>
           {% endif %}
         </div>
-
         <div>
           <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight">{{ item.name }}</h1>
           <div class="mt-1 flex items-center gap-2">
             <p id="sku-text" class="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm break-all">{{ item.sku }}</p>
             <button type="button" id="copy-sku" title="Copy SKU" class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-amber-600 hover:border-amber-400 transition">
-              <i class="far fa-copy text-xs"></i>
+              <i class="fa-regular fa-copy text-xs"></i>
             </button>
           </div>
         </div>
-
         <dl class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
           <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-3">
-            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fas fa-tag w-3"></i> Category</dt>
+            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fa-solid fa-layer-group w-3"></i> Category</dt>
             <dd class="mt-1 font-bold text-slate-800 dark:text-white">{{ item.category }}</dd>
           </div>
           <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-3">
-            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fas fa-feather-alt w-3"></i> Style</dt>
+            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fa-solid fa-wand-magic-sparkles w-3"></i> Style</dt>
             <dd class="mt-1 font-bold text-slate-800 dark:text-white">{{ item.style }}</dd>
           </div>
           <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-3">
-            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fas fa-drafting-compass w-3"></i> Design / Model</dt>
-            <dd class="mt-1 font-bold text-slate-800 dark:text-white">{{ item.design_model|default:"—" }}</dd>
+            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fa-solid fa-pen-nib w-3"></i> Design</dt>
+            <dd class="mt-1 font-bold text-slate-800 dark:text-white">{{ item.design_model|default:" " }}</dd>
           </div>
           <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-3">
-            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fas fa-palette w-3"></i> Color</dt>
+            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fa-solid fa-palette w-3"></i> Color</dt>
             <dd class="mt-1 font-bold text-slate-800 dark:text-white">{{ item.color }}</dd>
           </div>
           <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-3">
-            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fas fa-ruler w-3"></i> Size</dt>
+            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fa-solid fa-ruler w-3"></i> Size</dt>
             <dd class="mt-1 font-bold text-slate-800 dark:text-white">{{ item.size }}</dd>
           </div>
           <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-3">
-            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fas fa-hashtag w-3"></i> Serial No.</dt>
+            <dt class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400"><i class="fa-solid fa-hashtag w-3"></i> Serial No.</dt>
             <dd class="mt-1 font-bold font-mono text-slate-800 dark:text-white">{{ item.number }}</dd>
           </div>
         </dl>
-
         <div class="flex flex-wrap items-center gap-3 text-xs">
           {% if item.storage_box %}
             <span class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 font-bold" style="background-color: {{ item.storage_box.color_tag }}20; color: {{ item.storage_box.color_tag }};">
-              <i class="fas fa-map-marker-alt"></i> {{ item.storage_box.name }} <span class="opacity-60">•</span> {{ item.section_name|default:"Main" }}
+              <i class="fa-solid fa-location-dot"></i> {{ item.storage_box.name }} <span class="opacity-60">|</span> {{ item.section_name|default:"Main" }}
             </span>
           {% else %}
-            <span class="inline-flex items-center gap-2 text-slate-400 italic"><i class="fas fa-map-marker-alt"></i> No storage box assigned</span>
+            <span class="inline-flex items-center gap-2 text-slate-400 italic"><i class="fa-solid fa-location-dot"></i> No storage box assigned</span>
           {% endif %}
-          <span class="inline-flex items-center gap-1.5 text-slate-400"><i class="far fa-clock"></i> Added {{ item.created_at|date:"d M Y" }} • Updated {{ item.updated_at|date:"d M Y, H:i" }}</span>
+          <span class="inline-flex items-center gap-1.5 text-slate-400"><i class="fa-regular fa-clock"></i> Added {{ item.created_at|date:"d M Y" }} | Updated {{ item.updated_at|date:"d M Y, H:i" }}</span>
         </div>
-
         <form method="POST" action="{% url 'toggle_product_status' item.pk %}" class="pt-1">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.path }}">
           <button type="submit" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-            {% if item.is_listed %}<i class="fas fa-pause-circle"></i> Unlist product{% else %}<i class="fas fa-play-circle"></i> List product for sale{% endif %}
+            {% if item.is_listed %}<i class="fa-solid fa-circle-pause"></i> Unlist product{% else %}<i class="fa-solid fa-circle-play"></i> List product for sale{% endif %}
           </button>
         </form>
       </div>
     </div>
   </section>
 
-  {# ── Key numbers ───────────────────────────────────────────────────── #}
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/80 p-4">
       <div class="flex items-center gap-3">
-        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600"><i class="fas fa-boxes"></i></span>
+        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600"><i class="fa-solid fa-boxes-stacked"></i></span>
         <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Sellable Stock</div>
       </div>
       <div class="mt-3 text-2xl font-black font-mono text-emerald-600">{{ sellable_units }} <span class="text-xs font-bold text-slate-400">units</span></div>
-      {% if held_units %}<div class="mt-0.5 text-[10px] text-amber-600"><i class="fas fa-pause-circle"></i> {{ held_units }} on hold</div>{% endif %}
+      {% if held_units %}<div class="mt-0.5 text-[10px] text-amber-600"><i class="fa-solid fa-circle-pause"></i> {{ held_units }} on hold</div>{% endif %}
     </div>
     <div class="rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/80 p-4">
       <div class="flex items-center gap-3">
-        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600"><i class="fas fa-rupee-sign"></i></span>
+        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600"><i class="fa-solid fa-indian-rupee-sign"></i></span>
         <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Stock Value</div>
       </div>
-      <div class="mt-3 text-base font-black font-mono text-slate-900 dark:text-white">₹{{ cost_value|floatformat:0 }} <i class="fas fa-long-arrow-alt-right text-slate-400 text-xs mx-0.5"></i> ₹{{ retail_value|floatformat:0 }}</div>
+      <div class="mt-3 text-base font-black font-mono text-slate-900 dark:text-white">₹{{ cost_value|floatformat:0 }} <i class="fa-solid fa-arrow-right-long text-slate-400 text-xs mx-0.5"></i> ₹{{ retail_value|floatformat:0 }}</div>
       <div class="mt-0.5 text-[10px] text-slate-400">cost to reselling, sellable units only</div>
     </div>
     <div class="rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/80 p-4">
       <div class="flex items-center gap-3">
-        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600"><i class="fas fa-shopping-cart"></i></span>
+        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600"><i class="fa-solid fa-cart-shopping"></i></span>
         <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Sold</div>
       </div>
       <div class="mt-3 text-2xl font-black font-mono text-slate-900 dark:text-white">{{ total_units_sold }} <span class="text-xs font-bold text-slate-400">units</span></div>
@@ -157,7 +149,7 @@
     </div>
     <div class="rounded-2xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/80 p-4">
       <div class="flex items-center gap-3">
-        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600"><i class="fas fa-calendar-alt"></i></span>
+        <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600"><i class="fa-regular fa-calendar-days"></i></span>
         <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Last 30 Days</div>
       </div>
       <div class="mt-3 text-2xl font-black font-mono text-slate-900 dark:text-white">{{ units_30d }} <span class="text-xs font-bold text-slate-400">sold</span></div>
@@ -167,27 +159,25 @@
     </div>
   </div>
 
-  {# ── Pricing ───────────────────────────────────────────────────────── #}
   <section class="rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/80 p-6 shadow-sm space-y-5">
     <h2 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white">
-      <i class="fas fa-tags text-amber-500"></i> Pricing &amp; Marketplace Selling Rates
+      <i class="fa-solid fa-tags text-amber-500"></i> Pricing &amp; Marketplace Selling Rates
     </h2>
-
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <div class="rounded-2xl border border-rose-500/30 bg-rose-50/50 dark:bg-rose-950/20 p-4">
-        <div class="flex items-center gap-2 text-[10px] font-bold uppercase text-rose-600"><i class="fas fa-shopping-basket"></i> Buying Price <span class="normal-case font-semibold opacity-70">(latest)</span></div>
+        <div class="flex items-center gap-2 text-[10px] font-bold uppercase text-rose-600"><i class="fa-solid fa-basket-shopping"></i> Buying Price <span class="normal-case font-semibold opacity-70">(latest)</span></div>
         <div class="mt-1 text-xl font-black font-mono text-slate-900 dark:text-white">₹{{ item.purchase_price }}</div>
       </div>
       <div class="rounded-2xl border border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20 p-4">
-        <div class="flex items-center gap-2 text-[10px] font-bold uppercase text-indigo-600"><i class="fas fa-truck-loading"></i> Wholesale Price</div>
+        <div class="flex items-center gap-2 text-[10px] font-bold uppercase text-indigo-600"><i class="fa-solid fa-truck-fast"></i> Wholesale Price</div>
         <div class="mt-1 text-xl font-black font-mono text-slate-900 dark:text-white">₹{{ item.wholesale_price }}</div>
       </div>
       <div class="rounded-2xl border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 p-4">
-        <div class="flex items-center gap-2 text-[10px] font-bold uppercase text-emerald-600"><i class="fas fa-store"></i> Reselling Price</div>
+        <div class="flex items-center gap-2 text-[10px] font-bold uppercase text-emerald-600"><i class="fa-solid fa-shop"></i> Reselling Price</div>
         <div class="mt-1 text-xl font-black font-mono text-slate-900 dark:text-white">₹{{ item.selling_price }}</div>
       </div>
       <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-4">
-        <div class="flex items-center gap-2 text-[10px] font-bold uppercase text-slate-500"><i class="fas fa-percentage"></i> Margin at Reselling</div>
+        <div class="flex items-center gap-2 text-[10px] font-bold uppercase text-slate-500"><i class="fa-solid fa-percent"></i> Margin at Reselling</div>
         {% if mrp_margin is not None %}
           <div class="mt-1 text-xl font-black font-mono {% if mrp_margin < 0 %}text-rose-600{% else %}text-emerald-600{% endif %}">₹{{ mrp_margin }} <span class="text-xs">({{ mrp_margin_pct }}%)</span></div>
         {% else %}
@@ -201,11 +191,11 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {% for row in platform_rows %}
           <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-4">
-            <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300"><i class="fas fa-store-alt text-slate-400"></i> {{ row.platform.name }}</div>
+            <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300"><i class="fa-solid fa-store text-slate-400"></i> {{ row.platform.name }}</div>
             {% if row.price %}
               <div class="mt-1 text-xl font-black font-mono text-amber-600 dark:text-amber-400">₹{{ row.price }}</div>
               <div class="mt-1 text-[11px] font-mono {% if row.margin < 0 %}text-rose-600 font-bold{% else %}text-emerald-600{% endif %}">
-                <i class="fas {% if row.margin < 0 %}fa-arrow-down{% else %}fa-arrow-up{% endif %}"></i>
+                <i class="fa-solid {% if row.margin < 0 %}fa-arrow-trend-down{% else %}fa-arrow-trend-up{% endif %}"></i>
                 {% if row.margin < 0 %}Loss{% else %}Profit{% endif %} ₹{{ row.margin }} ({{ row.margin_pct }}%)
               </div>
               {% if row.discount_pct is not None and row.discount_pct != 0 %}
@@ -214,10 +204,11 @@
             {% else %}
               <div class="mt-2 text-sm italic text-slate-400">Price not set</div>
             {% endif %}
+            
             {% if row.listing_sku %}
               <div class="mt-3 border-t border-slate-200 dark:border-slate-700 pt-2">
                 <div class="flex items-center gap-1.5 text-[10px] uppercase font-bold text-slate-400">
-                  <i class="fas fa-barcode"></i> Seller SKU {% if row.listing_sku_source == 'database' %}· From database{% else %}· Manual{% endif %}
+                  <i class="fa-solid fa-barcode"></i> Seller SKU {% if row.listing_sku_source == 'database' %}— From database{% else %}— Manual{% endif %}
                 </div>
                 <div class="mt-0.5 font-mono text-xs font-bold text-slate-800 dark:text-white break-all">{{ row.listing_sku }}</div>
               </div>
@@ -228,14 +219,13 @@
         {% endfor %}
       </div>
     </div>
-    <p class="text-[10px] text-slate-400"><i class="fas fa-info-circle"></i> Margin = price − latest buying price (before platform fees &amp; shipping).</p>
+    <p class="text-[10px] text-slate-400"><i class="fa-solid fa-circle-info"></i> Margin = price - latest buying price (before platform fees &amp; shipping).</p>
   </section>
 
-  {# ── Batches ───────────────────────────────────────────────────────── #}
   <section class="rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/80 p-6 shadow-sm space-y-3">
     <div class="flex items-center justify-between">
-      <h2 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white"><i class="fas fa-layer-group text-blue-500"></i> Batches</h2>
-      <a href="{% url 'product_batches' item.pk %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">Manage all <i class="fas fa-arrow-right text-[10px]"></i></a>
+      <h2 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white"><i class="fa-solid fa-layer-group text-blue-500"></i> Batches</h2>
+      <a href="{% url 'product_batches' item.pk %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">Manage all <i class="fa-solid fa-arrow-right text-[10px]"></i></a>
     </div>
     <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
       <table class="w-full text-left text-xs text-slate-700 dark:text-slate-300">
@@ -254,20 +244,20 @@
               <td class="py-2.5 px-4 font-mono font-bold">{{ batch.batch_no }}<div class="text-[10px] font-normal text-slate-400">{{ batch.created_at|date:"d M Y" }}</div></td>
               <td class="py-2.5 px-4">
                 {% if batch.status == 'active' and batch.quantity > 0 %}
-                  {% if batch.sales_enabled %}<span class="inline-flex items-center gap-1.5 font-bold text-emerald-600"><i class="fas fa-circle text-[7px]"></i> Active</span>
-                  {% else %}<span class="inline-flex items-center gap-1.5 font-bold text-amber-600"><i class="fas fa-pause-circle"></i> On Hold</span>{% endif %}
+                  {% if batch.sales_enabled %}<span class="inline-flex items-center gap-1.5 font-bold text-emerald-600"><i class="fa-solid fa-circle text-[7px]"></i> Active</span>
+                  {% else %}<span class="inline-flex items-center gap-1.5 font-bold text-amber-600"><i class="fa-solid fa-circle-pause"></i> On Hold</span>{% endif %}
                 {% else %}
-                  <span class="inline-flex items-center gap-1.5 font-bold text-rose-500"><i class="fas fa-flag-checkered"></i> Finished</span>
+                  <span class="inline-flex items-center gap-1.5 font-bold text-rose-500"><i class="fa-solid fa-flag-checkered"></i> Finished</span>
                 {% endif %}
               </td>
               <td class="py-2.5 px-4">
-                {% if batch.storage_box %}<i class="fas fa-box-open text-slate-400 mr-1"></i>{{ batch.storage_box.name }} • {{ batch.section_name }}{% else %}<span class="italic text-slate-400">No box</span>{% endif %}
+                {% if batch.storage_box %}<i class="fa-solid fa-box-open text-slate-400 mr-1"></i>{{ batch.storage_box.name }} | {{ batch.section_name }}{% else %}<span class="italic text-slate-400">No box</span>{% endif %}
               </td>
               <td class="py-2.5 px-4 text-center font-mono font-bold">{{ batch.quantity }}</td>
               <td class="py-2.5 px-4 font-mono">₹{{ batch.purchase_price }} / ₹{{ batch.wholesale_price }} / ₹{{ batch.selling_price }}</td>
             </tr>
           {% empty %}
-            <tr><td colspan="5" class="py-8 text-center text-slate-400"><i class="fas fa-inbox text-xl block mb-2"></i>No batches yet. Use “Add Stock”.</td></tr>
+            <tr><td colspan="5" class="py-8 text-center text-slate-400"><i class="fa-solid fa-inbox text-xl block mb-2"></i>No batches yet. Use + Add Stock.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -275,29 +265,28 @@
     {% if batches|length > 6 %}<p class="text-[11px] text-slate-400">Showing latest 6 of {{ batches|length }} batches.</p>{% endif %}
   </section>
 
-  {# ── Sales ─────────────────────────────────────────────────────────── #}
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <section class="rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/80 p-6 shadow-sm space-y-3">
-      <h2 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white"><i class="fas fa-chart-line text-emerald-500"></i> Sales by Marketplace</h2>
+      <h2 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white"><i class="fa-solid fa-chart-line text-emerald-500"></i> Sales by Marketplace</h2>
       {% for row in by_platform %}
         <div class="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-2.5">
-          <span class="inline-flex items-center gap-2 text-xs font-bold"><i class="fas fa-store-alt text-slate-400"></i> {{ row.platform_name }}</span>
-          <span class="text-xs font-mono"><b>{{ row.units }}</b> units • ₹{{ row.revenue|floatformat:0 }}</span>
+          <span class="inline-flex items-center gap-2 text-xs font-bold"><i class="fa-solid fa-store text-slate-400"></i> {{ row.platform_name }}</span>
+          <span class="text-xs font-mono"><b>{{ row.units }}</b> units | ₹{{ row.revenue|floatformat:0 }}</span>
         </div>
       {% empty %}
         <p class="text-xs text-slate-400">No dispatches yet for this product.</p>
       {% endfor %}
     </section>
-
+    
     <section class="rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800/80 p-6 shadow-sm space-y-3">
       <div class="flex items-center justify-between">
-        <h2 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white"><i class="fas fa-truck text-amber-500"></i> Recent Dispatches</h2>
-        <a href="{% url 'scan_dispatch' item.sku %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">Open dispatch <i class="fas fa-arrow-right text-[10px]"></i></a>
+        <h2 class="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white"><i class="fa-solid fa-truck-fast text-amber-500"></i> Recent Dispatches</h2>
+        <a href="{% url 'scan_dispatch' item.sku %}" class="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">Open dispatch <i class="fa-solid fa-arrow-right text-[10px]"></i></a>
       </div>
       {% for log in recent_logs %}
         <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 text-xs">
-          <div><span class="font-bold">{{ log.platform_name }}</span> <span class="text-slate-400">• {{ log.dispatched_at|date:"d M Y, H:i" }}</span></div>
-          <div class="font-mono">{{ log.quantity }} × ₹{{ log.sold_price }} <span class="text-slate-400">(left {{ log.stock_after }})</span></div>
+          <div><span class="font-bold">{{ log.platform_name }}</span> <span class="text-slate-400">| {{ log.dispatched_at|date:"d M Y, H:i" }}</span></div>
+          <div class="font-mono">-{{ log.quantity }} | ₹{{ log.sold_price }} <span class="text-slate-400">(left {{ log.stock_after }})</span></div>
         </div>
       {% empty %}
         <p class="text-xs text-slate-400">Nothing dispatched yet.</p>
@@ -316,8 +305,8 @@
     button.addEventListener('click', function () {
       navigator.clipboard.writeText(text.textContent.trim()).then(function () {
         var icon = button.querySelector('i');
-        icon.className = 'fas fa-check text-xs text-emerald-600';
-        setTimeout(function () { icon.className = 'far fa-copy text-xs'; }, 1500);
+        icon.className = 'fa-solid fa-check text-xs text-emerald-600';
+        setTimeout(function () { icon.className = 'fa-regular fa-copy text-xs'; }, 1500);
       });
     });
   })();
