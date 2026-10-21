@@ -4,96 +4,143 @@
 
 {% block content %}
 <section class="max-w-screen-2xl mx-auto space-y-6">
+
+  <!-- Header -->
   <header class="border-b border-slate-200 dark:border-slate-800 pb-4">
-    <p class="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">Label PDF</p>
-    <h1 class="mt-1 text-2xl font-extrabold text-slate-900 dark:text-white">{{ rows|length }} orders found</h1>
-    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-      {{ pending_count }} pending. Tick the orders to dispatch, check the product for each, then confirm once. Each order is processed on its own, so one problem never blocks the rest.
+    <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-semibold uppercase tracking-wider w-fit mb-2">
+      <i class="fa-solid fa-file-pdf"></i> PDF Scanned Successfully
+    </div>
+    <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white">{{ rows|length }} Orders Found in PDF</h1>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      The original label PDF is auto-saved. Review the extracted orders, stamp your brand logo/QR, print labels, and confirm stock deduction.
     </p>
   </header>
 
-  <div class="grid gap-6 lg:grid-cols-12">
-  <div class="min-w-0 lg:col-span-7">
-  <form method="post" class="space-y-4">
-    {% csrf_token %}
-    <input type="hidden" name="ids" value="{{ ids }}">
-    {% if scan_id %}<input type="hidden" name="scan_id" value="{{ scan_id }}">{% endif %}
-
-    {% for row in rows %}
-      {% with order=row.order %}
-      <article class="rounded-2xl border bg-white dark:bg-slate-800/80 p-4 sm:p-5
-        {% if order.status == 'dispatched' %}border-emerald-500/40{% elif order.status == 'cancelled' %}border-rose-500/40{% else %}border-slate-200 dark:border-slate-700{% endif %}">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center gap-3">
-            {% if order.status == 'pending' %}
-              <input type="checkbox" name="include_{{ order.pk }}" id="include_{{ order.pk }}" {% if row.matched %}checked{% endif %} class="h-5 w-5 rounded border-slate-300">
-            {% endif %}
-            <div>
-              <p class="text-[10px] font-bold uppercase tracking-widest text-amber-600">{{ order.platform_name }}</p>
-              <p class="font-mono text-sm font-bold text-slate-900 dark:text-white select-all whitespace-nowrap">{{ order.order_id }}</p>
+  <!-- SPLIT SCREEN LAYOUT -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- LEFT SIDE: ORDER REVIEW LIST -->
+    <div class="lg:col-span-7 space-y-4">
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="ids" value="{{ ids }}">
+        
+        {% for row in rows %}
+          {% with order=row.order %}
+          <article class="rounded-3xl border bg-white dark:bg-slate-800/80 p-5 shadow-sm
+            {% if order.status == 'dispatched' %}border-emerald-500/40{% else %}border-slate-200 dark:border-slate-700{% endif %}">
+            
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
+              <div class="flex items-center gap-3">
+                {% if order.status == 'pending' %}
+                  <input type="checkbox" name="include_{{ order.pk }}" id="include_{{ order.pk }}" {% if row.matched %}checked{% endif %} class="h-5 w-5 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500 cursor-pointer">
+                {% else %}
+                  <span class="w-5 h-5 flex items-center justify-center bg-emerald-100 text-emerald-600 rounded-full text-xs"><i class="fa-solid fa-check"></i></span>
+                {% endif %}
+                <div>
+                  <p class="text-[10px] font-bold uppercase tracking-widest text-amber-600">{{ order.platform_name }}</p>
+                  <!-- Safe display of full 17-digit Order ID -->
+                  <p class="font-mono text-sm font-bold text-slate-900 dark:text-white select-all">{{ order.order_id }}</p>
+                </div>
+              </div>
+              <div class="text-right text-xs text-slate-500">
+                Seller SKU <span class="font-mono font-bold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded">{{ order.seller_sku|default:" " }}</span> • Qty <strong class="text-emerald-600 text-sm">{{ order.quantity }}</strong>
+              </div>
             </div>
+
+            {% if order.status == 'dispatched' %}
+              <p class="mt-3 text-sm font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
+                Dispatched {{ order.dispatched_at|date:"d M Y, h:i A" }} • {{ order.quantity }} units of {{ order.sku.sku }}. Stock was not changed again.
+              </p>
+            {% else %}
+              {% if not row.matched %}
+                <p class="mt-3 text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-950/20 p-2 rounded-lg border border-rose-100 dark:border-rose-900/50">
+                  <i class="fa-solid fa-triangle-exclamation mr-1"></i> No product matched this seller SKU. Please map it manually below.
+                </p>
+              {% endif %}
+              
+              <div class="mt-3 grid gap-3 md:grid-cols-3">
+                <div class="md:col-span-3">
+                  <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Tatkal Pick Product Inventory Mapping</label>
+                  <select name="sku_{{ order.pk }}" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:border-amber-500">
+                    <option value="">Choose the matching product</option>
+                    {% for product in products %}
+                      <option value="{{ product.pk }}" {% if row.matched.pk == product.pk %}selected{% endif %}>{{ product.sku }} • {{ product.name }} (Stock: {{ product.stock }})</option>
+                    {% endfor %}
+                  </select>
+                  {% if order.seller_sku %}
+                  <label class="mt-2 flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
+                    <input type="checkbox" name="save_sku_{{ order.pk }}" class="rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer">
+                    <span>Remember this {{ order.platform_name }} SKU mapping for future</span>
+                  </label>
+                  {% endif %}
+                </div>
+                
+                <div class="md:col-span-1">
+                  <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Recipient name</label>
+                  <input name="name_{{ order.pk }}" value="{{ order.customer_name }}" maxlength="150" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Delivery address</label>
+                  <textarea name="address_{{ order.pk }}" rows="2" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-[11px] font-semibold text-slate-800 dark:text-slate-200 leading-tight">{{ order.shipping_address }}</textarea>
+                </div>
+              </div>
+            {% endif %}
+          </article>
+          {% endwith %}
+        {% empty %}
+          <div class="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 p-8 text-center">
+            <i class="fa-regular fa-file-pdf text-4xl text-slate-400 mb-3"></i>
+            <h3 class="mt-3 font-bold text-slate-800 dark:text-slate-200">No readable orders</h3>
+            <p class="text-xs text-slate-500 mt-1">This PDF didn't contain any standard Meesho or Amazon shipping labels.</p>
           </div>
-          <div class="text-right text-xs text-slate-500">
-            Seller SKU <span class="font-mono font-bold text-slate-800 dark:text-slate-200">{{ order.seller_sku|default:"—" }}</span> · Qty <strong>{{ order.quantity }}</strong>
+        {% endfor %}
+
+        <!-- Action Bar -->
+        <div class="sticky bottom-4 mt-6 flex flex-col sm:flex-row items-center gap-3 bg-slate-900/90 backdrop-blur-md border border-slate-800 p-4 rounded-2xl shadow-2xl z-10">
+          {% if pending_count %}
+            <button type="submit" class="w-full sm:w-auto rounded-xl bg-emerald-500 px-6 py-3 text-sm font-black text-slate-950 hover:bg-emerald-400 transition shadow-lg shadow-emerald-500/20">
+              Confirm & Deduct Stock
+            </button>
+          {% endif %}
+          <a href="{% url 'pdf_order_scan' %}" class="w-full sm:w-auto text-center rounded-xl border border-slate-600 px-6 py-3 text-sm font-bold text-white hover:bg-slate-800 transition">
+            Scan another PDF
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <!-- RIGHT SIDE: PDF LIVE PREVIEW & PRINT -->
+    <div class="lg:col-span-5 relative">
+      <div class="sticky top-6 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-4 shadow-sm flex flex-col h-[85vh]">
+        
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3 shrink-0">
+          <div>
+            <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <i class="fa-solid fa-eye text-indigo-500"></i> PDF Live Preview
+            </h3>
+            <p class="text-[10px] text-slate-500">Auto-saved to database</p>
           </div>
+          {% if pdf_url %}
+            <button type="button" onclick="document.getElementById('pdfPreviewFrame').contentWindow.print()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-sm">
+              <i class="fa-solid fa-print"></i> Print Labels
+            </button>
+          {% endif %}
         </div>
 
-        {% if order.status == 'dispatched' %}
-          <p class="mt-3 text-sm text-emerald-700 dark:text-emerald-300">
-            Dispatched {{ order.dispatched_at|date:"d M Y, h:i A" }} — {{ order.quantity }} × {{ order.sku.sku }}. Stock was not changed again.
-            <a class="font-bold underline" href="{% url 'pdf_order_review' order.pk %}">Details</a>
-          </p>
-        {% elif order.status == 'cancelled' %}
-          <p class="mt-3 text-sm text-rose-700 dark:text-rose-300">
-            Cancelled / RTO — this order is not available for dispatch.
-            <a class="font-bold underline" href="{% url 'pdf_order_review' order.pk %}">Details</a>
-          </p>
-        {% else %}
-          {% if not row.matched %}
-            <p class="mt-3 text-xs font-semibold text-amber-700 dark:text-amber-300">No product matched this seller SKU — choose one below.</p>
+        <div class="flex-1 mt-4 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+          {% if pdf_url %}
+            <iframe id="pdfPreviewFrame" src="{{ pdf_url }}" class="w-full h-full border-none" title="Scanned PDF Preview"></iframe>
+          {% else %}
+            <div class="w-full h-full flex items-center justify-center text-slate-400 text-xs font-semibold">
+              PDF preview unavailable.
+            </div>
           {% endif %}
-          <div class="mt-3 grid gap-3 md:grid-cols-3">
-            <div>
-              <label class="block text-[10px] font-bold uppercase text-slate-500">Tatkal Pick product</label>
-              <select name="sku_{{ order.pk }}" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs">
-                <option value="">Choose the matching product</option>
-                {% for product in products %}
-                  <option value="{{ product.pk }}" {% if row.matched.pk == product.pk %}selected{% endif %}>{{ product.sku }} — {{ product.name }}</option>
-                {% endfor %}
-              </select>
-              {% if order.seller_sku %}
-              <label class="mt-2 flex items-start gap-2 text-xs text-slate-600 dark:text-slate-300">
-                <input type="checkbox" name="save_sku_{{ order.pk }}" class="mt-0.5 rounded border-slate-300">
-                <span>Remember this {{ order.platform_name }} SKU for this product</span>
-              </label>
-              {% endif %}
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold uppercase text-slate-500">Recipient name</label>
-              <input name="name_{{ order.pk }}" value="{{ order.customer_name }}" maxlength="150" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs">
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold uppercase text-slate-500">Delivery address</label>
-              <textarea name="address_{{ order.pk }}" rows="3" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs">{{ order.shipping_address }}</textarea>
-            </div>
-          </div>
-        {% endif %}
-      </article>
-      {% endwith %}
-    {% empty %}
-      <p class="rounded-2xl border border-slate-200 dark:border-slate-700 p-6 text-center text-slate-500">No orders to show.</p>
-    {% endfor %}
+        </div>
 
-    <div class="flex flex-wrap gap-3">
-      {% if pending_count %}
-      <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-extrabold text-white hover:bg-emerald-500">Confirm selected orders and deduct stock</button>
-      {% endif %}
-      <a href="{% url 'pdf_order_scan' %}" class="inline-flex rounded-xl border border-slate-300 dark:border-slate-600 px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">Scan another PDF</a>
+      </div>
     </div>
-  </form>
-  </div>
 
-  {% if pdf_url %}{% include "sku_manager/pdf_order_stamper.html" %}{% endif %}
   </div>
 </section>
 {% endblock %}
