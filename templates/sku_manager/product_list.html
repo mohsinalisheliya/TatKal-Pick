@@ -4,20 +4,18 @@
 
 {% block content %}
 <div class="space-y-6 max-w-6xl mx-auto">
-
   <!-- Header -->
   <header class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-4">
     <div>
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-semibold uppercase tracking-wider mb-1.5">
-        <span>📋</span> Master Catalog
+        <i class="fa-solid fa-book"></i> Master Catalog
       </div>
       <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Product Listing</h1>
       <p class="text-xs text-slate-500 dark:text-slate-400">Total catalog records: <strong class="text-amber-600 dark:text-amber-400 font-mono">{{ total_count }}</strong> items</p>
     </div>
-
     <div class="flex items-center gap-2.5">
       <a href="{% url 'product_master' %}" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5 whitespace-nowrap">
-        <span>+ Add Product</span>
+        <i class="fa-solid fa-plus"></i> Add Product
       </a>
     </div>
   </header>
@@ -27,16 +25,16 @@
     
     <!-- Quick Search Input (Realtime + Full Query) -->
     <form method="GET" id="searchForm" class="w-full sm:w-96 relative flex items-center">
-      <span class="absolute left-3.5 text-slate-400 text-xs pointer-events-none">🔍</span>
+      <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-slate-400 text-xs pointer-events-none"></i>
       <input type="text" name="q" id="quickSearchInput" value="{{ search_query }}" 
-        placeholder="Quick search SKU, name, color, style..."
+         placeholder="Quick search SKU, name, color, style..."
         autocomplete="off"
         class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 transition">
-      
+        
       {% if search_query %}
         <a href="{% url 'product_list' %}?limit={{ limit }}" title="Clear search" 
-           class="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold">
-          &times;
+            class="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold">
+          <i class="fa-solid fa-xmark"></i>
         </a>
       {% endif %}
       <input type="hidden" name="limit" value="{{ limit }}">
@@ -46,7 +44,7 @@
     <div class="flex items-center gap-2 w-full sm:w-auto justify-end text-xs text-slate-500 dark:text-slate-400">
       <span class="text-[11px] font-semibold">Rows per page:</span>
       <select id="limitSelector" onchange="changeLimit(this.value)" 
-        class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-bold focus:outline-none focus:border-amber-500 cursor-pointer">
+         class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-bold focus:outline-none focus:border-amber-500 cursor-pointer">
         <option value="10" {% if limit == 10 %}selected{% endif %}>10</option>
         <option value="25" {% if limit == 25 %}selected{% endif %}>25</option>
         <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
@@ -58,7 +56,7 @@
   <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm space-y-4">
     <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
       <table class="w-full text-left text-xs text-slate-700 dark:text-slate-300" id="productTable">
-        <thead class="bg-slate-50 dark:bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-800">
+        <thead class="bg-slate-50 dark:bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-50 border-b border-slate-200 dark:border-slate-800">
           <tr>
             <th class="py-3.5 px-4 w-16 text-center">Image</th>
             <th class="py-3.5 px-4 font-semibold">SKU ID</th>
@@ -77,43 +75,37 @@
                   {% if p.image %}
                     <img src="{{ p.image.url }}" class="w-full h-full object-cover">
                   {% else %}
-                    <span class="text-[9px] text-slate-400 font-mono">N/A</span>
+                    <i class="fa-solid fa-gem text-slate-400 text-[10px]"></i>
                   {% endif %}
                 </div>
               </td>
-
               <!-- SKU ID -->
               <td class="py-3 px-4 font-mono font-bold text-amber-600 dark:text-amber-400 row-sku">
                 {{ p.sku }}
               </td>
-
               <!-- Name & Color/Size -->
               <td class="py-3 px-4">
                 <div class="font-extrabold text-slate-900 dark:text-white text-xs row-name">{{ p.name }}</div>
-                <div class="text-[10px] text-slate-400 mt-0.5 row-meta">{{ p.color }} • {{ p.size }}</div>
+                <div class="text-[10px] text-slate-400 mt-0.5 row-meta">{{ p.color }} | {{ p.size }}</div>
               </td>
-
               <!-- Category -->
               <td class="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300 row-cat">
                 {{ p.category }}
               </td>
-
               <!-- Style & Model -->
               <td class="py-3 px-4 font-mono text-slate-600 dark:text-slate-400 row-style">
-                {{ p.style|default:"STD" }}{% if p.design_model %} • {{ p.design_model }}{% endif %}
+                {{ p.style|default:"STD" }}{% if p.design_model %} | {{ p.design_model }}{% endif %}
               </td>
-
               <!-- Actions -->
               <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                 <a href="{% url 'product_edit_details' p.pk %}" 
-                   class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg font-bold border border-slate-200 dark:border-slate-700 transition">
-                  ✏️ Edit
+                    class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg font-bold border border-slate-200 dark:border-slate-700 transition">
+                    <i class="fa-solid fa-pen text-[10px]"></i> Edit
                 </a>
-
                 <button type="button" 
-                        onclick="openDeleteModal('{{ p.id }}', '{{ p.sku|escapejs }}', '{{ p.name|escapejs }}')"
+                         onclick="openDeleteModal('{{ p.id }}', '{{ p.sku|escapejs }}', '{{ p.name|escapejs }}')"
                         class="inline-flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-3 py-1.5 rounded-lg font-bold transition">
-                  🗑️ Delete
+                    <i class="fa-solid fa-trash text-[10px]"></i> Delete
                 </button>
               </td>
             </tr>
@@ -136,41 +128,32 @@
         <strong class="text-slate-900 dark:text-white font-mono">{{ page_obj.end_index|default:0 }}</strong> of 
         <strong class="text-slate-900 dark:text-white font-mono">{{ total_count }}</strong> entries
       </div>
-
+      
       <div class="flex items-center gap-1.5">
-        <!-- Previous Page Button -->
         {% if page_obj.has_previous %}
           <a href="?page={{ page_obj.previous_page_number }}&limit={{ limit }}{% if search_query %}&q={{ search_query }}{% endif %}" 
-             class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition">
-            ← Prev
+              class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition">
+              Prev
           </a>
         {% else %}
-          <span class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 opacity-40 cursor-not-allowed font-bold">
-            ← Prev
-          </span>
+          <span class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 opacity-40 cursor-not-allowed font-bold">Prev</span>
         {% endif %}
 
-        <!-- Current Page Indicator -->
         <span class="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-black font-mono shadow-xs">
           {{ page_obj.number }} / {{ page_obj.paginator.num_pages|default:1 }}
         </span>
 
-        <!-- Next Page Button -->
         {% if page_obj.has_next %}
           <a href="?page={{ page_obj.next_page_number }}&limit={{ limit }}{% if search_query %}&q={{ search_query }}{% endif %}" 
-             class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition">
-            Next →
+              class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold transition">
+            Next 
           </a>
         {% else %}
-          <span class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 opacity-40 cursor-not-allowed font-bold">
-            Next →
-          </span>
+          <span class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 opacity-40 cursor-not-allowed font-bold">Next</span>
         {% endif %}
       </div>
     </div>
-
   </div>
-
 </div>
 
 <!-- Delete Password Modal -->
@@ -178,12 +161,12 @@
   <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
     <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
       <div class="flex items-center gap-2 text-rose-500 font-extrabold text-sm">
-        <span class="w-7 h-7 rounded-lg bg-rose-500/10 flex items-center justify-center">🔒</span>
+        <span class="w-7 h-7 rounded-lg bg-rose-500/10 flex items-center justify-center"><i class="fa-solid fa-triangle-exclamation"></i></span>
         <span>Security Verification Required</span>
       </div>
       <button type="button" onclick="closeDeleteModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
     </div>
-
+    
     <div>
       <p class="text-xs text-slate-600 dark:text-slate-400">You are about to permanently delete:</p>
       <div class="mt-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
@@ -201,7 +184,7 @@
         <input type="password" name="delete_password" required autofocus placeholder="Account password or master PIN"
           class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-rose-500 transition">
       </div>
-
+      
       <div class="flex items-center justify-end gap-2 pt-2">
         <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700">Cancel</button>
         <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-rose-600/20">
@@ -211,6 +194,7 @@
     </form>
   </div>
 </div>
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -221,7 +205,6 @@
 
   quickSearchInput.addEventListener('input', function() {
     const term = this.value.trim().toLowerCase();
-
     rows.forEach(row => {
       const text = row.textContent.toLowerCase();
       if (text.includes(term)) {
