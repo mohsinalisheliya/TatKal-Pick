@@ -7,14 +7,18 @@
   <header class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-4">
     <div>
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-semibold uppercase tracking-wider mb-1.5">
-        <span>📋</span> Batch Audit & Timeline
+        <i class="fa-solid fa-clock-rotate-left"></i> Batch Audit & Timeline
       </div>
       <h1 class="text-2xl font-black text-slate-900 dark:text-white">{{ item.name }}</h1>
       <p class="text-xs text-slate-500 font-mono mt-0.5">SKU: {{ item.sku }}</p>
     </div>
     <div class="flex items-center gap-2.5">
-      <a href="{% url 'stock_action' item.pk %}" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm">+ Add Stock</a>
-      <a href="{% url 'inventory_list' %}" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">← Inventory</a>
+      <a href="{% url 'stock_action' item.pk %}" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm inline-flex items-center gap-2">
+        <i class="fa-solid fa-plus"></i> Add Stock
+      </a>
+      <a href="{% url 'inventory_list' %}" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition inline-flex items-center gap-2">
+        <i class="fa-solid fa-boxes-stacked"></i> Inventory
+      </a>
     </div>
   </header>
 
@@ -24,37 +28,38 @@
         <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Batches</div>
         <div class="text-2xl font-black text-slate-900 dark:text-white font-mono mt-0.5">{{ total_batches }}</div>
       </div>
-      <span class="text-2xl">📦</span>
+      <i class="fa-solid fa-layer-group text-2xl text-slate-300 dark:text-slate-600"></i>
     </div>
     <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4 shadow-sm flex items-center justify-between">
       <div>
         <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Sellable Units</div>
         <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">{{ active_units }}</div>
       </div>
-      <span class="text-2xl">⚡</span>
+      <i class="fa-solid fa-box-open text-2xl text-emerald-500/30"></i>
     </div>
     <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4 shadow-sm flex items-center justify-between">
       <div>
         <div class="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">On Hold Units</div>
         <div class="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5">{{ held_units }}</div>
       </div>
-      <span class="text-2xl">⏸</span>
+      <i class="fa-solid fa-circle-pause text-2xl text-amber-500/30"></i>
     </div>
     <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4 shadow-sm flex items-center justify-between">
       <div>
         <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Retention Rule</div>
         <div class="text-xs font-bold text-slate-700 dark:text-slate-300 mt-1">30 Days Auto-Archive</div>
       </div>
-      <span class="text-2xl">⏳</span>
+      <i class="fa-solid fa-trash-can-arrow-up text-2xl text-slate-300 dark:text-slate-600"></i>
     </div>
   </div>
 
   <section class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-6 shadow-sm space-y-4">
     <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2"><span>📚</span> Batch History Log</h2>
+      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
+        <i class="fa-solid fa-list-ul text-blue-500"></i> Batch History Log
+      </h2>
       <span class="text-xs text-slate-400 font-mono">Finished batches are preserved for 30 days before purge</span>
     </div>
-
     <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
       <table class="w-full text-left text-xs text-slate-700 dark:text-slate-300">
         <thead class="bg-slate-50 dark:bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-800">
@@ -77,7 +82,6 @@
                 </div>
                 <div class="text-[10px] text-slate-400 font-normal">{{ b.created_at|date:"d M Y, H:i" }}</div>
               </td>
-
               <td class="py-3.5 px-4">
                 {% if b.status == 'active' and b.quantity > 0 %}
                   {% if b.sales_enabled %}
@@ -86,7 +90,7 @@
                     </span>
                   {% else %}
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-600 border border-amber-200 dark:border-amber-800">
-                      ⏸ On Hold
+                        <i class="fa-solid fa-circle-pause"></i> On Hold
                     </span>
                     <div class="text-[9px] text-amber-600 mt-0.5">Sales disabled</div>
                   {% endif %}
@@ -97,42 +101,46 @@
                   </div>
                 {% endif %}
               </td>
-
               <td class="py-3.5 px-4">
                 {% if b.storage_box %}
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold" style="background-color: {{ b.storage_box.color_tag }}20; color: {{ b.storage_box.color_tag }};">
-                    📦 {{ b.storage_box.name }} • {{ b.section_name|default:"Main" }}
+                      {{ b.storage_box.name }} | {{ b.section_name|default:"Main" }}
                   </span>
                 {% else %}<span class="text-slate-400 italic">No Box</span>{% endif %}
               </td>
-
               <td class="py-3.5 px-4 text-center font-mono font-bold text-sm">
                 {% if b.quantity == 0 %}<span class="text-slate-400">0 Units</span>
                 {% elif not b.sales_enabled %}<span class="text-amber-600">{{ b.quantity }} Units</span>
                 {% else %}<span class="text-emerald-600 dark:text-emerald-400">{{ b.quantity }} Units</span>{% endif %}
               </td>
-
               <td class="py-3.5 px-4 font-mono text-xs">
                 <div>Cost: ₹{{ b.purchase_price }}</div>
                 <div class="text-indigo-600 font-bold">Wholesale: ₹{{ b.wholesale_price }}</div>
                 <div class="text-emerald-600 font-bold">MRP: ₹{{ b.selling_price }}</div>
               </td>
-
               <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
                 {% if b.status == 'active' and b.quantity > 0 %}
                   <form method="POST" action="{% url 'toggle_batch_sales' b.id %}" class="inline">
                     {% csrf_token %}
                     {% if b.sales_enabled %}
                       <button type="submit" onclick="return confirm('Disable sales for batch {{ b.batch_no }}? Its units cannot be sold until you enable it again.')"
-                        class="inline-flex items-center gap-1 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 px-3 py-1.5 rounded-lg font-bold border border-amber-200 dark:border-amber-800 transition">⏸ Disable</button>
+                        class="inline-flex items-center gap-1 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 px-3 py-1.5 rounded-lg font-bold border border-amber-200 dark:border-amber-800 transition">
+                        <i class="fa-solid fa-ban text-[10px]"></i> Disable
+                      </button>
                     {% else %}
                       <button type="submit"
-                        class="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-lg font-bold border border-emerald-200 dark:border-emerald-800 transition">▶ Enable</button>
+                        class="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-lg font-bold border border-emerald-200 dark:border-emerald-800 transition">
+                        <i class="fa-solid fa-check text-[10px]"></i> Enable
+                      </button>
                     {% endif %}
                   </form>
                 {% endif %}
-                <a href="{% url 'stock_action' item.pk %}?edit_batch={{ b.id }}" class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg font-bold border border-slate-200 dark:border-slate-700 transition">✏️ Edit</a>
-                <a href="{% url 'sku_print_label' item.pk %}?batch={{ b.id }}" target="_blank" class="inline-flex items-center gap-1 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg font-bold border border-slate-200 dark:border-slate-700 transition hover:bg-slate-50">🏷️ Label</a>
+                <a href="{% url 'stock_action' item.pk %}?edit_batch={{ b.id }}" class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg font-bold border border-slate-200 dark:border-slate-700 transition">
+                  <i class="fa-solid fa-pen text-[10px]"></i> Edit
+                </a>
+                <a href="{% url 'sku_print_label' item.pk %}?batch={{ b.id }}" target="_blank" class="inline-flex items-center gap-1 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg font-bold border border-slate-200 dark:border-slate-700 transition hover:bg-slate-50">
+                  <i class="fa-solid fa-tag text-[10px]"></i> Label
+                </a>
               </td>
             </tr>
           {% empty %}
@@ -143,4 +151,4 @@
     </div>
   </section>
 </div>
-{% endblock %}  
+{% endblock %}
