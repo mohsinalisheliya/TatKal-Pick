@@ -605,6 +605,9 @@ def stock_action(request, pk):
             }
             for platform in platforms  
         ]
+        active_batches_with_stock = list(
+            item.batches.filter(status='active', quantity__gt=0).order_by('-created_at', '-pk')
+        )
         return render(request, 'sku_manager/stock_action.html', {
             'item': item,
             'is_edit': is_edit,
@@ -614,6 +617,7 @@ def stock_action(request, pk):
             'all_batches_count': item.batches.count(),
             'suggested_batch': f"BAT-{datetime.now().strftime('%y%m%d-%H%M')}",
             'form_values': form_values,
+            'active_batches_with_stock': active_batches_with_stock,
             'active_page': 'inventory',
         })
 
