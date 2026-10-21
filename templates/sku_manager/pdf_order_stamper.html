@@ -1,34 +1,46 @@
 <aside class="min-w-0 lg:col-span-5">
-  <div class="space-y-3 lg:sticky lg:top-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
+  <div class="space-y-4 lg:sticky lg:top-4 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+    
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-700/60 pb-3">
       <div>
-        <h2 class="font-bold text-slate-900 dark:text-white">Shipping label PDF</h2>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Optional stamps are added to every page.</p>
+        <h2 class="font-bold text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-stamp text-indigo-500"></i> Shipping Label PDF</h2>
+        <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Optional stamps are added to every page.</p>
       </div>
+      
       <div class="flex flex-wrap items-center gap-2">
         {% if label_logo_url %}
-        <label class="flex items-center gap-1.5 rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-600">
-          <input type="checkbox" id="stamp-logo" checked>
-          Stamp logo
+        <label class="flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-2 py-1 text-[11px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <input type="checkbox" id="stamp-logo" checked class="rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer">
+          Stamp Logo
         </label>
         {% endif %}
+        
         {% if store_qr_available %}
-        <label class="flex items-center gap-1.5 rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-600">
-          <input type="checkbox" id="stamp-store-qr" checked>
-          Stamp Meesho store QR
+        <label class="flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-2 py-1 text-[11px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <input type="checkbox" id="stamp-store-qr" checked class="rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer">
+          Store QR
         </label>
         {% endif %}
-        <button type="button" id="print-stamped-pdf" disabled onclick="printMarketplaceLabelPdf()" class="rounded-xl bg-amber-500 px-4 py-2 text-sm font-extrabold text-slate-950 hover:bg-amber-400 disabled:cursor-wait disabled:opacity-50">
-          Print PDF
-        </button>
       </div>
     </div>
-    <p class="text-xs text-amber-700 dark:text-amber-300">
-      Stamps appear in the bottom corners of each page. Check the preview to ensure they do not cover label details or barcodes.
-    </p>
-    <p id="stamped-pdf-status" role="status" aria-live="polite" class="text-xs text-slate-500 dark:text-slate-400">Preparing PDF preview…</p>
-    <iframe id="stamped-pdf-preview" src="{{ pdf_url }}" title="Marketplace shipping label PDF" class="h-[70vh] min-h-[480px] w-full rounded-2xl border border-slate-300 bg-white dark:border-slate-700"></iframe>
-    <a href="{{ pdf_url }}" target="_blank" rel="noopener" class="text-sm font-semibold text-amber-700 underline dark:text-amber-300">Open original PDF in a new tab</a>
+
+    <div class="flex items-center justify-between">
+      <p id="stamped-pdf-status" role="status" aria-live="polite" class="text-[11px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Preparing PDF preview...
+      </p>
+      <button type="button" id="print-stamped-pdf" disabled onclick="printMarketplaceLabelPdf()" class="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-extrabold text-slate-950 hover:bg-amber-400 disabled:cursor-wait disabled:opacity-50 transition shadow-sm shadow-amber-500/20 flex items-center gap-1.5">
+        <i class="fa-solid fa-print"></i> Print
+      </button>
+    </div>
+
+    <iframe id="stamped-pdf-preview" src="{{ pdf_url }}" title="Marketplace shipping label PDF" class="h-[65vh] min-h-[450px] w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-950"></iframe>
+    
+    <div class="text-right">
+      <a href="{{ pdf_url }}" target="_blank" rel="noopener" class="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white transition inline-flex items-center gap-1">
+        Open original PDF <i class="fa-solid fa-arrow-up-right-from-square"></i>
+      </a>
+    </div>
+
   </div>
 </aside>
 
@@ -46,12 +58,13 @@
       const params = new URLSearchParams();
       if (logoToggle && logoToggle.checked) params.set('logo', '1');
       if (qrToggle && qrToggle.checked) params.set('qr', '1');
-
+      
       printButton.disabled = true;
-      status.textContent = 'Preparing PDF preview…';
+      status.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Preparing PDF preview...';
+      
       frame.onload = () => {
         printButton.disabled = false;
-        status.textContent = 'Preview ready. Check that stamps do not cover label details or barcodes.';
+        status.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i> Preview ready.';
       };
       frame.src = `${stampUrl}?${params.toString()}`;
     }
