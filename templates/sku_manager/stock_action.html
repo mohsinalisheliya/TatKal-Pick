@@ -21,6 +21,24 @@
         </div>
         <h1 class="text-xl font-black text-slate-900 dark:text-white">{{ item.name }}</h1>
         <p class="text-xs text-slate-500 font-mono mt-0.5">SKU: {{ item.sku }} | Total Inventory: <strong class="text-emerald-600 text-sm">{{ item.stock }} Units</strong> across all batches</p>
+        {% if active_batches_with_stock %}
+        <div class="flex flex-wrap gap-1.5 mt-2">
+          {% for batch in active_batches_with_stock %}
+          <a href="?edit_batch={{ batch.pk }}"
+             title="Edit {{ batch.batch_no }}"
+             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border transition
+               {% if is_edit and selected_batch.pk == batch.pk %}
+                 bg-amber-500 text-slate-900 border-amber-400
+               {% else %}
+                 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:text-amber-600
+               {% endif %}">
+            <i class="fa-solid fa-box text-[8px]"></i>
+            {{ batch.batch_no }}
+            <span class="bg-white/40 dark:bg-black/30 px-1 rounded-full">{{ batch.quantity }}</span>
+          </a>
+          {% endfor %}
+        </div>
+        {% endif %}
       </div>
     </div>
     
