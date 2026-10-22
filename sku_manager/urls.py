@@ -45,8 +45,13 @@ urlpatterns = [
 
     # Settings & Export
     path('settings/', views.app_settings_view, name='app_settings'),
-    path('export-csv/', views.export_csv, name='sku_export_csv'),
-
+    
+    # Naya: Centralized Data Export Center
+    path('export/', views.export_center, name='export_center'),
+    path('export/inventory/', views.export_inventory_csv, name='export_inventory_csv'),
+    path('export/dispatch-logs/', views.export_dispatch_logs, name='export_dispatch_logs'),
+    path('export/batches/', views.export_batches_csv, name='export_batches_csv'),
+    
     # Scanner & Dispatch
     path('scanner/', views.sku_scanner, name='sku_scanner'),
     path('print-label/<int:pk>/', views.sku_print_label, name='sku_print_label'),
