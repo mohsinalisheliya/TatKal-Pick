@@ -3,61 +3,150 @@
 {% block title %}Dispatch History & Audit - Tatkal Pick{% endblock %}
 
 {% block content %}
-<header class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-4">
-  <div>
-    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider mb-2">
-      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-      Audit Trail
+<div class="flex flex-col h-full" style="height: calc(100vh - 40px);">
+  
+  <header class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-4 flex-shrink-0">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider mb-2">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        Audit Trail
+      </div>
+      <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Stock Dispatch Logs</h1>
+      <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Recorded every time a QR tag is scanned and dispatched on a sales channel.</p>
     </div>
-    <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Stock Dispatch Logs</h1>
-    <p class="text-slate-500 dark:text-slate-400 text-xs mt-0.5">Recorded every time a QR tag is scanned and dispatched on a sales channel.</p>
-  </div>
-  <div class="text-left sm:text-right">
-    <div class="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold">Total Dispatches Logged</div>
-    <div class="text-2xl font-black font-mono text-amber-600 dark:text-amber-400">{{ total_dispatches }}</div>
-  </div>
-</header>
+    <div class="text-left sm:text-right">
+      <div class="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold">Total Dispatches Logged</div>
+      <div class="text-2xl font-black font-mono text-amber-600 dark:text-amber-400">{{ total_dispatches }}</div>
+    </div>
+  </header>
 
-<div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4 sm:p-5 shadow-sm dark:shadow-xl space-y-4">
-  <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-    <table class="w-full text-left text-sm text-slate-700 dark:text-slate-300">
-      <thead class="bg-slate-50 dark:bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-        <tr>
-          <th class="py-3 px-4 font-semibold">Date & Time</th>
-          <th class="py-3 px-4 font-semibold">SKU Code</th>
-          <th class="py-3 px-4 font-semibold">Channel</th>
-          <th class="py-3 px-4 font-semibold">Marketplace Order ID</th>
-          <th class="py-3 px-4 text-center font-semibold">Qty</th>
-          <th class="py-3 px-4 font-semibold">Sold Rate</th>
-          <th class="py-3 px-4 text-center font-semibold">Stock Left</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono text-xs">
-        {% for log in logs %}
-          <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
-            <td class="py-3 px-4 text-slate-500 dark:text-slate-400">{{ log.dispatched_at|date:"d M Y, h:i:s A" }}</td>
-            <td class="py-3 px-4 font-bold text-amber-600 dark:text-amber-400">{{ log.sku.sku }}</td>
-            <td class="py-3 px-4 font-sans font-semibold">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 text-xs font-semibold">
-                {{ log.platform_name }}
-              </span>
-            </td>
-            <td class="py-3 px-4 font-mono whitespace-nowrap select-all">
-              {% if log.marketplace_order %}{{ log.marketplace_order.order_id }}{% else %}—{% endif %}
-            </td>
-            <td class="py-3 px-4 text-center text-rose-500 dark:text-rose-400 font-bold">-{{ log.quantity }}</td>
-            <td class="py-3 px-4 text-emerald-600 dark:text-emerald-400 font-bold">₹{{ log.sold_price }}</td>
-            <td class="py-3 px-4 text-center text-slate-900 dark:text-white font-bold">{{ log.stock_after }}</td>
-          </tr>
-        {% empty %}
+  <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-sm dark:shadow-xl flex flex-col flex-1 min-h-0 mt-4">
+    
+    <!-- Search Toolbar -->
+    <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col sm:flex-row justify-between items-center gap-3 flex-shrink-0">
+      <div class="relative w-full sm:max-w-md">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+        <input type="text" id="searchInput" placeholder="Search by SKU, Channel, or Order ID..."
+          class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 transition">
+      </div>
+      <div class="text-xs font-bold text-slate-500">
+        <i class="fa-solid fa-filter text-slate-400 mr-1"></i> Live Filtering
+      </div>
+    </div>
+
+    <!-- Scrollable Table -->
+    <div class="overflow-y-auto flex-1 min-h-0">
+      <table class="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+        <thead class="sticky top-0 bg-slate-50 dark:bg-slate-900/90 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 z-10 shadow-sm">
           <tr>
-            <td colspan="7" class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs font-sans">
-              No sales dispatches logged yet. Scan any tag to register your first sale!
+            <th class="py-3 px-4 font-semibold">Date & Time</th>
+            <th class="py-3 px-4 font-semibold">SKU Code</th>
+            <th class="py-3 px-4 font-semibold">Channel</th>
+            <th class="py-3 px-4 font-semibold">Marketplace Order ID</th>
+            <th class="py-3 px-4 text-center font-semibold">Qty</th>
+            <th class="py-3 px-4 font-semibold">Sold Rate</th>
+            <th class="py-3 px-4 text-center font-semibold">Stock Left</th>
+          </tr>
+        </thead>
+        <tbody id="logBody" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono text-xs">
+          {% for log in logs %}
+            <tr class="log-row hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+              <td class="py-3 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ log.dispatched_at|date:"d M Y, h:i:s A" }}</td>
+              <td class="py-3 px-4 font-bold text-amber-600 dark:text-amber-400 search-target">{{ log.sku.sku }}</td>
+              <td class="py-3 px-4 font-sans font-semibold">
+                <span class="search-target inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 text-xs font-semibold">
+                  {{ log.platform_name }}
+                </span>
+              </td>
+              <td class="py-3 px-4 font-mono whitespace-nowrap select-all search-target">
+                {% if log.marketplace_order %}{{ log.marketplace_order.order_id }}{% else %}—{% endif %}
+              </td>
+              <td class="py-3 px-4 text-center text-rose-500 dark:text-rose-400 font-bold">-{{ log.quantity }}</td>
+              <td class="py-3 px-4 text-emerald-600 dark:text-emerald-400 font-bold">₹{{ log.sold_price }}</td>
+              <td class="py-3 px-4 text-center text-slate-900 dark:text-white font-bold">{{ log.stock_after }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs font-sans">
+                <i class="fa-solid fa-inbox text-3xl mb-3 block text-slate-300 dark:text-slate-600"></i>
+                No sales dispatches logged yet. Scan any tag to register your first sale!
+              </td>
+            </tr>
+          {% endfor %}
+          <tr id="noResults" class="hidden">
+            <td colspan="7" class="text-center py-12 text-slate-400 text-xs font-sans">
+              <i class="fa-solid fa-magnifying-glass text-3xl mb-3 block text-slate-300 dark:text-slate-600"></i>
+              No logs match your search.
             </td>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    <div class="bg-slate-50 dark:bg-slate-900/40 border-t border-slate-200 dark:border-slate-700/60 px-4 py-3 flex items-center justify-between flex-shrink-0">
+      <div class="text-xs text-slate-500 font-semibold">
+        Showing <b id="pgStart" class="text-slate-800 dark:text-slate-200">0</b>–<b id="pgEnd" class="text-slate-800 dark:text-slate-200">0</b> of <b id="pgTotal" class="text-slate-800 dark:text-slate-200">0</b>
+      </div>
+      <div class="flex gap-2">
+        <button id="prevPage" class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-xs font-bold disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+          <i class="fa-solid fa-chevron-left text-[10px]"></i> Prev
+        </button>
+        <button id="nextPage" class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-xs font-bold disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+          Next <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </button>
+      </div>
+    </div>
+
   </div>
 </div>
-{% endblock %}      
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const ROWS_PER_PAGE = 15;
+  const tbody = document.getElementById('logBody');
+  const noResults = document.getElementById('noResults');
+  const searchInput = document.getElementById('searchInput');
+  const allRows = Array.from(document.querySelectorAll('.log-row'));
+  let filtered = [...allRows];
+  let page = 1;
+
+  function render() {
+    allRows.forEach(r => r.style.display = 'none');
+    const total = filtered.length;
+    const pages = Math.max(1, Math.ceil(total / ROWS_PER_PAGE));
+    page = Math.min(Math.max(page, 1), pages);
+    
+    const start = (page - 1) * ROWS_PER_PAGE;
+    const end = Math.min(start + ROWS_PER_PAGE, total);
+    
+    for (let i = start; i < end; i++) {
+      filtered[i].style.display = '';
+    }
+    
+    document.getElementById('pgStart').textContent = total ? start + 1 : 0;
+    document.getElementById('pgEnd').textContent = end;
+    document.getElementById('pgTotal').textContent = total;
+    document.getElementById('prevPage').disabled = page <= 1;
+    document.getElementById('nextPage').disabled = page >= pages || total === 0;
+    noResults.style.display = (total === 0 && allRows.length > 0) ? '' : 'none';
+  }
+
+  searchInput.addEventListener('input', () => {
+    const term = searchInput.value.toLowerCase().trim();
+    filtered = allRows.filter(row => {
+      // Look inside specific search target columns to avoid matching dates
+      const targets = row.querySelectorAll('.search-target');
+      return Array.from(targets).some(col => col.textContent.toLowerCase().includes(term));
+    });
+    page = 1;
+    render();
+  });
+
+  document.getElementById('prevPage').addEventListener('click', () => { page--; render(); });
+  document.getElementById('nextPage').addEventListener('click', () => { page++; render(); });
+
+  render();
+</script>
+{% endblock %}
