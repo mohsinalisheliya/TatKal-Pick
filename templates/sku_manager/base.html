@@ -117,9 +117,11 @@
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Dispatch Audit</span>
         </a>
 
-        <a href="{% url 'sku_export_csv' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white">
-          <i class="fa-solid fa-file-csv text-lg min-w-[20px] text-center"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Export CSV</span>
+        <!-- Export Data Center -->
+        <a href="{% url 'export_center' %}" title="Export Data Center"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'export_center' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-cloud-arrow-down text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Export Data</span>
         </a>
       </nav>
     </div>
