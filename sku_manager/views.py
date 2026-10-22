@@ -1816,3 +1816,4 @@ def app_settings_view(request):
         'settings': settings_obj,
         'active_page': 'settings',
     })
+    
