@@ -819,6 +819,55 @@ def box_delete(request, pk):
     messages.info(request, f"Box '{name}' deleted.")
     return redirect('box_manager')
 
+# sku_manager/views.py mein 'box_labels_print' function ko isse replace karein:
+
+@login_required(login_url='login')
+def box_labels_print(request):
+    """Generates printable thermal label sheets (2 stickers per box) for Storage Units with Custom & Bulk selection."""
+    boxes = StorageBox.objects.all().order_by('name')
+    
+    # Get selected box IDs from GET parameters (e.g. ?boxes=1,2,3 or ?box=1)
+    box_ids_raw = request.GET.get('boxes', '')
+    single_box_id = request.GET.get('box', '')
+    
+    selected_boxes = []
+    if box_ids_raw:
+        ids = [i for i in box_ids_raw.split(',') if i.isdigit()]
+        selected_boxes = list(boxes.filter(pk__in=ids))
+    elif single_box_id.isdigit():
+        selected_boxes = list(boxes.filter(pk=int(single_box_id)))
+    else:
+        # Default: Select all boxes if nothing specified
+        selected_boxes = list(boxes)
+
+    settings_obj = AppSettings.get_settings()
+    
+    import qrcode
+    import io
+    import base64
+
+    box_data_list = []
+    for box in selected_boxes:
+        # Generate QR Code for the Box Name/ID
+        qr = qrcode.QRCode(version=1, box_size=10, border=1)
+        qr.add_data(f"BOX:{box.name}")
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        box_data_list.append({
+            'box': box,
+            'qr_base64': qr_base64
+        })
+
+    return render(request, 'sku_manager/box_labels.html', {
+        'active_page': 'boxes',
+        'boxes': boxes,
+        'box_data_list': box_data_list,
+        'brand_name': settings_obj.brand_name,
+    })
 
 @login_required(login_url='login')
 def platform_manager(request):
