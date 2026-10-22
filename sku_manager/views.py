@@ -1816,4 +1816,13 @@ def app_settings_view(request):
         'settings': settings_obj,
         'active_page': 'settings',
     })
-    
+@login_required(login_url='login')
+def workspace_tools(request):
+    """Centralized hub for Catalog Generator, Storage Units, Marketplaces, and Dispatch Audit."""
+    return render(request, 'sku_manager/workspace.html', {
+        'active_page': 'workspace',
+        'products_count': JewelrySKU.objects.count(),
+        'boxes_count': StorageBox.objects.count(),
+        'platforms_count': Platform.objects.count(),
+        'dispatch_count': DispatchLog.objects.count(),
+    })
