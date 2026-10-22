@@ -1,0 +1,128 @@
+{% extends "sku_manager/base.html" %}
+
+{% block title %}Workspace Tools - Tatkal Pick{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <header class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-4">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-semibold uppercase tracking-wider mb-1.5">
+        <i class="fa-solid fa-screwdriver-wrench"></i> Operations Hub
+      </div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Workspace Tools</h1>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Manage B2B catalogs, warehouse storage bins, sales channels, and dispatch audit trails from one place.</p>
+    </div>
+  </header>
+
+  <!-- Tools Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+    <!-- 1. Catalog Generator -->
+    <a href="{% url 'catalog_generator' %}" class="group bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 hover:border-indigo-500 dark:hover:border-indigo-500 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 flex items-center justify-center text-xl shrink-0 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+            <i class="fa-solid fa-book-open"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-slate-900 dark:text-white group-hover:text-indigo-500 transition-colors">Catalog Generator</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Filter products by category, customize Buying, Wholesale, or Reselling price visibility, and download A4 PDF catalogs.
+            </p>
+          </div>
+        </div>
+        <i class="fa-solid fa-arrow-right text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all mt-1"></i>
+      </div>
+      <div class="mt-5 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+        <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Total Catalog Items</span>
+        <span class="font-mono font-black text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-lg">{{ products_count }} SKUs</span>
+      </div>
+    </a>
+
+    <!-- 2. Storage Units -->
+    <a href="{% url 'box_manager' %}" class="group bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 hover:border-amber-500 dark:hover:border-amber-500 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center text-xl shrink-0 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
+            <i class="fa-solid fa-box-archive"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-slate-900 dark:text-white group-hover:text-amber-500 transition-colors">Storage Units</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Create and manage physical warehouse bins, drawers, and unique color-coded tags for fast product picking.
+            </p>
+          </div>
+        </div>
+        <i class="fa-solid fa-arrow-right text-slate-300 dark:text-slate-600 group-hover:text-amber-500 group-hover:translate-x-1 transition-all mt-1"></i>
+      </div>
+      <div class="mt-5 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+        <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Configured Bins</span>
+        <span class="font-mono font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-lg">{{ boxes_count }} Units</span>
+      </div>
+    </a>
+
+    <!-- 3. Marketplaces -->
+    <a href="{% url 'platform_manager' %}" class="group bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 hover:border-purple-500 dark:hover:border-purple-500 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-500 border border-purple-500/20 flex items-center justify-center text-xl shrink-0 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+            <i class="fa-solid fa-shop"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-slate-900 dark:text-white group-hover:text-purple-500 transition-colors">Marketplaces</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Add or remove selling channels (Meesho, Amazon, Flipkart, Website, etc.) and manage channel-specific pricing.
+            </p>
+          </div>
+        </div>
+        <i class="fa-solid fa-arrow-right text-slate-300 dark:text-slate-600 group-hover:text-purple-500 group-hover:translate-x-1 transition-all mt-1"></i>
+      </div>
+      <div class="mt-5 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+        <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Active Channels</span>
+        <span class="font-mono font-black text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-lg">{{ platforms_count }} Channels</span>
+      </div>
+    </a>
+
+    <!-- 4. Dispatch Audit -->
+    <a href="{% url 'dispatch_logs' %}" class="group bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center text-xl shrink-0 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-black text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">Dispatch Audit</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Inspect the complete timestamped history of every scanned QR tag, order ID, sold rate, and remaining stock.
+            </p>
+          </div>
+        </div>
+        <i class="fa-solid fa-arrow-right text-slate-300 dark:text-slate-600 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all mt-1"></i>
+      </div>
+      <div class="mt-5 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+        <span class="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Recorded Dispatches</span>
+        <span class="font-mono font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-lg">{{ dispatch_count }} Logs</span>
+      </div>
+    </a>
+
+    <!-- 5. Export Data Center -->
+    <a href="{% url 'export_center' %}" class="md:col-span-2 group bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 hover:border-blue-500 dark:hover:border-blue-500 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all flex items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 border border-blue-500/20 flex items-center justify-center text-xl shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+          <i class="fa-solid fa-cloud-arrow-down"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors">Export Data Center</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Download centralized CSV and Excel backups for Master Inventory, Scanned Orders, Dispatch Logs, and Stock Batches.
+          </p>
+        </div>
+      </div>
+      <i class="fa-solid fa-arrow-right text-slate-300 dark:text-slate-600 group-hover:text-blue-500 group-hover:translate-x-1 transition-all"></i>
+    </a>
+
+  </div>
+</div>
+{% endblock %}
