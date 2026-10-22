@@ -22,12 +22,6 @@
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     .sku-mono { font-family: 'JetBrains Mono', monospace; }
-    
-    /* Clean minimal scrollbar for the sidebar */
-    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
   </style>
 
   <!-- Early Theme Detection Script -->
@@ -41,14 +35,14 @@
 </head>
 <body class="bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen flex antialiased transition-colors duration-200">
 
-  <!-- Reactive Expandable Sidebar -->
-  <aside class="group fixed left-0 top-0 z-40 h-[100dvh] w-16 hover:w-64 transition-all duration-300 ease-in-out bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 flex flex-col shadow-xl">
+  <!-- Reactive Expandable Sidebar (No Scroll) -->
+  <aside class="group fixed left-0 top-0 z-40 h-[100dvh] w-16 hover:w-64 transition-all duration-300 ease-in-out bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between p-2.5 shadow-xl overflow-hidden">
     
-    <!-- TOP SECTION: Scrollable Menu -->
-    <div class="flex flex-col flex-1 min-h-0 overflow-hidden p-2.5 pb-0">
+    <!-- TOP SECTION: Logo & Primary Navigation -->
+    <div class="space-y-5">
       
-      <!-- Logo (Fixed at top) -->
-      <a href="{% url 'inventory_list' %}" class="flex items-center gap-3 px-1 py-1 shrink-0 mb-4">
+      <!-- Logo -->
+      <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-1 py-1">
         <div class="w-10 h-10 min-w-[40px] rounded-xl bg-gradient-to-tr from-amber-500 to-amber-400 flex items-center justify-center shadow-md shadow-amber-500/20 text-slate-950">
           <img src="{% static 'tatkal-pick-icon.svg' %}" class="w-7 h-7 object-contain" alt="Tatkal Pick">
         </div>
@@ -58,83 +52,72 @@
         </div>
       </a>
 
-      <!-- Navigation Links (Scrollable internally) -->
-      <nav class="flex-1 overflow-y-auto overflow-x-hidden pr-1 pb-4 custom-scrollbar space-y-1.5">
+      <!-- Navigation Links (Fixed, No Scroll) -->
+      <nav class="space-y-1.5">
         
-        <!-- Primary Tools -->
-        <a href="{% url 'dashboard' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'dashboard' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+        <!-- Dashboard -->
+        <a href="{% url 'dashboard' %}" title="Dashboard"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'dashboard' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-house text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Dashboard</span>
         </a>
 
-        <a href="{% url 'pdf_order_scan' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'pdf_order_scan' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+        <!-- PDF Order Scan -->
+        <a href="{% url 'pdf_order_scan' %}" title="Scan Marketplace PDF"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'pdf_order_scan' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-file-invoice text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">PDF Order Scan</span>
         </a>
 
-        <a href="{% url 'inventory_list' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'inventory' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+        <!-- Inventory -->
+        <a href="{% url 'inventory_list' %}" title="Inventory"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'inventory' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-boxes-stacked text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Inventory</span>
         </a>
 
-        <a href="{% url 'product_master' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'products' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+        <!-- Products -->
+        <a href="{% url 'product_master' %}" title="Add Products & Catalog"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'products' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-tags text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Products</span>
         </a>
 
-        <a href="{% url 'order_cancellation' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'cancellation' %}bg-rose-500 text-white font-bold shadow-md shadow-rose-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+        <!-- RTO & Cancellations -->
+        <a href="{% url 'order_cancellation' %}" title="Returns & Cancellations"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'cancellation' %}bg-rose-500 text-white font-bold shadow-md shadow-rose-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-arrow-rotate-left text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">RTO & Cancellations</span>
         </a>
 
-        <a href="{% url 'sku_scanner' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'scanner' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+        <!-- Fast Scanner -->
+        <a href="{% url 'sku_scanner' %}" title="Camera Scanner"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'scanner' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-qrcode text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Fast Scanner</span>
         </a>
 
-        <!-- Workspace Tools Divider -->
-        <div class="pt-4 pb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pl-4 shrink-0">
-          <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Workspace Tools</span>
-        </div>
-
-        <a href="{% url 'catalog_generator' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'catalog' %}bg-indigo-500 text-white font-bold shadow-md shadow-indigo-500/20{% else %}text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <i class="fa-solid fa-book-open text-lg min-w-[20px] text-center"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Catalog Generator</span>
+        <!-- Workspace Tools (Consolidated Hub) -->
+        <a href="{% url 'workspace_tools' %}" title="Workspace Tools"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'workspace' or active_page == 'catalog' or active_page == 'boxes' or active_page == 'platforms' or active_page == 'dispatch_logs' or active_page == 'export_center' %}bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-screwdriver-wrench text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Workspace Tools</span>
         </a>
 
-        <a href="{% url 'box_manager' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'boxes' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <i class="fa-solid fa-box-archive text-lg min-w-[20px] text-center"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Storage Units</span>
-        </a>
-
-        <a href="{% url 'platform_manager' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'platforms' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <i class="fa-solid fa-shop text-lg min-w-[20px] text-center"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Marketplaces</span>
-        </a>
-
-        <a href="{% url 'dispatch_logs' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'dispatch_logs' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <i class="fa-solid fa-clock-rotate-left text-lg min-w-[20px] text-center"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Dispatch Audit</span>
-        </a>
-
-        <!-- Export Data Center -->
-        <a href="{% url 'export_center' %}" title="Export Data Center"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'export_center' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <i class="fa-solid fa-cloud-arrow-down text-lg min-w-[20px] text-center"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Export Data</span>
-        </a>
       </nav>
     </div>
 
-    <!-- BOTTOM SECTION: Shrink-0 guarantees this is ALWAYS visible at the bottom -->
-    <div class="shrink-0 p-2.5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1.5 z-50 relative">
+    <!-- BOTTOM SECTION: Settings, Theme Toggle & User Info -->
+    <div class="space-y-1.5 pt-3 border-t border-slate-200 dark:border-slate-800">
 
-      <a href="{% url 'app_settings' %}" class="flex items-center gap-3.5 px-3 py-2 rounded-xl transition {% if active_page == 'settings' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+      <a href="{% url 'app_settings' %}" title="System Settings"
+        class="flex items-center gap-3.5 px-3 py-2 rounded-xl transition {% if active_page == 'settings' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
         <i class="fa-solid fa-gear text-lg min-w-[20px] text-center"></i>
         <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-semibold">Settings</span>
       </a>
       
-      <button id="themeToggleBtn" type="button" class="w-full flex items-center gap-3.5 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+      <button id="themeToggleBtn" type="button" title="Switch Theme"
+        class="w-full flex items-center gap-3.5 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
         <i id="themeIconSun" class="fa-solid fa-sun text-lg min-w-[20px] text-center hidden text-amber-400"></i>
         <i id="themeIconMoon" class="fa-solid fa-moon text-lg min-w-[20px] text-center text-slate-600"></i>
         <span id="themeToggleText" class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-semibold">Light Mode</span>
@@ -151,7 +134,8 @@
         </div>
       </div>
 
-      <a href="{% url 'logout' %}" class="flex items-center gap-3 px-3 py-1.5 rounded-xl text-slate-500 hover:bg-rose-500/10 hover:text-rose-500 transition">
+      <a href="{% url 'logout' %}" title="Log Out"
+        class="flex items-center gap-3 px-3 py-1.5 rounded-xl text-slate-500 hover:bg-rose-500/10 hover:text-rose-500 transition">
         <i class="fa-solid fa-right-from-bracket text-lg min-w-[20px] text-center text-rose-500"></i>
         <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-semibold">Sign Out</span>
       </a>
