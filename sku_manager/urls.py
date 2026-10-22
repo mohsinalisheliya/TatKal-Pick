@@ -69,6 +69,7 @@ urlpatterns = [
     path('orders/<int:pk>/review/', views.pdf_order_review, name='pdf_order_review'),
     
     # Cancellations & RTO
-    path('cancellations/', views.order_cancellation, name='order_cancellation')
-    ,
+    path('cancellations/', views.order_cancellation, name='order_cancellation'),
+    # Workspace Tools Hub
+    path('workspace/', views.workspace_tools, name='workspace_tools'),
 ]
