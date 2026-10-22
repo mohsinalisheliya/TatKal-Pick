@@ -1671,6 +1671,73 @@ def pdf_order_review(request, pk):
     })
 
 
+# --- CENTRALIZED EXPORT DATA CENTER ---
+
+@login_required(login_url='login')
+def export_center(request):
+    """Renders the centralized export dashboard."""
+    return render(request, 'sku_manager/export_center.html', {
+        'active_page': 'export_center',
+        'inventory_count': JewelrySKU.objects.count(),
+        'order_count': MarketplaceOrder.objects.count(),
+        'dispatch_count': DispatchLog.objects.count(),
+        'batch_count': StockBatch.objects.count(),
+    })
+
+@login_required(login_url='login')
+def export_inventory_csv(request):
+    """Exports Master Inventory to CSV."""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="Inventory_Master.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['SKU ID', 'Product Name', 'Category', 'Style', 'Color', 'Size', 'Stock Left', 'Storage Box', 'Compartment', 'Buying Price', 'Wholesale Price', 'MRP'])
+
+    for obj in JewelrySKU.objects.select_related('storage_box').all().order_by('-created_at'):
+        box_name = obj.storage_box.name if obj.storage_box else 'Unassigned'
+        writer.writerow([
+            obj.sku, obj.name, obj.category, obj.style, obj.color, obj.size,
+            obj.stock, box_name, obj.section_name, obj.purchase_price, obj.wholesale_price, obj.selling_price
+        ])
+    return response
+
+@login_required(login_url='login')
+def export_dispatch_logs(request):
+    """Exports Dispatch History to CSV."""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="Dispatch_Logs.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Date & Time', 'Marketplace', 'SKU ID', 'Product Name', 'Quantity Sold', 'Sold Price', 'Stock Remaining'])
+    
+    for log in DispatchLog.objects.select_related('sku').all().order_by('-dispatched_at'):
+        dt = timezone.localtime(log.dispatched_at).strftime('%Y-%m-%d %H:%M:%S') if log.dispatched_at else ''
+        writer.writerow([
+            dt, log.platform_name, 
+            log.sku.sku if log.sku else 'N/A', 
+            log.sku.name if log.sku else 'N/A', 
+            log.quantity, log.sold_price, log.stock_after
+        ])
+    return response
+
+@login_required(login_url='login')
+def export_batches_csv(request):
+    """Exports all Stock Batches (Inward History) to CSV."""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="Stock_Batches.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Date Created', 'Batch No', 'SKU ID', 'Product Name', 'Quantity', 'Status', 'Buying Price', 'Wholesale Price', 'MRP', 'Storage Unit', 'Compartment'])
+    
+    for batch in StockBatch.objects.select_related('sku', 'storage_box').all().order_by('-created_at'):
+        dt = timezone.localtime(batch.created_at).strftime('%Y-%m-%d %H:%M:%S') if batch.created_at else ''
+        writer.writerow([
+            dt, batch.batch_no, 
+            batch.sku.sku if batch.sku else 'N/A', 
+            batch.sku.name if batch.sku else 'N/A', 
+            batch.quantity, batch.status, 
+            batch.purchase_price, batch.wholesale_price, batch.selling_price, 
+            batch.storage_box.name if batch.storage_box else 'Unassigned', 
+            batch.section_name
+        ])
+    return response
 
 
 
