@@ -1,0 +1,38 @@
+<div class="sheet">
+  <div class="scale">
+    {% if box_data_list %}
+      {% for data in box_data_list %}
+        <div class="row" style="margin-bottom: 2mm;">
+          
+          <!-- STICKER 1: QR Code + Box Tag -->
+          <div class="label">
+            <img class="qr" src="data:image/png;base64,{{ data.qr_base64 }}" alt="QR {{ data.box.name }}">
+            <div class="info">
+              <div>
+                <div style="font-size: 5pt; font-weight: 700; color: #64748b; text-transform: uppercase;">Storage Unit</div>
+                <div style="font-size: 8pt; font-weight: 900; text-transform: uppercase; margin-top: 0.5mm;">{{ data.box.name }}</div>
+              </div>
+              <div style="font-family: monospace; font-size: 5pt; border-top: 0.2mm solid #000; padding-top: 0.5mm;">
+                {{ brand_name }}
+              </div>
+            </div>
+          </div>
+
+          <!-- STICKER 2: Large Bold Name Badge -->
+          <div class="label" style="border-left: 3px solid {{ data.box.color_tag }};">
+            <div class="box-badge">
+              <div style="font-size: 5pt; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 1mm;">BIN / DRAWER ID</div>
+              <div class="box-title" style="color: {{ data.box.color_tag }};">{{ data.box.name }}</div>
+              {% if data.box.description %}
+                <div class="box-sub">{{ data.box.description }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+        </div>
+      {% endfor %}
+    {% else %}
+      <p style="padding: 20px; font-size: 12px; font-weight: bold;">No boxes selected.</p>
+    {% endif %}
+  </div>
+</div>
