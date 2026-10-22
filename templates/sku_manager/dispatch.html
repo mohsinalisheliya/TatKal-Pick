@@ -26,15 +26,16 @@
         <span class="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shadow-sm"><img src="{% static 'tatkal-pick-icon.svg' %}" class="w-full h-full object-contain" alt="Tatkal Pick"></span>
         <span class="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Fast Dispatch Station</span>
       </div>
-      <a href="{% url 'sku_inventory' %}" class="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded-lg font-semibold shadow-xs transition">
-        Catalog
+      <a href="{% url 'sku_inventory' %}" class="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded-lg font-semibold shadow-xs transition flex items-center gap-1.5">
+        <i class="fa-solid fa-list"></i> Catalog
       </a>
     </div>
 
     <!-- Flash Messages -->
     {% if messages %}
       {% for msg in messages %}
-        <div class="p-3 rounded-xl text-xs font-bold border {% if msg.tags == 'error' %}bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300{% else %}bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300{% endif %} animate-bounce">
+        <div class="p-3 rounded-xl text-xs font-bold border {% if msg.tags == 'error' %}bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300{% else %}bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300{% endif %} animate-bounce flex items-center gap-2">
+          <i class="fa-solid {% if msg.tags == 'error' %}fa-circle-xmark{% else %}fa-circle-check{% endif %}"></i>
           {{ msg }}
         </div>
       {% endfor %}
@@ -132,7 +133,7 @@
   </div>
 
   <div class="text-center pt-6 text-[10px] text-slate-400 dark:text-slate-600 font-mono flex items-center justify-center gap-2">
-    TATKAL PICK LOGISTICS ENGINE
+    <i class="fa-solid fa-truck-fast"></i> TATKAL PICK LOGISTICS ENGINE
   </div>
 
 </body>
