@@ -1671,20 +1671,7 @@ def pdf_order_review(request, pk):
     })
 
 
-@login_required(login_url='login')
-def export_csv(request):
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="inventory_stock.csv"'
-    writer = csv.writer(response)
-    writer.writerow(['SKU', 'Name', 'Category', 'Style', 'Color', 'Size', 'Stock', 'Box', 'Compartment', 'Purchase Price', 'MRP'])
 
-    for obj in JewelrySKU.objects.select_related('storage_box').all():
-        box_name = obj.storage_box.name if obj.storage_box else 'Unassigned'
-        writer.writerow([
-            obj.sku, obj.name, obj.category, obj.style, obj.color, obj.size,
-            obj.stock, box_name, obj.section_name, obj.purchase_price, obj.selling_price
-        ])
-    return response
 
 
 @login_required(login_url='login')
