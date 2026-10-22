@@ -40,7 +40,9 @@ urlpatterns = [
     # Storage & Platforms
     path('boxes/', views.box_manager, name='box_manager'),
     path('boxes/delete/<int:pk>/', views.box_delete, name='box_delete'),
-    
+
+    # sku_manager/urls.py ke urlpatterns mein add karein:
+    path('boxes/print-labels/', views.box_labels_print, name='box_labels_print'),
     path('platforms/', views.platform_manager, name='platform_manager'),
     path('platforms/delete/<int:pk>/', views.platform_delete, name='platform_delete'),
 
