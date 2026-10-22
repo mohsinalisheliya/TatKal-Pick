@@ -30,6 +30,7 @@
     .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
   </style>
 
+  <!-- Early Theme Detection Script -->
   <script>
     if (localStorage.getItem('theme') === 'light') {
       document.documentElement.classList.remove('dark');
@@ -41,13 +42,13 @@
 <body class="bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen flex antialiased transition-colors duration-200">
 
   <!-- Reactive Expandable Sidebar -->
-  <aside class="group fixed left-0 top-0 z-40 h-screen w-16 hover:w-64 transition-all duration-300 ease-in-out bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between p-2.5 shadow-xl overflow-hidden">
+  <aside class="group fixed left-0 top-0 z-40 h-[100dvh] w-16 hover:w-64 transition-all duration-300 ease-in-out bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 flex flex-col shadow-xl">
     
-    <!-- TOP SECTION: Flex-1 forces it to take available space but min-h-0 allows internal scrolling -->
-    <div class="flex flex-col flex-1 min-h-0 space-y-6 pb-2">
+    <!-- TOP SECTION: Scrollable Menu -->
+    <div class="flex flex-col flex-1 min-h-0 overflow-hidden p-2.5 pb-0">
       
-      <!-- Logo -->
-      <a href="{% url 'inventory_list' %}" class="flex items-center gap-3 px-1 py-1 shrink-0">
+      <!-- Logo (Fixed at top) -->
+      <a href="{% url 'inventory_list' %}" class="flex items-center gap-3 px-1 py-1 shrink-0 mb-4">
         <div class="w-10 h-10 min-w-[40px] rounded-xl bg-gradient-to-tr from-amber-500 to-amber-400 flex items-center justify-center shadow-md shadow-amber-500/20 text-slate-950">
           <img src="{% static 'tatkal-pick-icon.svg' %}" class="w-7 h-7 object-contain" alt="Tatkal Pick">
         </div>
@@ -57,8 +58,8 @@
         </div>
       </a>
 
-      <!-- Navigation (Scrollable internally) -->
-      <nav class="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden pb-4 pr-1 custom-scrollbar">
+      <!-- Navigation Links (Scrollable internally) -->
+      <nav class="flex-1 overflow-y-auto overflow-x-hidden pr-1 pb-4 custom-scrollbar space-y-1.5">
         
         <!-- Primary Tools -->
         <a href="{% url 'dashboard' %}" class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'dashboard' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
@@ -123,8 +124,8 @@
       </nav>
     </div>
 
-    <!-- BOTTOM SECTION: shrink-0 pins this firmly to the bottom -->
-    <div class="shrink-0 space-y-1.5 pt-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <!-- BOTTOM SECTION: Shrink-0 guarantees this is ALWAYS visible at the bottom -->
+    <div class="shrink-0 p-2.5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1.5 z-50 relative">
 
       <a href="{% url 'app_settings' %}" class="flex items-center gap-3.5 px-3 py-2 rounded-xl transition {% if active_page == 'settings' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
         <i class="fa-solid fa-gear text-lg min-w-[20px] text-center"></i>
