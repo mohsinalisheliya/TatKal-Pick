@@ -819,47 +819,6 @@ def box_delete(request, pk):
     messages.info(request, f"Box '{name}' deleted.")
     return redirect('box_manager')
 
-# sku_manager/views.py ke aakhri mein yeh view add karein:
-
-@login_required(login_url='login')
-def box_labels_print(request):
-    """Generates printable thermal label sheets (2 stickers per box) for Storage Units."""
-    boxes = StorageBox.objects.all().order_by('name')
-    box_id = request.GET.get('box', '')
-    
-    selected_box = None
-    if box_id.isdigit():
-        selected_box = boxes.filter(pk=int(box_id)).first()
-    if not selected_box and boxes.exists():
-        selected_box = boxes.first()
-
-    settings_obj = AppSettings.get_settings()
-    
-    # Generate QR Code for the Box Name/ID
-    qr_base64 = ''
-    if selected_box:
-        import qrcode
-        import io
-        import base64
-        qr = qrcode.QRCode(version=1, box_size=10, border=1)
-        qr.add_data(f"BOX:{selected_box.name}")
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-        buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
-        qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-
-    # Each row prints 2 stickers side-by-side (Sticker 1: QR + Box Info, Sticker 2: Box Name Badge)
-    rows = [[1, 1]] if selected_box else []
-
-    return render(request, 'sku_manager/box_labels.html', {
-        'active_page': 'boxes',
-        'boxes': boxes,
-        'selected_box': selected_box,
-        'qr_base64': qr_base64,
-        'rows': rows,
-        'brand_name': settings_obj.brand_name,
-    })
 
 @login_required(login_url='login')
 def platform_manager(request):
