@@ -160,16 +160,11 @@ class StockBatch(models.Model):
     sales_enabled = models.BooleanField(default=True)
     finished_at = models.DateTimeField(null=True, blank=True)
 
-    # Packaging cost tracking
-    packaging_material = models.ForeignKey(
-        'PackagingMaterial',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='batches_used',
-    )
+    # Packaging cost — cached sum of all BatchPackagingItems for this batch.
+    # Updated by save_packaging_items() in the view after each save.
     packaging_cost = models.DecimalField(
         max_digits=10, decimal_places=2, default=0.00,
-        help_text='Snapshot of packaging cost per piece at time of batch creation.',
+        help_text='Cached total packaging cost per product unit (sum of all items × qty).',
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -191,8 +186,47 @@ class StockBatch(models.Model):
             return max(0, 30 - elapsed)
         return 30
 
+    def recalculate_packaging_cost(self):
+        """Recalculate and cache the total packaging cost from all BatchPackagingItems."""
+        from decimal import Decimal
+        total = sum(
+            (item.quantity_per_unit * item.cost_snapshot for item in self.packaging_items.all()),
+            Decimal('0'),
+        )
+        self.packaging_cost = total
+        self.save(update_fields=['packaging_cost', 'updated_at'])
+
     def __str__(self):
         return f"{self.sku.sku} - {self.batch_no} ({self.quantity} units)"
+
+
+class BatchPackagingItem(models.Model):
+    """Tracks which packaging materials (and how many per unit) are used in a batch."""
+    batch = models.ForeignKey(
+        StockBatch, on_delete=models.CASCADE, related_name='packaging_items'
+    )
+    material = models.ForeignKey(
+        'PackagingMaterial', on_delete=models.PROTECT, related_name='batch_items'
+    )
+    quantity_per_unit = models.PositiveIntegerField(
+        default=1,
+        help_text='How many of this material are used per product unit (e.g. 1 box, 2 stickers).'
+    )
+    cost_snapshot = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.00,
+        help_text='Material cost per piece at the time this batch was created/updated.'
+    )
+
+    class Meta:
+        unique_together = ('batch', 'material')
+
+    @property
+    def line_total(self):
+        """Cost contribution per product unit for this packaging line."""
+        return self.quantity_per_unit * self.cost_snapshot
+
+    def __str__(self):
+        return f"{self.material.name} ×{self.quantity_per_unit} → {self.batch}"
 
 
 class ManualStockReturn(models.Model):
