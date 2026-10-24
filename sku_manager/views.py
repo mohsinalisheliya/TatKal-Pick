@@ -18,6 +18,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
+from django.db.models import ProtectedError
 from django.db.models import Q, Count, OuterRef, Subquery, Sum, Max, Min, F, DecimalField, ExpressionWrapper
 from django.urls import reverse, NoReverseMatch
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -574,6 +575,57 @@ def product_detail(request, pk):
     })
 
 
+# --- Packaging helpers (a batch can use many materials) ---
+def parse_packaging_post(post):
+    """Read repeated packaging_material_id / packaging_qty fields.
+
+    Returns {material_id: qty_per_unit}. Blank rows are ignored, the same
+    material picked twice is added together, qty is at least 1.
+    """
+    ids = post.getlist('packaging_material_id')
+    qtys = post.getlist('packaging_qty')
+    wanted = {}
+    for index, raw_id in enumerate(ids):
+        raw_id = (raw_id or '').strip()
+        if not raw_id.isdigit():
+            continue
+        raw_qty = (qtys[index] if index < len(qtys) else '1').strip()
+        qty = int(raw_qty) if raw_qty.isdigit() else 1
+        wanted[int(raw_id)] = wanted.get(int(raw_id), 0) + max(1, qty)
+    return wanted
+
+
+def save_packaging_items(batch, wanted):
+    """Make the batch's packaging lines match `wanted` and refresh its cached cost.
+
+    Materials already on the batch keep their original cost snapshot; newly
+    added ones are snapshotted at today's cost.
+    """
+    materials = PackagingMaterial.objects.in_bulk(list(wanted))
+    existing = {item.material_id: item for item in batch.packaging_items.all()}
+
+    for material_id, item in existing.items():
+        if material_id not in materials:
+            item.delete()
+
+    for material_id in wanted:  # keep the order the rows were entered in
+        material = materials.get(material_id)
+        if material is None:
+            continue
+        qty = wanted[material_id]
+        item = existing.get(material_id)
+        if item:
+            if item.quantity_per_unit != qty:
+                item.quantity_per_unit = qty
+                item.save(update_fields=['quantity_per_unit'])
+        else:
+            BatchPackagingItem.objects.create(
+                batch=batch, material=material,
+                quantity_per_unit=qty, cost_snapshot=material.cost_per_piece,
+            )
+    batch.recalculate_packaging_cost()
+
+
 # --- PART 2: Add / Edit Stock ---
 @login_required(login_url='login')
 def stock_action(request, pk):
@@ -611,7 +663,22 @@ def stock_action(request, pk):
             item.batches.filter(status='active', quantity__gt=0).order_by('-created_at', '-pk')
         )
         packaging_materials = PackagingMaterial.objects.all().order_by('name')
+        if form_values is not None:
+            ids = form_values.getlist('packaging_material_id') if hasattr(form_values, 'getlist') else []
+            qtys = form_values.getlist('packaging_qty') if hasattr(form_values, 'getlist') else []
+            packaging_rows = [
+                {'material_id': int(i), 'qty': (qtys[n] if n < len(qtys) and qtys[n] else 1)}
+                for n, i in enumerate(ids) if str(i).isdigit()
+            ]
+        elif selected_batch is not None:
+            packaging_rows = [
+                {'material_id': row.material_id, 'qty': row.quantity_per_unit}
+                for row in selected_batch.packaging_items.order_by('pk')
+            ]
+        else:
+            packaging_rows = []
         return render(request, 'sku_manager/stock_action.html', {
+            'packaging_rows': packaging_rows,
             'item': item,
             'is_edit': is_edit,
             'selected_batch': selected_batch,
@@ -645,10 +712,8 @@ def stock_action(request, pk):
 
         section_name = request.POST.get('section_name', '').strip() or 'Main Compartment'
 
-        # Packaging
-        pkg_id = request.POST.get('packaging_material_id', '').strip()
-        selected_pkg = PackagingMaterial.objects.filter(pk=pkg_id).first() if pkg_id else None
-        pkg_cost = selected_pkg.cost_per_piece if selected_pkg else Decimal('0.00')
+        # Packaging: any number of materials, each with a qty per product unit
+        packaging_wanted = parse_packaging_post(request.POST)
 
         with transaction.atomic():
             if is_edit:
@@ -660,8 +725,6 @@ def stock_action(request, pk):
                 batch.selling_price = selling_price
                 batch.storage_box = storage_box
                 batch.section_name = section_name
-                batch.packaging_material = selected_pkg
-                batch.packaging_cost = pkg_cost
                 if stock_qty > 0:
                     batch.status = 'active'
                     batch.finished_at = None
@@ -669,6 +732,7 @@ def stock_action(request, pk):
                     batch.status = 'disabled'
                     batch.finished_at = timezone.now()
                 batch.save()
+                save_packaging_items(batch, packaging_wanted)
                 success_message = f"Batch '{batch_no}' updated! Units: {stock_qty}"
             else:
                 new_batch = StockBatch.objects.create(
@@ -677,11 +741,10 @@ def stock_action(request, pk):
                     wholesale_price=wholesale_price,
                     selling_price=selling_price,
                     storage_box=storage_box, section_name=section_name,
-                    packaging_material=selected_pkg,
-                    packaging_cost=pkg_cost,
                     status='active' if stock_qty > 0 else 'disabled',
                     finished_at=timezone.now() if stock_qty == 0 else None,
                 )
+                save_packaging_items(new_batch, packaging_wanted)
                 success_message = f"Added new batch '{batch_no}' with {stock_qty} units!"
 
             for platform in platforms:
@@ -961,7 +1024,16 @@ def packaging_manager(request):
 def packaging_delete(request, pk):
     obj = get_object_or_404(PackagingMaterial, pk=pk)
     name = obj.name
-    obj.delete()
+    try:
+        obj.delete()
+    except ProtectedError:
+        used = obj.batch_items.count()
+        messages.error(
+            request,
+            f"'{name}' is used by {used} stock batch line(s), so it cannot be deleted. "
+            "Edit it instead, or remove it from those batches first.",
+        )
+        return redirect('packaging_manager')
     messages.info(request, f"Packaging item '{name}' deleted.")
     return redirect('packaging_manager')
 
