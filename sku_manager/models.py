@@ -159,11 +159,30 @@ class StockBatch(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     sales_enabled = models.BooleanField(default=True)
     finished_at = models.DateTimeField(null=True, blank=True)
+
+    # Packaging cost tracking
+    packaging_material = models.ForeignKey(
+        'PackagingMaterial',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='batches_used',
+    )
+    packaging_cost = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.00,
+        help_text='Snapshot of packaging cost per piece at time of batch creation.',
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
+
+    @property
+    def true_cost(self):
+        """Total landed cost per unit = product purchase price + packaging cost."""
+        from decimal import Decimal
+        return (self.purchase_price or Decimal('0')) + (self.packaging_cost or Decimal('0'))
 
     @property
     def days_until_deletion(self):
