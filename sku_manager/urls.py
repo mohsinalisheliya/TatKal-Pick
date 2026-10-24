@@ -46,6 +46,10 @@ urlpatterns = [
     path('platforms/', views.platform_manager, name='platform_manager'),
     path('platforms/delete/<int:pk>/', views.platform_delete, name='platform_delete'),
 
+    # Packaging Material Master
+    path('packaging/', views.packaging_manager, name='packaging_manager'),
+    path('packaging/delete/<int:pk>/', views.packaging_delete, name='packaging_delete'),
+
     # Settings & Export
     path('settings/', views.app_settings_view, name='app_settings'),
     
