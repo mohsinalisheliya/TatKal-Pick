@@ -609,6 +609,7 @@ def stock_action(request, pk):
         active_batches_with_stock = list(
             item.batches.filter(status='active', quantity__gt=0).order_by('-created_at', '-pk')
         )
+        packaging_materials = PackagingMaterial.objects.all().order_by('name')
         return render(request, 'sku_manager/stock_action.html', {
             'item': item,
             'is_edit': is_edit,
@@ -619,6 +620,7 @@ def stock_action(request, pk):
             'suggested_batch': f"BAT-{datetime.now().strftime('%y%m%d-%H%M')}",
             'form_values': form_values,
             'active_batches_with_stock': active_batches_with_stock,
+            'packaging_materials': packaging_materials,
             'active_page': 'inventory',
         })
 
@@ -642,6 +644,11 @@ def stock_action(request, pk):
 
         section_name = request.POST.get('section_name', '').strip() or 'Main Compartment'
 
+        # Packaging
+        pkg_id = request.POST.get('packaging_material_id', '').strip()
+        selected_pkg = PackagingMaterial.objects.filter(pk=pkg_id).first() if pkg_id else None
+        pkg_cost = selected_pkg.cost_per_piece if selected_pkg else Decimal('0.00')
+
         with transaction.atomic():
             if is_edit:
                 batch = selected_batch
@@ -652,6 +659,8 @@ def stock_action(request, pk):
                 batch.selling_price = selling_price
                 batch.storage_box = storage_box
                 batch.section_name = section_name
+                batch.packaging_material = selected_pkg
+                batch.packaging_cost = pkg_cost
                 if stock_qty > 0:
                     batch.status = 'active'
                     batch.finished_at = None
@@ -667,6 +676,8 @@ def stock_action(request, pk):
                     wholesale_price=wholesale_price,
                     selling_price=selling_price,
                     storage_box=storage_box, section_name=section_name,
+                    packaging_material=selected_pkg,
+                    packaging_cost=pkg_cost,
                     status='active' if stock_qty > 0 else 'disabled',
                     finished_at=timezone.now() if stock_qty == 0 else None,
                 )
