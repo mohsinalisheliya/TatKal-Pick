@@ -897,6 +897,75 @@ def platform_delete(request, pk):
     get_object_or_404(Platform, pk=pk).delete()
     return redirect('platform_manager')
 
+
+# --- Packaging Material Master ---
+@login_required(login_url='login')
+def packaging_manager(request):
+    """Manage packaging materials (boxes, bags, cards) and their per-piece cost."""
+    materials = PackagingMaterial.objects.all().order_by('name')
+    edit_obj = None
+    edit_id = request.GET.get('edit')
+    if edit_id and edit_id.isdigit():
+        edit_obj = PackagingMaterial.objects.filter(pk=edit_id).first()
+
+    if request.method == 'POST':
+        action = request.POST.get('action', 'add')
+        name = request.POST.get('name', '').strip()
+        material_type = request.POST.get('material_type', 'box')
+        cost_raw = request.POST.get('cost_per_piece', '0').strip()
+        stock_raw = request.POST.get('stock_quantity', '0').strip()
+
+        try:
+            cost_per_piece = Decimal(cost_raw) if cost_raw else Decimal('0.00')
+            stock_quantity = int(stock_raw) if stock_raw.isdigit() else 0
+        except Exception:
+            messages.error(request, "Please enter a valid cost value.")
+            return redirect('packaging_manager')
+
+        if not name:
+            messages.error(request, "Material name is required.")
+            return redirect('packaging_manager')
+
+        if action == 'edit':
+            obj_id = request.POST.get('material_id', '').strip()
+            obj = PackagingMaterial.objects.filter(pk=obj_id).first()
+            if obj:
+                obj.name = name
+                obj.material_type = material_type
+                obj.cost_per_piece = cost_per_piece
+                obj.stock_quantity = stock_quantity
+                obj.save()
+                messages.success(request, f"'{name}' updated successfully!")
+            else:
+                messages.error(request, "Material not found.")
+        else:
+            PackagingMaterial.objects.create(
+                name=name,
+                material_type=material_type,
+                cost_per_piece=cost_per_piece,
+                stock_quantity=stock_quantity,
+            )
+            messages.success(request, f"Packaging item '{name}' added!")
+        return redirect('packaging_manager')
+
+    return render(request, 'sku_manager/packaging.html', {
+        'active_page': 'packaging',
+        'materials': materials,
+        'edit_obj': edit_obj,
+        'type_choices': PackagingMaterial.TYPE_CHOICES,
+    })
+
+
+@login_required(login_url='login')
+def packaging_delete(request, pk):
+    obj = get_object_or_404(PackagingMaterial, pk=pk)
+    name = obj.name
+    obj.delete()
+    messages.info(request, f"Packaging item '{name}' deleted.")
+    return redirect('packaging_manager')
+
+
+
 # --- Dispatch, Scanner & Label Print ---
 def scan_dispatch(request, sku):
     item = get_object_or_404(JewelrySKU.objects.select_related('storage_box'), sku=sku)
