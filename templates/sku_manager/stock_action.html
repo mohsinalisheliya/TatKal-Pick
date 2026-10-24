@@ -124,37 +124,65 @@
         </div>
       </div>
 
-      <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-        <div class="flex items-center justify-between">
+      <!-- Packaging: any number of materials per product unit -->
+      <div class="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
           <label class="block text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
-            <i class="fa-solid fa-box-open mr-1"></i> Packaging Material
+            <i class="fa-solid fa-box-open mr-1"></i> Packaging Materials
           </label>
           {% if packaging_materials %}
             <span id="true-cost-badge" class="hidden items-center gap-1 text-[11px] font-black bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-400/30 px-2.5 py-0.5 rounded-full">
               <i class="fa-solid fa-calculator text-[9px]"></i>
-              True Cost: ₹<span id="true-cost-value">0.00</span>/pc
+              True Cost: &#8377;<span id="true-cost-value">0.00</span>/pc
             </span>
           {% endif %}
         </div>
 
         {% if packaging_materials %}
-          <!-- Packaging dropdown with data attributes for JS -->
-          <select id="packaging-select" name="packaging_material_id"
-            class="w-full bg-violet-50 dark:bg-slate-900 border border-violet-200 dark:border-violet-500/30 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500">
-            <option value="" data-cost="0">-- None (No Packaging Cost) --</option>
-            {% for pkg in packaging_materials %}
-              <option value="{{ pkg.pk }}" data-cost="{{ pkg.cost_per_piece }}"
-                {% if is_edit and selected_batch.packaging_material_id == pkg.pk %}selected
-                {% elif form_values and form_values.packaging_material_id == pkg.pk|stringformat:"s" %}selected{% endif %}>
-                {{ pkg.name }} — ₹{{ pkg.cost_per_piece }}/pc ({{ pkg.get_material_type_display }})
-              </option>
-            {% endfor %}
-          </select>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">
+            Add every item used to pack <strong>one</strong> product (box, bag, tape, card, sticker...). Set how many of each.
+          </p>
+
+          <div id="packaging-rows" class="space-y-2"></div>
+
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <button type="button" id="add-packaging-row"
+              class="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition">
+              <i class="fa-solid fa-plus"></i> Add Packaging Item
+            </button>
+            <div id="packaging-total" class="hidden text-[11px] font-mono text-slate-500 dark:text-slate-400">
+              Packaging per unit: <strong class="text-violet-600 dark:text-violet-400">&#8377;<span id="packaging-total-value">0.00</span></strong>
+            </div>
+          </div>
+
           <p class="text-[10px] text-slate-400 dark:text-slate-500">
             <i class="fa-solid fa-circle-info text-[9px]"></i>
-            Packaging cost is snapshotted per batch. Change it anytime in
+            Cost is saved with this batch. Manage materials in
             <a href="{% url 'packaging_manager' %}" class="text-violet-500 hover:underline">Packaging Manager</a>.
           </p>
+
+          <template id="packaging-row-template">
+            <div class="packaging-row flex items-center gap-2 bg-violet-50/60 dark:bg-slate-900 border border-violet-200 dark:border-violet-500/30 rounded-xl p-2">
+              <select name="packaging_material_id"
+                class="pkg-select flex-1 min-w-0 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500">
+                <option value="" data-cost="0">-- Select material --</option>
+                {% for pkg in packaging_materials %}
+                  <option value="{{ pkg.pk }}" data-cost="{{ pkg.cost_per_piece }}">{{ pkg.name }} &mdash; &#8377;{{ pkg.cost_per_piece }}/pc ({{ pkg.get_material_type_display }})</option>
+                {% endfor %}
+              </select>
+              <div class="flex items-center gap-1 shrink-0">
+                <span class="text-[10px] font-bold uppercase text-slate-400">Qty</span>
+                <input type="number" min="1" name="packaging_qty" value="1"
+                  class="pkg-qty w-14 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-2 text-xs text-center font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500">
+              </div>
+              <div class="pkg-line w-16 shrink-0 text-right text-[11px] font-mono font-bold text-rose-600 dark:text-rose-400">&#8377;0.00</div>
+              <button type="button" class="pkg-remove w-8 h-8 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/10 hover:text-rose-500 text-slate-500 flex items-center justify-center transition" title="Remove">
+                <i class="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+          </template>
+
+          {{ packaging_rows|json_script:"packaging-initial" }}
         {% else %}
           <div class="bg-violet-500/5 border border-violet-400/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
             <p class="text-xs text-slate-500 dark:text-slate-400">No packaging materials configured yet.</p>
@@ -162,7 +190,6 @@
               <i class="fa-solid fa-plus"></i> Add Materials
             </a>
           </div>
-          <input type="hidden" name="packaging_material_id" value="">
         {% endif %}
       </div>
 
@@ -184,32 +211,60 @@
 {% block extra_scripts %}
 <script>
 (function () {
-  const pkgSelect   = document.getElementById('packaging-select');
-  const trueBadge   = document.getElementById('true-cost-badge');
-  const trueValue   = document.getElementById('true-cost-value');
-  const buyInput    = document.querySelector('input[name="purchase_price"]');
+  const rowsBox   = document.getElementById('packaging-rows');
+  const tpl       = document.getElementById('packaging-row-template');
+  const addBtn    = document.getElementById('add-packaging-row');
+  const trueBadge = document.getElementById('true-cost-badge');
+  const trueValue = document.getElementById('true-cost-value');
+  const totalBox  = document.getElementById('packaging-total');
+  const totalVal  = document.getElementById('packaging-total-value');
+  const buyInput  = document.querySelector('input[name="purchase_price"]');
+  if (!rowsBox || !tpl || !addBtn) return;
 
-  if (!pkgSelect || !trueBadge || !trueValue || !buyInput) return;
+  function money(n) { return (Math.round(n * 100) / 100).toFixed(2); }
 
-  function update() {
-    const selectedOption = pkgSelect.options[pkgSelect.selectedIndex];
-    const pkgCost  = parseFloat(selectedOption.getAttribute('data-cost') || '0') || 0;
-    const buyCost  = parseFloat(buyInput.value || '0') || 0;
-    const trueCost = buyCost + pkgCost;
-
-    if (pkgCost > 0) {
-      trueBadge.classList.remove('hidden');
-      trueBadge.classList.add('inline-flex');
-      trueValue.textContent = trueCost.toFixed(2);
-    } else {
-      trueBadge.classList.add('hidden');
-      trueBadge.classList.remove('inline-flex');
+  function recalc() {
+    let pkgTotal = 0;
+    rowsBox.querySelectorAll('.packaging-row').forEach(function (row) {
+      const opt  = row.querySelector('.pkg-select').selectedOptions[0];
+      const cost = parseFloat(opt && opt.dataset.cost || '0') || 0;
+      const qty  = Math.max(1, parseInt(row.querySelector('.pkg-qty').value, 10) || 1);
+      const line = opt && opt.value ? cost * qty : 0;
+      row.querySelector('.pkg-line').textContent = '\u20b9' + money(line);
+      pkgTotal += line;
+    });
+    const buy = buyInput ? (parseFloat(buyInput.value) || 0) : 0;
+    const has = pkgTotal > 0;
+    totalBox.classList.toggle('hidden', !has);
+    totalVal.textContent = money(pkgTotal);
+    if (trueBadge) {
+      trueBadge.classList.toggle('hidden', !has);
+      trueBadge.classList.toggle('inline-flex', has);
+      trueValue.textContent = money(buy + pkgTotal);
     }
   }
 
-  pkgSelect.addEventListener('change', update);
-  buyInput.addEventListener('input', update);
-  update(); // run on page load for edit mode
+  function addRow(materialId, qty) {
+    const node = tpl.content.firstElementChild.cloneNode(true);
+    if (materialId) node.querySelector('.pkg-select').value = String(materialId);
+    if (qty) node.querySelector('.pkg-qty').value = qty;
+    rowsBox.appendChild(node);
+    recalc();
+  }
+
+  rowsBox.addEventListener('change', recalc);
+  rowsBox.addEventListener('input', recalc);
+  rowsBox.addEventListener('click', function (e) {
+    const btn = e.target.closest('.pkg-remove');
+    if (btn) { btn.closest('.packaging-row').remove(); recalc(); }
+  });
+  addBtn.addEventListener('click', function () { addRow(); });
+  if (buyInput) buyInput.addEventListener('input', recalc);
+
+  let initial = [];
+  try { initial = JSON.parse(document.getElementById('packaging-initial').textContent) || []; } catch (e) {}
+  initial.forEach(function (r) { addRow(r.material_id, r.qty); });
+  recalc();
 })();
 </script>
-{% endblock %}
+{% endblock %}
