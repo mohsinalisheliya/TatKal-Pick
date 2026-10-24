@@ -120,16 +120,19 @@
         </div>
 
         {% for m in materials %}
-          {% if m.material_type == 'box' %}{% with icon='fa-box' icon_color='text-amber-500' bg='bg-amber-500/10 border-amber-500/20' %}
-          {% elif m.material_type == 'bag' %}{% with icon='fa-bag-shopping' icon_color='text-blue-500' bg='bg-blue-500/10 border-blue-500/20' %}
-          {% elif m.material_type == 'card' %}{% with icon='fa-heart' icon_color='text-rose-500' bg='bg-rose-500/10 border-rose-500/20' %}
-          {% else %}{% with icon='fa-scissors' icon_color='text-slate-500' bg='bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600' %}
-          {% endif %}
-
           <div class="bg-white dark:bg-slate-800/80 border {% if edit_obj and edit_obj.pk == m.pk %}border-amber-500{% else %}border-slate-200 dark:border-slate-700/60{% endif %} rounded-2xl px-4 py-3 shadow-sm flex items-center gap-4">
+
             <!-- Type icon -->
-            <div class="w-10 h-10 min-w-[40px] rounded-xl {{ bg }} border flex items-center justify-center">
-              <i class="fa-solid {{ icon }} {{ icon_color }}"></i>
+            <div class="w-10 h-10 min-w-[40px] rounded-xl border flex items-center justify-center
+              {% if m.material_type == 'box' %}bg-amber-500/10 border-amber-500/20
+              {% elif m.material_type == 'bag' %}bg-blue-500/10 border-blue-500/20
+              {% elif m.material_type == 'card' %}bg-rose-500/10 border-rose-500/20
+              {% else %}bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600{% endif %}">
+              <i class="fa-solid
+                {% if m.material_type == 'box' %}fa-box text-amber-500
+                {% elif m.material_type == 'bag' %}fa-bag-shopping text-blue-500
+                {% elif m.material_type == 'card' %}fa-heart text-rose-500
+                {% else %}fa-scissors text-slate-500{% endif %}"></i>
             </div>
 
             <!-- Info -->
@@ -162,10 +165,9 @@
               </form>
             </div>
           </div>
-
-          {% endwith %}{% endwith %}{% endwith %}{% endwith %}
         {% endfor %}
       {% endif %}
+
     </div>
   </div>
 </div>
