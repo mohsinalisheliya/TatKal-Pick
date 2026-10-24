@@ -124,6 +124,48 @@
         </div>
       </div>
 
+      <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+            <i class="fa-solid fa-box-open mr-1"></i> Packaging Material
+          </label>
+          {% if packaging_materials %}
+            <span id="true-cost-badge" class="hidden items-center gap-1 text-[11px] font-black bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-400/30 px-2.5 py-0.5 rounded-full">
+              <i class="fa-solid fa-calculator text-[9px]"></i>
+              True Cost: ₹<span id="true-cost-value">0.00</span>/pc
+            </span>
+          {% endif %}
+        </div>
+
+        {% if packaging_materials %}
+          <!-- Packaging dropdown with data attributes for JS -->
+          <select id="packaging-select" name="packaging_material_id"
+            class="w-full bg-violet-50 dark:bg-slate-900 border border-violet-200 dark:border-violet-500/30 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500">
+            <option value="" data-cost="0">-- None (No Packaging Cost) --</option>
+            {% for pkg in packaging_materials %}
+              <option value="{{ pkg.pk }}" data-cost="{{ pkg.cost_per_piece }}"
+                {% if is_edit and selected_batch.packaging_material_id == pkg.pk %}selected
+                {% elif form_values and form_values.packaging_material_id == pkg.pk|stringformat:"s" %}selected{% endif %}>
+                {{ pkg.name }} — ₹{{ pkg.cost_per_piece }}/pc ({{ pkg.get_material_type_display }})
+              </option>
+            {% endfor %}
+          </select>
+          <p class="text-[10px] text-slate-400 dark:text-slate-500">
+            <i class="fa-solid fa-circle-info text-[9px]"></i>
+            Packaging cost is snapshotted per batch. Change it anytime in
+            <a href="{% url 'packaging_manager' %}" class="text-violet-500 hover:underline">Packaging Manager</a>.
+          </p>
+        {% else %}
+          <div class="bg-violet-500/5 border border-violet-400/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+            <p class="text-xs text-slate-500 dark:text-slate-400">No packaging materials configured yet.</p>
+            <a href="{% url 'packaging_manager' %}" class="shrink-0 inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+              <i class="fa-solid fa-plus"></i> Add Materials
+            </a>
+          </div>
+          <input type="hidden" name="packaging_material_id" value="">
+        {% endif %}
+      </div>
+
       <div class="flex justify-end pt-3">
         {% if is_edit %}
           <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-8 py-3 rounded-xl text-xs uppercase tracking-wider transition shadow-sm">Update Batch</button>
@@ -138,3 +180,36 @@
   </div>
 </div>
 {% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const pkgSelect   = document.getElementById('packaging-select');
+  const trueBadge   = document.getElementById('true-cost-badge');
+  const trueValue   = document.getElementById('true-cost-value');
+  const buyInput    = document.querySelector('input[name="purchase_price"]');
+
+  if (!pkgSelect || !trueBadge || !trueValue || !buyInput) return;
+
+  function update() {
+    const selectedOption = pkgSelect.options[pkgSelect.selectedIndex];
+    const pkgCost  = parseFloat(selectedOption.getAttribute('data-cost') || '0') || 0;
+    const buyCost  = parseFloat(buyInput.value || '0') || 0;
+    const trueCost = buyCost + pkgCost;
+
+    if (pkgCost > 0) {
+      trueBadge.classList.remove('hidden');
+      trueBadge.classList.add('inline-flex');
+      trueValue.textContent = trueCost.toFixed(2);
+    } else {
+      trueBadge.classList.add('hidden');
+      trueBadge.classList.remove('inline-flex');
+    }
+  }
+
+  pkgSelect.addEventListener('change', update);
+  buyInput.addEventListener('input', update);
+  update(); // run on page load for edit mode
+})();
+</script>
+{% endblock %}
