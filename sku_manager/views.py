@@ -1956,4 +1956,5 @@ def workspace_tools(request):
         'boxes_count': StorageBox.objects.count(),
         'platforms_count': Platform.objects.count(),
         'dispatch_count': DispatchLog.objects.count(),
+        'packaging_count': PackagingMaterial.objects.count(),
     })
