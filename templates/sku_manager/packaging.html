@@ -1,0 +1,172 @@
+{% extends "sku_manager/base.html" %}
+
+{% block title %}Packaging Materials - Tatkal Pick{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <header class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-3">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 text-xs font-semibold uppercase tracking-wider mb-1.5">
+        <i class="fa-solid fa-box-open"></i> Packaging Master
+      </div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Packaging Materials</h1>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Track boxes, bags, cards and their per-piece cost for accurate profit calculation.</p>
+    </div>
+    <a href="{% url 'workspace_tools' %}" class="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold px-4 py-2.5 rounded-xl transition">
+      <i class="fa-solid fa-arrow-left"></i> Workspace
+    </a>
+  </header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+    <!-- LEFT: Add / Edit Form -->
+    <div class="lg:col-span-2">
+      <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-6 shadow-sm sticky top-4">
+        <h2 class="text-sm font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
+          {% if edit_obj %}
+            <i class="fa-solid fa-pen text-amber-500"></i> Edit Material
+          {% else %}
+            <i class="fa-solid fa-plus text-violet-500"></i> Add New Material
+          {% endif %}
+        </h2>
+
+        <form method="POST" action="{% url 'packaging_manager' %}" class="space-y-4">
+          {% csrf_token %}
+          {% if edit_obj %}
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="material_id" value="{{ edit_obj.pk }}">
+          {% else %}
+            <input type="hidden" name="action" value="add">
+          {% endif %}
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Material Name <span class="text-rose-500">*</span></label>
+            <input type="text" name="name" required
+              value="{{ edit_obj.name|default:'' }}"
+              placeholder="e.g. Small Luxury Jewelry Box"
+              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Type</label>
+            <select name="material_type"
+              class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500">
+              {% for val, label in type_choices %}
+                <option value="{{ val }}" {% if edit_obj and edit_obj.material_type == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-rose-600 mb-1">Cost / Piece (₹) <span class="text-rose-500">*</span></label>
+              <input type="number" name="cost_per_piece" step="0.01" min="0" required
+                value="{{ edit_obj.cost_per_piece|default:'0.00' }}"
+                class="w-full bg-rose-50 dark:bg-slate-900 border border-rose-200 dark:border-rose-500/30 rounded-xl px-3.5 py-2.5 text-sm font-black text-rose-700 dark:text-rose-400 focus:outline-none focus:border-rose-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">Stock Qty</label>
+              <input type="number" name="stock_quantity" min="0"
+                value="{{ edit_obj.stock_quantity|default:'0' }}"
+                class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500">
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-1">
+            <button type="submit"
+              class="flex-1 {% if edit_obj %}bg-amber-500 hover:bg-amber-400 text-slate-950{% else %}bg-violet-600 hover:bg-violet-500 text-white{% endif %} font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm">
+              {% if edit_obj %}<i class="fa-solid fa-check mr-1"></i>Save Changes{% else %}<i class="fa-solid fa-plus mr-1"></i>Add Material{% endif %}
+            </button>
+            {% if edit_obj %}
+              <a href="{% url 'packaging_manager' %}" class="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition">Cancel</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- RIGHT: Materials List -->
+    <div class="lg:col-span-3 space-y-3">
+
+      {% if not materials %}
+        <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-10 shadow-sm text-center">
+          <i class="fa-solid fa-box-open text-4xl text-slate-300 dark:text-slate-600 mb-3"></i>
+          <p class="text-sm font-semibold text-slate-500">No packaging materials added yet.</p>
+          <p class="text-xs text-slate-400 mt-1">Add your first box, bag, or card using the form.</p>
+        </div>
+      {% else %}
+        <!-- Summary row -->
+        <div class="grid grid-cols-3 gap-3 mb-1">
+          <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-3 text-center shadow-sm">
+            <div class="text-lg font-black text-violet-600 dark:text-violet-400">{{ materials|length }}</div>
+            <div class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Total Types</div>
+          </div>
+          <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-3 text-center shadow-sm">
+            <div class="text-lg font-black text-rose-600 dark:text-rose-400">
+              {% with total=materials|length %}₹{% endwith %}
+              {# cheapest cost #}
+              {% for m in materials %}{% if forloop.first %}{{ m.cost_per_piece }}{% endif %}{% endfor %}
+            </div>
+            <div class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Lowest Cost/pc</div>
+          </div>
+          <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-3 text-center shadow-sm">
+            <div class="text-lg font-black text-emerald-600 dark:text-emerald-400">
+              {% for m in materials %}{% if forloop.last %}{{ m.cost_per_piece }}{% endif %}{% endfor %}
+            </div>
+            <div class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Highest Cost/pc</div>
+          </div>
+        </div>
+
+        {% for m in materials %}
+          {% if m.material_type == 'box' %}{% with icon='fa-box' icon_color='text-amber-500' bg='bg-amber-500/10 border-amber-500/20' %}
+          {% elif m.material_type == 'bag' %}{% with icon='fa-bag-shopping' icon_color='text-blue-500' bg='bg-blue-500/10 border-blue-500/20' %}
+          {% elif m.material_type == 'card' %}{% with icon='fa-heart' icon_color='text-rose-500' bg='bg-rose-500/10 border-rose-500/20' %}
+          {% else %}{% with icon='fa-scissors' icon_color='text-slate-500' bg='bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600' %}
+          {% endif %}
+
+          <div class="bg-white dark:bg-slate-800/80 border {% if edit_obj and edit_obj.pk == m.pk %}border-amber-500{% else %}border-slate-200 dark:border-slate-700/60{% endif %} rounded-2xl px-4 py-3 shadow-sm flex items-center gap-4">
+            <!-- Type icon -->
+            <div class="w-10 h-10 min-w-[40px] rounded-xl {{ bg }} border flex items-center justify-center">
+              <i class="fa-solid {{ icon }} {{ icon_color }}"></i>
+            </div>
+
+            <!-- Info -->
+            <div class="flex-1 min-w-0">
+              <div class="font-bold text-sm text-slate-900 dark:text-white truncate">{{ m.name }}</div>
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                <span class="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 font-mono">{{ m.get_material_type_display }}</span>
+                {% if m.stock_quantity > 0 %}
+                  <span class="px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">{{ m.stock_quantity }} pcs left</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Cost badge -->
+            <div class="text-right shrink-0">
+              <div class="text-base font-black text-rose-600 dark:text-rose-400">₹{{ m.cost_per_piece }}</div>
+              <div class="text-[10px] text-slate-400 font-mono">per piece</div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-1.5 shrink-0">
+              <a href="?edit={{ m.pk }}" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-amber-500/10 hover:text-amber-600 text-slate-500 dark:text-slate-400 flex items-center justify-center transition" title="Edit">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </a>
+              <form method="POST" action="{% url 'packaging_delete' m.pk %}" onsubmit="return confirm('Delete \'{{ m.name }}\'?')">
+                {% csrf_token %}
+                <button type="submit" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-rose-500/10 hover:text-rose-500 text-slate-500 dark:text-slate-400 flex items-center justify-center transition" title="Delete">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {% endwith %}{% endwith %}{% endwith %}{% endwith %}
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
