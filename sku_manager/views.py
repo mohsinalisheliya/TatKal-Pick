@@ -34,6 +34,7 @@ from .models import (
     MarketplaceLabelScan,
     MarketplaceListingSKU,
     MarketplaceOrder,
+    PackagingMaterial,
     Platform,
     PlatformPrice,
     StorageBox,
