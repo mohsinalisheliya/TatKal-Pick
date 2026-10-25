@@ -1,0 +1,90 @@
+{% extends "sku_manager/base.html" %}
+{% load static %}
+
+{% block title %}{% if kind == 'products' %}Product Analytics{% else %}Customer Analytics{% endif %} - Tatkal Pick{% endblock %}
+
+{% block content %}
+<style>
+  .india-state { stroke: #ffffff; stroke-width: .5; cursor: pointer; transition: opacity .15s; }
+  .india-state.empty { fill: #e2e8f0; }
+  .dark .india-state { stroke: #0f172a; }
+  .dark .india-state.empty { fill: #1e293b; }
+  .india-state:hover { opacity: .75; }
+  .india-state.selected { stroke: #f59e0b; stroke-width: 2.2; }
+</style>
+
+<div id="analytics-root" data-kind="{{ kind }}" data-url="{% url 'analytics_data' kind %}" class="max-w-7xl mx-auto space-y-6 transition-opacity">
+
+  <header class="flex flex-col lg:flex-row lg:items-end justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-4">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full {% if kind == 'products' %}bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20{% else %}bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20{% endif %} border text-xs font-semibold uppercase tracking-wider mb-1.5">
+        <i class="fa-solid {% if kind == 'products' %}fa-gem{% else %}fa-users{% endif %}"></i> {% if kind == 'products' %}Product Analytics{% else %}Customer Analytics{% endif %}
+      </div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{% if kind == 'products' %}What sells, and where{% else %}Who buys, and where from{% endif %}</h1>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+        {% if kind == 'products' %}Tap any state to see its best sellers, returns and marketplaces.{% else %}Tap any state to see its customers, repeat buyers and favourite products.{% endif %}
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <select id="f-days" class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+        <option value="30" selected>Last 30 days</option>
+        <option value="7">Last 7 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="365">Last 12 months</option>
+        <option value="0">All time</option>
+      </select>
+      <select id="f-platform" class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+        <option value="">All marketplaces</option>
+        {% for p in platforms %}<option value="{{ p.pk }}">{{ p.name }}</option>{% endfor %}
+      </select>
+      {% if kind == 'products' %}
+      <select id="f-sku" class="max-w-[220px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+        <option value="">All products</option>
+        {% for s in skus %}<option value="{{ s.pk }}">{{ s.name }} ({{ s.sku }})</option>{% endfor %}
+      </select>
+      {% endif %}
+      <a href="{% if kind == 'products' %}{% url 'analytics_customers' %}{% else %}{% url 'analytics_products' %}{% endif %}"
+         class="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold px-4 py-2.5 rounded-xl transition">
+        <i class="fa-solid {% if kind == 'products' %}fa-users{% else %}fa-gem{% endif %}"></i> {% if kind == 'products' %}Customers{% else %}Products{% endif %}
+      </a>
+    </div>
+  </header>
+
+  <div id="kpis" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+  <p id="coverage" class="text-[11px] text-slate-400 -mt-3"></p>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    <div class="lg:col-span-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div id="metric-buttons" class="flex flex-wrap gap-1.5"></div>
+        <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+          <span id="legend-label"></span> 0 <span id="legend-bar" class="inline-block w-24 h-2 rounded-full"></span> <span id="legend-max"></span>
+        </div>
+      </div>
+      <div class="relative mx-auto max-w-[520px]">
+        <svg id="india-svg" class="w-full h-auto" role="img" aria-label="Map of India by state"></svg>
+        <div id="map-tip" class="hidden absolute pointer-events-none z-10 bg-slate-900 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap"></div>
+      </div>
+      <p class="text-[10px] text-slate-400 text-center mt-2">Map: &copy; Victor Cazanave, @svg-maps/india, CC BY 4.0. Ladakh is shown with Jammu &amp; Kashmir.</p>
+    </div>
+
+    <div class="lg:col-span-2 space-y-6">
+      <div id="detail" class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm"></div>
+      <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+        <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2"><i class="fa-solid fa-lightbulb text-amber-500"></i> Insights</h3>
+        <ul id="insights" class="space-y-2"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="lower" class="grid grid-cols-1 lg:grid-cols-3 gap-6"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ state_names|json_script:"state-names" }}
+<script>window.STATE_NAMES = JSON.parse(document.getElementById('state-names').textContent);</script>
+<script src="{% static 'sku_manager/india_map_data.js' %}"></script>
+<script src="{% static 'sku_manager/analytics.js' %}"></script>
+{% endblock %}
