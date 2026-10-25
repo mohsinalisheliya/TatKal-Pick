@@ -132,10 +132,19 @@ class PackagingMaterial(models.Model):
     material_type   = models.CharField(max_length=20, choices=TYPE_CHOICES, default='box')
     cost_per_piece  = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     stock_quantity  = models.PositiveIntegerField(default=0)
+    # Marketplaces this material is used for. Empty = used for ALL marketplaces.
+    platforms       = models.ManyToManyField(
+        'Platform', blank=True, related_name='packaging_materials',
+        help_text='Leave empty if this material is used for every marketplace.',
+    )
     created_at      = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['name']
+
+    def applies_to(self, platform_id):
+        ids = [p.pk for p in self.platforms.all()]
+        return not ids or platform_id in ids
 
     def __str__(self):
         return f"{self.name} (₹{self.cost_per_piece}/pc)"
