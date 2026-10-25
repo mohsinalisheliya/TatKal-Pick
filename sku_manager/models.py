@@ -320,6 +320,9 @@ class MarketplaceOrder(models.Model):
     customer_name = models.CharField(max_length=150, blank=True, default='')
     shipping_address = models.TextField(blank=True, default='')
     customer_phone = models.CharField(max_length=40, blank=True, default='')
+    # Filled automatically from shipping_address (used by the India-map analytics)
+    state = models.CharField(max_length=60, blank=True, default='', db_index=True)
+    pincode = models.CharField(max_length=10, blank=True, default='')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     dispatch_log = models.OneToOneField(
         'DispatchLog',
@@ -338,6 +341,16 @@ class MarketplaceOrder(models.Model):
             models.UniqueConstraint(fields=('platform', 'order_id'), name='uniq_marketplace_order_id'),
         ]
         ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        from .geo import detect_state, extract_pincode
+        if self.shipping_address:
+            self.state = detect_state(self.shipping_address) or self.state
+            self.pincode = extract_pincode(self.shipping_address) or self.pincode
+            update_fields = kwargs.get('update_fields')
+            if update_fields is not None:
+                kwargs['update_fields'] = set(update_fields) | {'state', 'pincode'}
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.platform_name} order {self.order_id}"
