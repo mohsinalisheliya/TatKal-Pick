@@ -8,21 +8,12 @@
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" type="image/svg+xml" href="{% static 'tatkal-pick-icon.svg' %}">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
     tailwind.config = {
       darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              400: '#fbbf24',
-              500: '#f59e0b',
-              600: '#d97706',
-            }
-          }
-        }
-      }
+      theme: { extend: { colors: { brand: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' } } } }
     }
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,8 +22,6 @@
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     .sku-mono { font-family: 'JetBrains Mono', monospace; }
-    .sidebar-nav { scrollbar-width: none; }
-    .sidebar-nav::-webkit-scrollbar { display: none; }
   </style>
 
   <!-- Early Theme Detection Script -->
@@ -46,12 +35,14 @@
 </head>
 <body class="bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen flex antialiased transition-colors duration-200">
 
-  <!-- Reactive Expandable Sidebar -->
-  <aside class="group fixed left-0 top-0 z-40 h-screen w-16 hover:w-60 transition-all duration-300 ease-in-out bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between p-2.5 shadow-xl overflow-hidden">
+  <!-- Reactive Expandable Sidebar (No Scroll) -->
+  <aside class="group fixed left-0 top-0 z-40 h-[100dvh] w-16 hover:w-64 transition-all duration-300 ease-in-out bg-white border-r border-slate-200 dark:bg-slate-900 dark:border-slate-800 flex flex-col justify-between p-2.5 shadow-xl overflow-hidden">
     
-    <div class="flex flex-col gap-4 flex-1 min-h-0">
-      <!-- Universal Tatkal Pick Logo -->
-      <a href="{% url 'inventory_list' %}" class="flex items-center gap-3 px-1 py-1">
+    <!-- TOP SECTION: Logo & Primary Navigation -->
+    <div class="space-y-5">
+      
+      <!-- Logo -->
+      <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-1 py-1">
         <div class="w-10 h-10 min-w-[40px] rounded-xl bg-gradient-to-tr from-amber-500 to-amber-400 flex items-center justify-center shadow-md shadow-amber-500/20 text-slate-950">
           <img src="{% static 'tatkal-pick-icon.svg' %}" class="w-7 h-7 object-contain" alt="Tatkal Pick">
         </div>
@@ -61,119 +52,79 @@
         </div>
       </a>
 
-<nav class="sidebar-nav flex-1 min-h-0 space-y-1.5 overflow-y-auto overflow-x-hidden pb-2">
-  
-  <!-- === PRIMARY DAILY TOOLS === -->
-  
-  <!-- Dashboard -->
-  <a href="{% url 'dashboard' %}" title="Dashboard"
-    class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'dashboard' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-    <i class="fa-solid fa-house text-lg min-w-[20px] text-center"></i>
-    <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Dashboard</span>
-  </a>
+      <!-- Navigation Links (Fixed, No Scroll) -->
+      <nav class="space-y-1.5">
+        
+        <!-- Dashboard -->
+        <a href="{% url 'dashboard' %}" title="Dashboard"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'dashboard' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-house text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Dashboard</span>
+        </a>
 
-  <!-- PDF Order Scan -->
-  <a href="{% url 'pdf_order_scan' %}" title="Scan Marketplace PDF"
-    class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'pdf_order_scan' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-    <i class="fa-solid fa-file-invoice text-lg min-w-[20px] text-center"></i>
-    <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">PDF Order Scan</span>
-  </a>
+        <!-- PDF Order Scan -->
+        <a href="{% url 'pdf_order_scan' %}" title="Scan Marketplace PDF"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'pdf_order_scan' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-file-invoice text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">PDF Order Scan</span>
+        </a>
 
-  <!-- Inventory -->
-  <a href="{% url 'inventory_list' %}" title="Inventory"
-    class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'inventory' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-    <i class="fa-solid fa-boxes-stacked text-lg min-w-[20px] text-center"></i>
-    <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Inventory</span>
-  </a>
+        <!-- Inventory -->
+        <a href="{% url 'inventory_list' %}" title="Inventory"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'inventory' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-boxes-stacked text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Inventory</span>
+        </a>
 
-  <!-- Products -->
-  <a href="{% url 'product_master' %}" title="Add Products & Catalog"
-    class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'products' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-    <i class="fa-solid fa-tags text-lg min-w-[20px] text-center"></i>
-    <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Products</span>
-  </a>
+        <!-- Products -->
+        <a href="{% url 'product_master' %}" title="Add Products & Catalog"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'products' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-tags text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Products</span>
+        </a>
 
-  <!-- RTO & Cancellations -->
-  <a href="{% url 'order_cancellation' %}" title="Returns & Cancellations"
-    class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'cancellation' %}bg-rose-500 text-white font-bold shadow-md shadow-rose-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-    <i class="fa-solid fa-arrow-rotate-left text-lg min-w-[20px] text-center"></i>
-    <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">RTO & Cancellations</span>
-  </a>
+        <!-- RTO & Cancellations -->
+        <a href="{% url 'order_cancellation' %}" title="Returns & Cancellations"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'cancellation' %}bg-rose-500 text-white font-bold shadow-md shadow-rose-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-arrow-rotate-left text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">RTO & Cancellations</span>
+        </a>
 
-  <!-- Scanner -->
-  <a href="{% url 'sku_scanner' %}" title="Camera Scanner"
-    class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'scanner' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-    <i class="fa-solid fa-qrcode text-lg min-w-[20px] text-center"></i>
-    <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Fast Scanner</span>
-  </a>
+        <!-- Fast Scanner -->
+        <a href="{% url 'sku_scanner' %}" title="Camera Scanner"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'scanner' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-qrcode text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Fast Scanner</span>
+        </a>
 
-  <!-- === SECONDARY TOOLS DIVIDER === -->
-  <div class="pt-4 pb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pl-4">
-    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Workspace Tools</span>
-  </div>
+        <!-- Workspace Tools (Consolidated Hub) -->
+        <a href="{% url 'workspace_tools' %}" title="Workspace Tools"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'workspace' or active_page == 'catalog' or active_page == 'boxes' or active_page == 'platforms' or active_page == 'dispatch_logs' or active_page == 'export_center' %}bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-screwdriver-wrench text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Workspace Tools</span>
+        </a>
 
-  <!-- Catalog Generator -->
-  <a href="{% url 'catalog_generator' %}" title="Catalog Generator"
-    class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'catalog' %}bg-indigo-500 text-white font-bold shadow-md shadow-indigo-500/20{% else %}text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-    <i class="fa-solid fa-book-open text-lg min-w-[20px] text-center"></i>
-    <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Catalog Generator</span>
-  </a>
-
-  <!-- Storage Boxes -->
-  <a href="{% url 'box_manager' %}" title="Storage Boxes"
-    class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'boxes' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-    <i class="fa-solid fa-box-archive text-lg min-w-[20px] text-center"></i>
-    <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Storage Units</span>
-  </a>
-
-  <!-- Marketplace Channels -->
-  <a href="{% url 'platform_manager' %}" title="Marketplace Channels"
-    class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'platforms' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-    <i class="fa-solid fa-shop text-lg min-w-[20px] text-center"></i>
-    <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Marketplaces</span>
-  </a>
-
-  <!-- Dispatch Audit Logs -->
-  <a href="{% url 'dispatch_logs' %}" title="Dispatch Logs"
-    class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'dispatch_logs' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-    <i class="fa-solid fa-clock-rotate-left text-lg min-w-[20px] text-center"></i>
-    <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Dispatch Audit</span>
-  </a>
-
-  <!-- Export CSV -->
-  <a href="{% url 'export_center' %}" title="Export CSV"
-    class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition text-slate-500 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white">
-    <i class="fa-solid fa-file-csv text-lg min-w-[20px] text-center"></i>
-    <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-[11px] font-semibold">Export CSV</span>
-  </a>
-
-</nav>
-
+      </nav>
     </div>
 
-    <!-- Bottom Controls: Settings, Theme Toggle & User Info -->
-    <div class="shrink-0 space-y-1 pt-2 mt-2 border-t border-slate-200 dark:border-slate-800">
+    <!-- BOTTOM SECTION: Settings, Theme Toggle & User Info -->
+    <div class="space-y-1.5 pt-3 border-t border-slate-200 dark:border-slate-800">
 
-      <!-- Settings -->
       <a href="{% url 'app_settings' %}" title="System Settings"
         class="flex items-center gap-3.5 px-3 py-2 rounded-xl transition {% if active_page == 'settings' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
         <i class="fa-solid fa-gear text-lg min-w-[20px] text-center"></i>
         <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-semibold">Settings</span>
       </a>
       
-      <!-- Theme Switcher -->
       <button id="themeToggleBtn" type="button" title="Switch Theme"
         class="w-full flex items-center gap-3.5 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
         <i id="themeIconSun" class="fa-solid fa-sun text-lg min-w-[20px] text-center hidden text-amber-400"></i>
         <i id="themeIconMoon" class="fa-solid fa-moon text-lg min-w-[20px] text-center text-slate-600"></i>
-        <span id="themeToggleText" class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-semibold">
-          Light Mode
-        </span>
+        <span id="themeToggleText" class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-semibold">Light Mode</span>
       </button>
 
       {% if request.user.is_authenticated %}
-      <!-- Authenticated Profile -->
-      <div class="flex items-center gap-3 px-1.5 pt-0.5 overflow-hidden">
+      <div class="flex items-center gap-3 px-1.5 pt-1 overflow-hidden">
         <div class="w-8 h-8 min-w-[32px] rounded-lg bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-amber-600 dark:text-amber-400 text-xs">
           {{ request.user.username|slice:":1"|upper }}
         </div>
@@ -183,9 +134,8 @@
         </div>
       </div>
 
-      <!-- Logout -->
       <a href="{% url 'logout' %}" title="Log Out"
-        class="flex items-center gap-3.5 px-3 py-2 rounded-xl text-slate-500 hover:bg-rose-500/10 hover:text-rose-500 transition">
+        class="flex items-center gap-3 px-3 py-1.5 rounded-xl text-slate-500 hover:bg-rose-500/10 hover:text-rose-500 transition">
         <i class="fa-solid fa-right-from-bracket text-lg min-w-[20px] text-center text-rose-500"></i>
         <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-semibold">Sign Out</span>
       </a>
@@ -193,25 +143,21 @@
     </div>
   </aside>
 
-  <!-- Main Content Space -->
+  <!-- Main Content -->
   <main class="flex-1 ml-16 p-4 sm:p-5 min-h-screen transition-all duration-300">
     <div class="w-full space-y-4">
-
-      <!-- Alerts -->
       {% if messages %}
         {% for msg in messages %}
           <div class="px-4 py-2.5 rounded-xl text-xs font-bold border shadow-sm {% if msg.tags == 'error' %}bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300{% elif msg.tags == 'warning' %}bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300{% else %}bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300{% endif %}">
-            <i class="fa-solid {% if msg.tags == 'error' %}fa-circle-xmark{% elif msg.tags == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %} mr-1.5"></i>{{ msg }}
+            {{ msg }}
           </div>
         {% endfor %}
       {% endif %}
 
       {% block content %}{% endblock %}
-
     </div>
   </main>
 
-  <!-- Theme Toggle Logic Script -->
   <script>
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     const themeIconSun = document.getElementById('themeIconSun');
@@ -242,7 +188,6 @@
       syncThemeUI(!isCurrentlyDark);
     });
   </script>
-
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>
