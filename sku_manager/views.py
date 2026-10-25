@@ -677,8 +677,20 @@ def stock_action(request, pk):
             ]
         else:
             packaging_rows = []
+        packaging_data = [
+            {
+                'id': m.pk, 'name': m.name, 'type': m.material_type,
+                'type_label': m.get_material_type_display(),
+                'cost': float(m.cost_per_piece),
+                'platforms': [p.pk for p in m.platforms.all()],
+            }
+            for m in packaging_materials.prefetch_related('platforms')
+        ]
+        platform_data = [{'id': p.pk, 'name': p.name} for p in platforms]
         return render(request, 'sku_manager/stock_action.html', {
             'packaging_rows': packaging_rows,
+            'packaging_data': packaging_data,
+            'platform_data': platform_data,
             'item': item,
             'is_edit': is_edit,
             'selected_batch': selected_batch,
@@ -966,7 +978,8 @@ def platform_delete(request, pk):
 @login_required(login_url='login')
 def packaging_manager(request):
     """Manage packaging materials (boxes, bags, cards) and their per-piece cost."""
-    materials = PackagingMaterial.objects.all().order_by('name')
+    materials = PackagingMaterial.objects.all().order_by('name').prefetch_related('platforms')
+    all_platforms = get_or_seed_platforms()
     edit_obj = None
     edit_id = request.GET.get('edit')
     if edit_id and edit_id.isdigit():
@@ -978,6 +991,7 @@ def packaging_manager(request):
         material_type = request.POST.get('material_type', 'box')
         cost_raw = request.POST.get('cost_per_piece', '0').strip()
         stock_raw = request.POST.get('stock_quantity', '0').strip()
+        platform_ids = [int(v) for v in request.POST.getlist('platform_ids') if v.isdigit()]
 
         try:
             cost_per_piece = Decimal(cost_raw) if cost_raw else Decimal('0.00')
@@ -999,16 +1013,18 @@ def packaging_manager(request):
                 obj.cost_per_piece = cost_per_piece
                 obj.stock_quantity = stock_quantity
                 obj.save()
+                obj.platforms.set(Platform.objects.filter(pk__in=platform_ids))
                 messages.success(request, f"'{name}' updated successfully!")
             else:
                 messages.error(request, "Material not found.")
         else:
-            PackagingMaterial.objects.create(
+            created = PackagingMaterial.objects.create(
                 name=name,
                 material_type=material_type,
                 cost_per_piece=cost_per_piece,
                 stock_quantity=stock_quantity,
             )
+            created.platforms.set(Platform.objects.filter(pk__in=platform_ids))
             messages.success(request, f"Packaging item '{name}' added!")
         return redirect('packaging_manager')
 
@@ -1016,6 +1032,8 @@ def packaging_manager(request):
         'active_page': 'packaging',
         'materials': materials,
         'edit_obj': edit_obj,
+        'edit_platform_ids': [p.pk for p in edit_obj.platforms.all()] if edit_obj else [],
+        'all_platforms': all_platforms,
         'type_choices': PackagingMaterial.TYPE_CHOICES,
     })
 
