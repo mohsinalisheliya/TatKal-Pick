@@ -1,6 +1,7 @@
 # sku_manager/urls.py
 from django.urls import path
 from . import views
+from . import analytics_views
 
 urlpatterns = [
     # Auth
@@ -75,6 +76,11 @@ urlpatterns = [
     path('orders/scans/<int:pk>/stamped-pdf/', views.pdf_order_stamped_file, name='pdf_order_stamped_file'),
     path('orders/<int:pk>/review/', views.pdf_order_review, name='pdf_order_review'),
     
+    # India-map analytics
+    path('analytics/products/', analytics_views.analytics_page, {'kind': 'products'}, name='analytics_products'),
+    path('analytics/customers/', analytics_views.analytics_page, {'kind': 'customers'}, name='analytics_customers'),
+    path('analytics/data/<str:kind>/', analytics_views.analytics_data, name='analytics_data'),
+
     # Cancellations & RTO
     path('cancellations/', views.order_cancellation, name='order_cancellation'),
     # Workspace Tools Hub
