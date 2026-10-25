@@ -124,64 +124,22 @@
         </div>
       </div>
 
-      <!-- Packaging: any number of materials per product unit -->
+      <!-- Packaging: tap tags to select, set qty per unit -->
       <div class="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-700">
         <div class="flex items-center justify-between gap-2 flex-wrap">
           <label class="block text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
             <i class="fa-solid fa-box-open mr-1"></i> Packaging Materials
           </label>
-          {% if packaging_materials %}
-            <span id="true-cost-badge" class="hidden items-center gap-1 text-[11px] font-black bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-400/30 px-2.5 py-0.5 rounded-full">
-              <i class="fa-solid fa-calculator text-[9px]"></i>
-              True Cost: &#8377;<span id="true-cost-value">0.00</span>/pc
-            </span>
-          {% endif %}
+          <a href="{% url 'packaging_manager' %}" class="text-[10px] text-violet-500 hover:underline"><i class="fa-solid fa-gear"></i> Manage</a>
         </div>
 
         {% if packaging_materials %}
-          <p class="text-[11px] text-slate-500 dark:text-slate-400">
-            Add every item used to pack <strong>one</strong> product (box, bag, tape, card, sticker...). Set how many of each.
-          </p>
-
-          <div id="packaging-rows" class="space-y-2"></div>
-
-          <div class="flex items-center justify-between gap-3 flex-wrap">
-            <button type="button" id="add-packaging-row"
-              class="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition">
-              <i class="fa-solid fa-plus"></i> Add Packaging Item
-            </button>
-            <div id="packaging-total" class="hidden text-[11px] font-mono text-slate-500 dark:text-slate-400">
-              Packaging per unit: <strong class="text-violet-600 dark:text-violet-400">&#8377;<span id="packaging-total-value">0.00</span></strong>
-            </div>
-          </div>
-
-          <p class="text-[10px] text-slate-400 dark:text-slate-500">
-            <i class="fa-solid fa-circle-info text-[9px]"></i>
-            Cost is saved with this batch. Manage materials in
-            <a href="{% url 'packaging_manager' %}" class="text-violet-500 hover:underline">Packaging Manager</a>.
-          </p>
-
-          <template id="packaging-row-template">
-            <div class="packaging-row flex items-center gap-2 bg-violet-50/60 dark:bg-slate-900 border border-violet-200 dark:border-violet-500/30 rounded-xl p-2">
-              <select name="packaging_material_id"
-                class="pkg-select flex-1 min-w-0 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500">
-                <option value="" data-cost="0">-- Select material --</option>
-                {% for pkg in packaging_materials %}
-                  <option value="{{ pkg.pk }}" data-cost="{{ pkg.cost_per_piece }}">{{ pkg.name }} &mdash; &#8377;{{ pkg.cost_per_piece }}/pc ({{ pkg.get_material_type_display }})</option>
-                {% endfor %}
-              </select>
-              <div class="flex items-center gap-1 shrink-0">
-                <span class="text-[10px] font-bold uppercase text-slate-400">Qty</span>
-                <input type="number" min="1" name="packaging_qty" value="1"
-                  class="pkg-qty w-14 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-2 text-xs text-center font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-violet-500">
-              </div>
-              <div class="pkg-line w-16 shrink-0 text-right text-[11px] font-mono font-bold text-rose-600 dark:text-rose-400">&#8377;0.00</div>
-              <button type="button" class="pkg-remove w-8 h-8 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/10 hover:text-rose-500 text-slate-500 flex items-center justify-center transition" title="Remove">
-                <i class="fa-solid fa-xmark text-xs"></i>
-              </button>
-            </div>
-          </template>
-
+          <div id="pkg-filter" class="flex flex-wrap items-center gap-1.5"></div>
+          <div id="pkg-chips" class="flex flex-wrap gap-2"></div>
+          <div id="pkg-hidden"></div>
+          <div id="pkg-costs" class="hidden flex-wrap items-center gap-1.5 pt-1"></div>
+          {{ packaging_data|json_script:"packaging-data" }}
+          {{ platform_data|json_script:"platform-data" }}
           {{ packaging_rows|json_script:"packaging-initial" }}
         {% else %}
           <div class="bg-violet-500/5 border border-violet-400/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
@@ -211,60 +169,84 @@
 {% block extra_scripts %}
 <script>
 (function () {
-  const rowsBox   = document.getElementById('packaging-rows');
-  const tpl       = document.getElementById('packaging-row-template');
-  const addBtn    = document.getElementById('add-packaging-row');
-  const trueBadge = document.getElementById('true-cost-badge');
-  const trueValue = document.getElementById('true-cost-value');
-  const totalBox  = document.getElementById('packaging-total');
-  const totalVal  = document.getElementById('packaging-total-value');
+  const chipsBox = document.getElementById('pkg-chips');
+  if (!chipsBox) return;
+  const filterBox = document.getElementById('pkg-filter');
+  const hiddenBox = document.getElementById('pkg-hidden');
+  const costsBox  = document.getElementById('pkg-costs');
   const buyInput  = document.querySelector('input[name="purchase_price"]');
-  if (!rowsBox || !tpl || !addBtn) return;
+  const read = id => JSON.parse(document.getElementById(id).textContent || '[]');
+  const materials = read('packaging-data');
+  const platforms = read('platform-data');
+  const selected  = {};            // material id -> qty per unit
+  read('packaging-initial').forEach(r => { selected[r.material_id] = Math.max(1, parseInt(r.qty, 10) || 1); });
+  let filter = 0;                  // 0 = all marketplaces
+  const money = n => (Math.round(n * 100) / 100).toFixed(2);
+  const applies = (m, pid) => m.platforms.length === 0 || m.platforms.indexOf(pid) !== -1;
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-  function money(n) { return (Math.round(n * 100) / 100).toFixed(2); }
+  function renderFilter() {
+    const pills = [{id: 0, name: 'All'}].concat(platforms);
+    filterBox.innerHTML = '<span class="text-[10px] font-bold uppercase text-slate-400 mr-1">Show for</span>' +
+      pills.map(p => '<button type="button" data-f="' + p.id + '" class="px-2.5 py-1 rounded-full text-[11px] font-bold border transition ' +
+        (p.id === filter ? 'bg-violet-600 border-violet-600 text-white' : 'bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-violet-400') +
+        '">' + esc(p.name) + '</button>').join('');
+  }
 
-  function recalc() {
-    let pkgTotal = 0;
-    rowsBox.querySelectorAll('.packaging-row').forEach(function (row) {
-      const opt  = row.querySelector('.pkg-select').selectedOptions[0];
-      const cost = parseFloat(opt && opt.dataset.cost || '0') || 0;
-      const qty  = Math.max(1, parseInt(row.querySelector('.pkg-qty').value, 10) || 1);
-      const line = opt && opt.value ? cost * qty : 0;
-      row.querySelector('.pkg-line').textContent = '\u20b9' + money(line);
-      pkgTotal += line;
-    });
+  function renderChips() {
+    const shown = materials.filter(m => filter === 0 || applies(m, filter));
+    if (!shown.length) { chipsBox.innerHTML = '<p class="text-xs text-slate-400">No packaging linked to this marketplace yet.</p>'; return; }
+    chipsBox.innerHTML = shown.map(m => {
+      const on = selected[m.id] !== undefined;
+      const where = m.platforms.length ? platforms.filter(p => m.platforms.indexOf(p.id) !== -1).map(p => p.name).join(', ') : 'All marketplaces';
+      return '<div class="pkg-chip inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs transition ' +
+        (on ? 'bg-violet-600 border-violet-600 text-white shadow-sm' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-violet-400') + '">' +
+        '<button type="button" data-toggle="' + m.id + '" class="text-left leading-tight">' +
+          '<span class="block font-bold"><i class="fa-solid ' + (on ? 'fa-check' : 'fa-plus') + ' text-[10px] mr-1"></i>' + esc(m.name) + '</span>' +
+          '<span class="block text-[10px] ' + (on ? 'text-violet-100' : 'text-slate-400') + '">&#8377;' + money(m.cost) + ' &middot; ' + esc(where) + '</span>' +
+        '</button>' +
+        (on ? '<span class="inline-flex items-center gap-1 bg-white/20 rounded-lg px-1">' +
+          '<button type="button" data-dec="' + m.id + '" class="w-5 h-5 font-black">&minus;</button>' +
+          '<span class="min-w-[16px] text-center font-mono font-black">' + selected[m.id] + '</span>' +
+          '<button type="button" data-inc="' + m.id + '" class="w-5 h-5 font-black">+</button></span>' : '') +
+        '</div>';
+    }).join('');
+  }
+
+  function renderHidden() {
+    hiddenBox.innerHTML = Object.keys(selected).map(id =>
+      '<input type="hidden" name="packaging_material_id" value="' + id + '">' +
+      '<input type="hidden" name="packaging_qty" value="' + selected[id] + '">').join('');
+  }
+
+  function renderCosts() {
+    const chosen = materials.filter(m => selected[m.id] !== undefined);
+    if (!chosen.length) { costsBox.classList.add('hidden'); costsBox.classList.remove('inline-flex', 'flex'); return; }
     const buy = buyInput ? (parseFloat(buyInput.value) || 0) : 0;
-    const has = pkgTotal > 0;
-    totalBox.classList.toggle('hidden', !has);
-    totalVal.textContent = money(pkgTotal);
-    if (trueBadge) {
-      trueBadge.classList.toggle('hidden', !has);
-      trueBadge.classList.toggle('inline-flex', has);
-      trueValue.textContent = money(buy + pkgTotal);
-    }
+    const tags = platforms.map(p => {
+      const pkg = chosen.filter(m => applies(m, p.id)).reduce((t, m) => t + m.cost * selected[m.id], 0);
+      return '<span class="inline-flex items-center gap-1 text-[11px] font-black bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-400/30 px-2.5 py-0.5 rounded-full">' +
+        '<i class="fa-solid fa-store text-[9px]"></i>' + esc(p.name) + ': &#8377;' + money(buy + pkg) + '</span>';
+    });
+    costsBox.innerHTML = '<span class="text-[10px] font-bold uppercase text-slate-400 mr-1">True cost / pc</span>' + tags.join('');
+    costsBox.classList.remove('hidden'); costsBox.classList.add('flex');
   }
 
-  function addRow(materialId, qty) {
-    const node = tpl.content.firstElementChild.cloneNode(true);
-    if (materialId) node.querySelector('.pkg-select').value = String(materialId);
-    if (qty) node.querySelector('.pkg-qty').value = qty;
-    rowsBox.appendChild(node);
-    recalc();
-  }
+  function renderAll() { renderFilter(); renderChips(); renderHidden(); renderCosts(); }
 
-  rowsBox.addEventListener('change', recalc);
-  rowsBox.addEventListener('input', recalc);
-  rowsBox.addEventListener('click', function (e) {
-    const btn = e.target.closest('.pkg-remove');
-    if (btn) { btn.closest('.packaging-row').remove(); recalc(); }
+  filterBox.addEventListener('click', e => {
+    const b = e.target.closest('[data-f]'); if (!b) return;
+    filter = parseInt(b.dataset.f, 10); renderFilter(); renderChips();
   });
-  addBtn.addEventListener('click', function () { addRow(); });
-  if (buyInput) buyInput.addEventListener('input', recalc);
-
-  let initial = [];
-  try { initial = JSON.parse(document.getElementById('packaging-initial').textContent) || []; } catch (e) {}
-  initial.forEach(function (r) { addRow(r.material_id, r.qty); });
-  recalc();
+  chipsBox.addEventListener('click', e => {
+    const t = e.target.closest('[data-toggle],[data-inc],[data-dec]'); if (!t) return;
+    if (t.dataset.toggle) { const id = t.dataset.toggle; if (selected[id] === undefined) selected[id] = 1; else delete selected[id]; }
+    else if (t.dataset.inc) selected[t.dataset.inc] += 1;
+    else if (t.dataset.dec) selected[t.dataset.dec] = Math.max(1, selected[t.dataset.dec] - 1);
+    renderChips(); renderHidden(); renderCosts();
+  });
+  if (buyInput) buyInput.addEventListener('input', renderCosts);
+  renderAll();
 })();
 </script>
 {% endblock %}
