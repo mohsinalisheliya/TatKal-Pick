@@ -91,8 +91,6 @@ def get_next_serial():
         return str(last_item.id + 1).zfill(3)
 
 
-# In sku_manager/views.py, REPLACE your whole dashboard_home function with this one.
-# (Keep the @login_required line above it. No other imports are needed.)
 
 @login_required(login_url='login')
 def dashboard_home(request):
