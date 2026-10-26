@@ -3,167 +3,407 @@
 {% block title %}Dashboard - Tatkal Pick{% endblock %}
 
 {% block content %}
-<!-- Chart.js Library -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="max-w-[1500px] mx-auto space-y-5">
 
-  <!-- Header -->
-  <header class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-4">
+  <!-- ============ HEADER ============ -->
+  <header class="flex flex-col xl:flex-row xl:items-end justify-between border-b border-slate-200 dark:border-slate-800 pb-4 gap-4">
     <div>
       <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-        <i class="fa-solid fa-chart-pie text-amber-500"></i>
-        Operations Dashboard
+        <i class="fa-solid fa-gauge-high text-amber-500"></i> Operations Dashboard
       </h1>
-      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Welcome back, {{ request.user.username }}. Here is your warehouse overview.</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        Welcome back, {{ request.user.username }}. Showing the last <strong>{{ days }} days</strong> compared with the {{ days }} days before.
+      </p>
+      <div class="flex flex-wrap items-center gap-2 mt-3 text-[11px]">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold">
+          <i class="fa-solid fa-sun"></i> Today: {{ today.orders }} order{{ today.orders|pluralize }} &middot; {{ today.units }} units &middot; {{ today.revenue }}
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-semibold">
+          Yesterday: {{ today.yest_orders }} orders &middot; {{ today.yest_revenue }}
+          {% if today.orders_delta > 0 %}<i class="fa-solid fa-caret-up text-emerald-500"></i> +{{ today.orders_delta }}{% elif today.orders_delta < 0 %}<i class="fa-solid fa-caret-down text-rose-500"></i> {{ today.orders_delta }}{% endif %}
+        </span>
+        {% if peak_label %}<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-semibold"><i class="fa-solid fa-fire text-rose-500"></i> Busiest: {{ peak_label }}</span>{% endif %}
+        {% if best_day_label %}<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-semibold"><i class="fa-solid fa-trophy text-amber-500"></i> Best day: {{ best_day_label }}</span>{% endif %}
+      </div>
     </div>
-    <div class="flex items-center gap-2">
+
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
+        {% for p in periods %}
+          <a href="?days={{ p }}" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition {% if p == days %}bg-amber-500 text-slate-950 shadow-sm{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white{% endif %}">{{ p }}D</a>
+        {% endfor %}
+      </div>
       <a href="{% url 'pdf_order_scan' %}" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2">
         <i class="fa-solid fa-file-pdf"></i> Scan Orders
       </a>
-      <a href="{% url 'stock_action_add' 0 %}" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2">
+      <a href="{% url 'inventory_list' %}" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-sm flex items-center gap-2">
         <i class="fa-solid fa-plus"></i> Inward Stock
       </a>
     </div>
   </header>
 
-  <!-- Key Metrics -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <!-- ============ KPI TILES ============ -->
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    {% for k in kpis %}
     <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4 shadow-sm">
-      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Products</div>
-      <div class="text-2xl font-black text-slate-900 dark:text-white mt-1">{{ total_products }}</div>
-    </div>
-    <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4 shadow-sm">
-      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Stock Units</div>
-      <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{{ total_stock }}</div>
-    </div>
-    <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4 shadow-sm">
-      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Storage Bins</div>
-      <div class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{{ total_boxes }}</div>
-    </div>
-    <div class="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 rounded-2xl p-4 shadow-sm">
-      <div class="text-[10px] font-bold uppercase tracking-wider text-rose-500">Alerts (≤ {{ threshold }} units)</div>
-      <div class="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">{{ low_stock_items|length }}</div>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-    
-    <!-- Left Column: Low Stock & Alerts -->
-    <div class="lg:col-span-7 space-y-6">
-      <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
-        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3 mb-4">
-          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
-            <i class="fa-solid fa-triangle-exclamation text-amber-500"></i> Low Stock Alerts
-          </h2>
-          <a href="{% url 'inventory_list' %}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-bold">View Inventory</a>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <span class="w-6 h-6 rounded-lg bg-{{ k.color }}-500/10 text-{{ k.color }}-500 flex items-center justify-center"><i class="fa-solid {{ k.icon }} text-[11px]"></i></span>
+          {{ k.label }}
         </div>
-        
-        <div class="space-y-2">
-          {% for item in low_stock_items %}
-            <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl">
-              <div class="flex items-center gap-3">
-                {% if item.image %}
-                  <img src="{{ item.image.url }}" class="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700">
-                {% else %}
-                  <div class="w-10 h-10 rounded-lg bg-slate-200 dark:bg-slate-800 flex items-center justify-center"><i class="fa-solid fa-gem text-slate-400 text-xs"></i></div>
-                {% endif %}
-                <div>
-                  <a href="{% url 'product_detail' item.pk %}" class="font-bold text-sm text-slate-900 dark:text-white hover:underline">{{ item.name }}</a>
-                  <div class="text-[10px] text-slate-500 font-mono">{{ item.sku }}</div>
-                </div>
-              </div>
-              <div class="text-right flex items-center gap-3">
-                <span class="px-2 py-1 rounded bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-bold text-xs">
-                  {{ item.stock }} Left
-                </span>
-                <a href="{% url 'stock_action' item.pk %}" class="w-7 h-7 flex items-center justify-center rounded-lg bg-amber-500 text-slate-950 hover:bg-amber-400 transition" title="Add Stock">
-                  <i class="fa-solid fa-plus text-xs"></i>
-                </a>
-              </div>
-            </div>
-          {% empty %}
-            <div class="text-center py-8 text-slate-400 text-xs font-bold">
-              <i class="fa-solid fa-circle-check text-emerald-500 text-2xl mb-2 block"></i>
-              All products have sufficient stock!
-            </div>
+        {% if k.delta is not None %}
+          <span class="inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-md {% if k.delta >= 0 %}bg-emerald-500/10 text-emerald-600 dark:text-emerald-400{% else %}bg-rose-500/10 text-rose-600 dark:text-rose-400{% endif %}">
+            <i class="fa-solid {% if k.delta >= 0 %}fa-caret-up{% else %}fa-caret-down{% endif %}"></i>{{ k.delta|stringformat:".1f" }}%
+          </span>
+        {% endif %}
+      </div>
+      <div class="text-2xl font-black text-slate-900 dark:text-white mt-2 leading-none">{{ k.value }}</div>
+      <div class="flex items-end justify-between gap-2 mt-2">
+        <div class="text-[10px] text-slate-400 font-mono leading-tight">{{ k.sub }}</div>
+        {% if k.spark %}
+          <svg viewBox="0 0 100 26" class="w-20 h-6 shrink-0 text-{{ k.color }}-500" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="{{ k.spark }}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+
+  <!-- ============ TREND + ACTION CENTRE ============ -->
+  <section class="grid grid-cols-1 xl:grid-cols-12 gap-5">
+    <div class="xl:col-span-8 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-chart-column text-amber-500"></i> Daily revenue &amp; units</h2>
+        <span class="text-[10px] text-slate-400 font-mono">last {{ days }} days</span>
+      </div>
+      <div class="relative h-72"><canvas id="trendChart"></canvas></div>
+    </div>
+
+    <div class="xl:col-span-4 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2 mb-3"><i class="fa-solid fa-bell text-rose-500"></i> Needs attention</h2>
+      <div class="space-y-2">
+        {% if pending_total %}
+        <a href="{% url 'pdf_order_history' %}" class="flex items-center gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/15 transition">
+          <i class="fa-solid fa-file-invoice text-amber-500"></i>
+          <div class="flex-1 text-xs"><div class="font-bold text-slate-800 dark:text-slate-100">{{ pending_total }} scanned order{{ pending_total|pluralize }} waiting</div>
+            <div class="text-[10px] text-slate-500">{% if pending_unmatched %}{{ pending_unmatched }} have no product matched{% else %}Review and dispatch to deduct stock{% endif %}</div></div>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </a>
+        {% endif %}
+        {% if stock_health.out %}
+        <a href="{% url 'inventory_list' %}" class="flex items-center gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/15 transition">
+          <i class="fa-solid fa-ban text-rose-500"></i>
+          <div class="flex-1 text-xs"><div class="font-bold text-slate-800 dark:text-slate-100">{{ stock_health.out }} product{{ stock_health.out|pluralize }} out of stock</div><div class="text-[10px] text-slate-500">Listed but nothing left to sell</div></div>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </a>
+        {% endif %}
+        {% if stock_health.low %}
+        <a href="{% url 'inventory_list' %}" class="flex items-center gap-3 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/15 transition">
+          <i class="fa-solid fa-triangle-exclamation text-orange-500"></i>
+          <div class="flex-1 text-xs"><div class="font-bold text-slate-800 dark:text-slate-100">{{ stock_health.low }} running low (&le; {{ threshold }})</div><div class="text-[10px] text-slate-500">Reorder before they sell out</div></div>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </a>
+        {% endif %}
+        {% if stock_health.held_units %}
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+          <i class="fa-solid fa-pause text-slate-500"></i>
+          <div class="flex-1 text-xs"><div class="font-bold text-slate-800 dark:text-slate-100">{{ stock_health.held_units }} units on hold</div><div class="text-[10px] text-slate-500">Batches with sales switched off</div></div>
+        </div>
+        {% endif %}
+        {% for m in low_packaging %}
+        <a href="{% url 'packaging_manager' %}" class="flex items-center gap-3 p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/15 transition">
+          <i class="fa-solid fa-box-open text-violet-500"></i>
+          <div class="flex-1 text-xs"><div class="font-bold text-slate-800 dark:text-slate-100">{{ m.name }}: {{ m.stock_quantity }} left</div><div class="text-[10px] text-slate-500">Packaging running low</div></div>
+          <i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i>
+        </a>
+        {% endfor %}
+        {% if dead_stock %}
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-sky-500/10 border border-sky-500/20">
+          <i class="fa-solid fa-snowflake text-sky-500"></i>
+          <div class="flex-1 text-xs"><div class="font-bold text-slate-800 dark:text-slate-100">{{ dead_value }} tied up in slow stock</div><div class="text-[10px] text-slate-500">No sale in 30 days (see below)</div></div>
+        </div>
+        {% endif %}
+        {% if not pending_total and not stock_health.out and not stock_health.low and not stock_health.held_units and not low_packaging and not dead_stock %}
+        <div class="text-center py-10 text-slate-400 text-xs font-bold"><i class="fa-solid fa-circle-check text-emerald-500 text-3xl mb-2 block"></i>Everything looks healthy.</div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CHANNELS ============ -->
+  <section class="grid grid-cols-1 xl:grid-cols-12 gap-5">
+    <div class="xl:col-span-8 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2 mb-3"><i class="fa-solid fa-store text-indigo-500"></i> Marketplace performance</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400">
+            <th class="py-2 pr-3">Marketplace</th><th class="py-2 pr-3 text-right">Orders</th><th class="py-2 pr-3 text-right">Units</th>
+            <th class="py-2 pr-3 text-right">Revenue</th><th class="py-2 pr-3 text-right">Est. profit</th><th class="py-2 pr-3 text-right">Avg order</th>
+            <th class="py-2 pr-3 text-right">Returns</th><th class="py-2 w-32">Share</th></tr></thead>
+          <tbody>
+            {% for c in channels %}
+            <tr class="border-t border-slate-100 dark:border-slate-700">
+              <td class="py-2.5 pr-3 font-bold text-slate-800 dark:text-slate-100">{{ c.name }}</td>
+              <td class="py-2.5 pr-3 text-right font-mono">{{ c.orders }}</td>
+              <td class="py-2.5 pr-3 text-right font-mono">{{ c.units }}</td>
+              <td class="py-2.5 pr-3 text-right font-mono font-bold text-slate-900 dark:text-white">{{ c.revenue }}</td>
+              <td class="py-2.5 pr-3 text-right font-mono text-emerald-600 dark:text-emerald-400">{{ c.profit }}</td>
+              <td class="py-2.5 pr-3 text-right font-mono">{{ c.aov }}</td>
+              <td class="py-2.5 pr-3 text-right font-mono {% if c.return_pct >= 10 %}text-rose-500 font-black{% endif %}">{{ c.returns }} <span class="text-slate-400">({{ c.return_pct|stringformat:".1f" }}%)</span></td>
+              <td class="py-2.5"><div class="flex items-center gap-2"><div class="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700"><div class="h-1.5 rounded-full bg-indigo-500" style="width: {{ c.share|stringformat:'.1f' }}%"></div></div><span class="w-9 text-right font-mono text-[10px] text-slate-500">{{ c.share|stringformat:".0f" }}%</span></div></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="py-8 text-center text-slate-400">No dispatches in this period.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="xl:col-span-4 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2 mb-3"><i class="fa-solid fa-chart-pie text-indigo-500"></i> Revenue by marketplace</h2>
+      <div class="relative h-56"><canvas id="channelChart"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ============ PRODUCTS + STOCK HEALTH ============ -->
+  <section class="grid grid-cols-1 xl:grid-cols-12 gap-5">
+    <div class="xl:col-span-8 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2 mb-3"><i class="fa-solid fa-trophy text-amber-500"></i> Top products by revenue</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400">
+            <th class="py-2 pr-3">Product</th><th class="py-2 pr-3 text-right">Units</th><th class="py-2 pr-3 text-right">Revenue</th>
+            <th class="py-2 pr-3 text-right">Profit</th><th class="py-2 pr-3 text-right">Margin</th><th class="py-2 pr-3 text-right">In stock</th><th class="py-2 text-right">Lasts</th></tr></thead>
+          <tbody>
+            {% for p in top_products %}
+            <tr class="border-t border-slate-100 dark:border-slate-700">
+              <td class="py-2.5 pr-3"><a href="{% url 'product_detail' p.pk %}" class="font-bold text-slate-800 dark:text-slate-100 hover:underline">{{ p.name }}</a>
+                <div class="text-[10px] font-mono text-slate-400 truncate max-w-[260px]">{{ p.sku }}</div>
+                <div class="h-1 mt-1 rounded-full bg-slate-100 dark:bg-slate-700 max-w-[160px]"><div class="h-1 rounded-full bg-amber-500" style="width: {{ p.share|stringformat:'.1f' }}%"></div></div></td>
+              <td class="py-2.5 pr-3 text-right font-mono">{{ p.units }}</td>
+              <td class="py-2.5 pr-3 text-right font-mono font-bold text-slate-900 dark:text-white">{{ p.revenue }}</td>
+              <td class="py-2.5 pr-3 text-right font-mono text-emerald-600 dark:text-emerald-400">{{ p.profit }}</td>
+              <td class="py-2.5 pr-3 text-right font-mono">{{ p.margin|stringformat:".0f" }}%</td>
+              <td class="py-2.5 pr-3 text-right font-mono {% if p.stock <= threshold %}text-rose-500 font-black{% endif %}">{{ p.stock }}</td>
+              <td class="py-2.5 text-right font-mono {% if p.days is not None and p.days <= 14 %}text-rose-500 font-black{% endif %}">{% if p.days is not None %}{{ p.days|stringformat:".0f" }} d{% else %}-{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="py-8 text-center text-slate-400">No sales in this period.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="xl:col-span-4 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2 mb-3"><i class="fa-solid fa-heart-pulse text-emerald-500"></i> Stock health</h2>
+      <div class="flex items-center gap-4">
+        <div class="relative h-36 w-36 shrink-0"><canvas id="stockChart"></canvas></div>
+        <div class="text-xs space-y-1.5 flex-1">
+          <div class="flex justify-between"><span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Healthy</span><b class="font-mono">{{ stock_health.healthy }}</b></div>
+          <div class="flex justify-between"><span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>Low</span><b class="font-mono">{{ stock_health.low }}</b></div>
+          <div class="flex justify-between"><span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>Out</span><b class="font-mono">{{ stock_health.out }}</b></div>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2"><div class="text-[9px] uppercase font-bold text-slate-400">At cost</div><div class="text-xs font-black mt-0.5">{{ stock_health.cost }}</div></div>
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2"><div class="text-[9px] uppercase font-bold text-slate-400">At retail</div><div class="text-xs font-black mt-0.5">{{ stock_health.retail }}</div></div>
+        <div class="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-2"><div class="text-[9px] uppercase font-bold text-emerald-600">Potential</div><div class="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{{ stock_health.potential }}</div></div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Units per storage bin</div>
+        {% for b in boxes %}
+        <div class="py-1"><div class="flex justify-between text-[11px]"><span class="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: {{ b.color }}"></span>{{ b.name }}</span><span class="font-mono text-slate-500">{{ b.units }}</span></div>
+          <div class="h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 mt-1"><div class="h-1.5 rounded-full" style="width: {{ b.pct }}%; background: {{ b.color }}"></div></div></div>
+        {% empty %}<p class="text-xs text-slate-400">No stock in bins yet.</p>{% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HEATMAP + MIX ============ -->
+  <section class="grid grid-cols-1 xl:grid-cols-12 gap-5">
+    <div class="xl:col-span-7 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-clock text-rose-500"></i> When do orders go out?</h2>
+        {% if best_weekday %}<span class="text-[10px] text-slate-400 font-mono">best weekday: {{ best_weekday }}</span>{% endif %}
+      </div>
+      <div class="overflow-x-auto">
+        <div class="min-w-[520px]">
+          <div class="flex items-center gap-[3px] pl-9 mb-1">
+            {% for h in heat_hours %}<div class="flex-1 text-center text-[8px] font-mono text-slate-400">{% if h|divisibleby:3 %}{{ h }}{% endif %}</div>{% endfor %}
+          </div>
+          {% for row in heat_rows %}
+          <div class="flex items-center gap-[3px] mb-[3px]">
+            <div class="w-8 text-[10px] font-bold text-slate-500">{{ row.day }}</div>
+            {% for c in row.cells %}
+              <div class="flex-1 h-5 rounded-[4px] {% if not c.n %}bg-slate-100 dark:bg-slate-900{% endif %}" {% if c.n %}style="background: rgba(245,158,11,{{ c.a|stringformat:'.2f' }})"{% endif %} title="{{ row.day }} {{ forloop.counter0 }}:00 - {{ c.n }} order{{ c.n|pluralize }}"></div>
+            {% endfor %}
+          </div>
           {% endfor %}
         </div>
       </div>
+      <p class="text-[10px] text-slate-400 mt-2">Darker = more dispatches. Use it to plan packing shifts and courier pickups.</p>
     </div>
 
-    <!-- Right Column: Charts & Activity -->
-    <div class="lg:col-span-5 space-y-6">
-      
-      <!-- Chart -->
+    <div class="xl:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
       <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
-        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2 mb-4">
-          <i class="fa-solid fa-chart-bar text-indigo-500"></i> Dispatch By Channel (30 Days)
-        </h2>
-        <div class="relative h-48 w-full flex items-center justify-center">
-          <canvas id="salesChart"></canvas>
-        </div>
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2 mb-3"><i class="fa-solid fa-layer-group text-blue-500"></i> By category</h2>
+        {% for c in categories %}
+        <div class="py-1.5"><div class="flex justify-between text-[11px] gap-2"><span class="font-semibold text-slate-700 dark:text-slate-200 truncate">{{ c.name }}</span><span class="font-mono text-slate-500 shrink-0">{{ c.revenue }}</span></div>
+          <div class="h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 mt-1"><div class="h-1.5 rounded-full bg-blue-500" style="width: {{ c.share|stringformat:'.1f' }}%"></div></div></div>
+        {% empty %}<p class="text-xs text-slate-400">No sales yet.</p>{% endfor %}
       </div>
-
-      <!-- Recent Activity -->
       <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
-        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3 mb-4">
-          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
-            <i class="fa-solid fa-clock-rotate-left text-blue-500"></i> Recent Dispatches
-          </h2>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-map-location-dot text-teal-500"></i> Top states</h2>
+          {% if states_enabled %}<a href="{% url 'analytics_products' %}" class="text-[10px] font-bold text-teal-600 hover:underline">Map</a>{% endif %}
         </div>
-        <div class="space-y-3">
-          {% for log in recent_dispatches %}
-            <div class="flex items-start justify-between">
-              <div>
-                <div class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ log.sku.name }}</div>
-                <div class="text-[10px] text-slate-500">{{ log.platform_name }} • {{ log.dispatched_at|timesince }} ago</div>
-              </div>
-              <div class="text-xs font-black text-emerald-600">-{{ log.quantity }}</div>
-            </div>
-          {% empty %}
-            <div class="text-center text-xs text-slate-400 py-4">No recent dispatches.</div>
-          {% endfor %}
-        </div>
+        {% for s in top_states %}
+        <div class="py-1.5"><div class="flex justify-between text-[11px] gap-2"><span class="font-semibold text-slate-700 dark:text-slate-200 truncate">{{ s.name }}</span><span class="font-mono text-slate-500 shrink-0">{{ s.units }} &middot; {{ s.pct|stringformat:".0f" }}%</span></div>
+          <div class="h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 mt-1"><div class="h-1.5 rounded-full bg-teal-500" style="width: {{ s.pct|stringformat:'.1f' }}%"></div></div></div>
+        {% empty %}<p class="text-xs text-slate-400">{% if states_enabled %}No state data yet. Run backfill_order_states.{% else %}Install the India-map analytics to see states here.{% endif %}</p>{% endfor %}
       </div>
-
     </div>
-  </div>
+  </section>
+
+  <!-- ============ STOCK WATCHLISTS ============ -->
+  <section class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-amber-500"></i> Low &amp; out of stock</h2>
+        <a href="{% url 'inventory_list' %}" class="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline">Inventory</a>
+      </div>
+      <div class="space-y-2">
+        {% for item in low_stock_items %}
+        <div class="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl">
+          <div class="min-w-0"><a href="{% url 'product_detail' item.pk %}" class="font-bold text-xs text-slate-900 dark:text-white hover:underline truncate block">{{ item.name }}</a><div class="text-[10px] text-slate-500 font-mono truncate">{{ item.sku }}</div></div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="px-2 py-0.5 rounded {% if item.stock == 0 %}bg-rose-500 text-white{% else %}bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400{% endif %} font-bold text-[11px]">{% if item.stock == 0 %}Out{% else %}{{ item.stock }} left{% endif %}</span>
+            <a href="{% url 'stock_action' item.pk %}" class="w-7 h-7 flex items-center justify-center rounded-lg bg-amber-500 text-slate-950 hover:bg-amber-400 transition" title="Add stock"><i class="fa-solid fa-plus text-xs"></i></a>
+          </div>
+        </div>
+        {% empty %}<div class="text-center py-8 text-slate-400 text-xs font-bold"><i class="fa-solid fa-circle-check text-emerald-500 text-2xl mb-2 block"></i>All products have enough stock.</div>{% endfor %}
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2 mb-3"><i class="fa-solid fa-hourglass-half text-rose-500"></i> Will run out soon</h2>
+      <table class="w-full text-xs">
+        <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-1.5">Product</th><th class="py-1.5 text-right">Stock</th><th class="py-1.5 text-right">Sells/day</th><th class="py-1.5 text-right">Lasts</th></tr></thead>
+        <tbody>
+          {% for r in cover %}
+          <tr class="border-t border-slate-100 dark:border-slate-700"><td class="py-2 pr-2 font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[130px]">{{ r.name }}</td><td class="py-2 text-right font-mono">{{ r.stock }}</td><td class="py-2 text-right font-mono">{{ r.per_day }}</td>
+            <td class="py-2 text-right font-mono {% if r.days <= 7 %}text-rose-500 font-black{% elif r.days <= 21 %}text-amber-500 font-bold{% endif %}">{{ r.days|stringformat:".0f" }} d</td></tr>
+          {% empty %}<tr><td colspan="4" class="py-8 text-center text-slate-400">No sales to estimate from yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-snowflake text-sky-500"></i> Not selling (30 d)</h2>
+        {% if dead_stock %}<span class="text-[10px] font-mono text-slate-400">{{ dead_value }} tied up</span>{% endif %}
+      </div>
+      <table class="w-full text-xs">
+        <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-1.5">Product</th><th class="py-1.5 text-right">Units</th><th class="py-1.5 text-right">Last sale</th></tr></thead>
+        <tbody>
+          {% for r in dead_stock %}
+          <tr class="border-t border-slate-100 dark:border-slate-700"><td class="py-2 pr-2"><a href="{% url 'product_detail' r.pk %}" class="font-semibold text-slate-700 dark:text-slate-200 hover:underline truncate block max-w-[130px]">{{ r.name }}</a></td><td class="py-2 text-right font-mono">{{ r.stock }}</td><td class="py-2 text-right font-mono text-slate-400 text-[10px]">{{ r.last }}</td></tr>
+          {% empty %}<tr><td colspan="3" class="py-8 text-center text-slate-400">Everything in stock has sold recently.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ ACTIVITY ============ -->
+  <section class="grid grid-cols-1 xl:grid-cols-12 gap-5">
+    <div class="xl:col-span-8 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-blue-500"></i> Recent dispatches</h2>
+        <a href="{% url 'dispatch_logs' %}" class="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline">Full audit</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-1.5">Product</th><th class="py-1.5">Marketplace</th><th class="py-1.5 text-right">Qty</th><th class="py-1.5 text-right">Price</th><th class="py-1.5 text-right">Stock after</th><th class="py-1.5 text-right">When</th></tr></thead>
+          <tbody>
+            {% for log in recent_dispatches %}
+            <tr class="border-t border-slate-100 dark:border-slate-700">
+              <td class="py-2 pr-2 font-semibold text-slate-800 dark:text-slate-100">{{ log.sku.name }}</td>
+              <td class="py-2 pr-2 text-slate-500">{{ log.platform_name }}</td>
+              <td class="py-2 text-right font-mono font-black text-emerald-600">-{{ log.quantity }}</td>
+              <td class="py-2 text-right font-mono">{{ currency }}{{ log.sold_price }}</td>
+              <td class="py-2 text-right font-mono text-slate-500">{{ log.stock_after }}</td>
+              <td class="py-2 text-right text-slate-400 text-[10px] whitespace-nowrap">{{ log.dispatched_at|timesince }} ago</td>
+            </tr>
+            {% empty %}<tr><td colspan="6" class="py-8 text-center text-slate-400">No dispatches yet.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="xl:col-span-4 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-hourglass-start text-amber-500"></i> Waiting to dispatch</h2>
+        <a href="{% url 'pdf_order_history' %}" class="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline">All orders</a>
+      </div>
+      <div class="space-y-2">
+        {% for o in pending_orders %}
+        <a href="{% url 'pdf_order_review' o.pk %}" class="block p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400 transition">
+          <div class="flex justify-between gap-2 text-xs"><span class="font-bold text-slate-800 dark:text-slate-100">{{ o.platform_name }}</span><span class="font-mono text-slate-400 text-[10px]">{{ o.created_at|timesince }} ago</span></div>
+          <div class="text-[10px] font-mono text-slate-500 truncate mt-0.5">{{ o.order_id }}</div>
+          <div class="text-[11px] mt-1 {% if o.sku %}text-slate-600 dark:text-slate-300{% else %}text-rose-500 font-bold{% endif %}">{% if o.sku %}{{ o.sku.name }} &times; {{ o.quantity }}{% else %}No product matched: {{ o.seller_sku }}{% endif %}</div>
+        </a>
+        {% empty %}<div class="text-center py-8 text-slate-400 text-xs font-bold"><i class="fa-solid fa-circle-check text-emerald-500 text-2xl mb-2 block"></i>No orders waiting.</div>{% endfor %}
+      </div>
+    </div>
+  </section>
 </div>
 
+{{ chart|json_script:"dash-data" }}
 <script>
-  // Render Chart.js
-  document.addEventListener("DOMContentLoaded", function() {
-    const ctx = document.getElementById('salesChart').getContext('2d');
-    const labels = {{ chart_labels|safe }};
-    const data = {{ chart_data|safe }};
-    
-    if (labels.length === 0) {
-      document.getElementById('salesChart').style.display = 'none';
-      ctx.canvas.parentNode.innerHTML = '<span class="text-xs text-slate-400">No data available for the last 30 days.</span>';
-      return;
-    }
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof Chart === 'undefined') return;
+  const D = JSON.parse(document.getElementById('dash-data').textContent);
+  const dark = document.documentElement.classList.contains('dark');
+  const txt = dark ? '#94a3b8' : '#64748b', grid = dark ? 'rgba(148,163,184,.12)' : 'rgba(100,116,139,.15)';
+  const PAL = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#14b8a6', '#64748b'];
+  Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+  Chart.defaults.color = txt;
 
-    new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: data,
-          backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#64748b'],
-          borderWidth: 0,
-          hoverOffset: 4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10 } } }
-        },
-        cutout: '70%'
+  new Chart(document.getElementById('trendChart'), {
+    data: {
+      labels: D.labels,
+      datasets: [
+        {type: 'line', label: 'Revenue', data: D.revenue, yAxisID: 'yRev', borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.12)',
+         fill: true, tension: .35, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2},
+        {type: 'bar', label: 'Units', data: D.units, yAxisID: 'yUnits', backgroundColor: 'rgba(245,158,11,.75)', borderRadius: 4, maxBarThickness: 18}
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, interaction: {mode: 'index', intersect: false},
+      plugins: {legend: {position: 'top', align: 'end', labels: {boxWidth: 10, usePointStyle: true, font: {size: 10}}}},
+      scales: {
+        x: {grid: {display: false}, ticks: {maxTicksLimit: 10, font: {size: 10}}},
+        yRev: {position: 'left', grid: {color: grid}, ticks: {font: {size: 10}}, beginAtZero: true},
+        yUnits: {position: 'right', grid: {display: false}, ticks: {font: {size: 10}, precision: 0}, beginAtZero: true}
       }
-    });
+    }
   });
+
+  const ch = document.getElementById('channelChart');
+  if (D.channels.length) {
+    new Chart(ch, {type: 'doughnut', data: {labels: D.channels.map(c => c.name), datasets: [{data: D.channels.map(c => c.value), backgroundColor: PAL, borderWidth: 0, hoverOffset: 4}]},
+      options: {responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: {legend: {position: 'bottom', labels: {boxWidth: 8, usePointStyle: true, font: {size: 10}}}}}});
+  } else { ch.parentNode.innerHTML = '<div class="h-full flex items-center justify-center text-xs text-slate-400">No sales in this period.</div>'; }
+
+  const s = D.stock, sc = document.getElementById('stockChart');
+  if (s.healthy + s.low + s.out) {
+    new Chart(sc, {type: 'doughnut', data: {labels: ['Healthy', 'Low', 'Out'], datasets: [{data: [s.healthy, s.low, s.out], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderWidth: 0}]},
+      options: {responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: {legend: {display: false}}}});
+  }
+});
 </script>
 {% endblock %}
