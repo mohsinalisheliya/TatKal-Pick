@@ -159,9 +159,46 @@
 </div>
 
 <script>
+  // ---- Color Picker Sync ----
+  const nativePicker = document.getElementById('nativeColorPicker');
+  const colorInput   = document.getElementById('inputColorTag');
+
+  function setColor(hex) {
+    hex = hex.toUpperCase();
+    if (!/^#[0-9A-F]{6}$/.test(hex)) return;
+    nativePicker.value = hex;
+    colorInput.value   = hex;
+
+    // Highlight active swatch
+    document.querySelectorAll('.color-swatch-btn').forEach(btn => {
+      if (btn.dataset.color.toUpperCase() === hex) {
+        btn.style.outline = '2px solid #0f172a';
+        btn.style.outlineOffset = '2px';
+      } else {
+        btn.style.outline = '';
+        btn.style.outlineOffset = '';
+      }
+    });
+  }
+
+  // Called when a curated swatch button is clicked
+  function selectPresetColor(hex) {
+    setColor(hex);
+  }
+
+  // Keep both inputs in sync
+  nativePicker.addEventListener('input', () => setColor(nativePicker.value));
+  colorInput.addEventListener('input', () => {
+    let val = colorInput.value.trim().toUpperCase();
+    if (!val.startsWith('#')) val = '#' + val;
+    if (/^#[0-9A-F]{6}$/.test(val)) {
+      nativePicker.value = val;
+    }
+  });
+
+  // ---- Select All / Print Selected ----
   function toggleSelectAll(source) {
-    checkboxes = document.querySelectorAll('.box-checkbox');
-    checkboxes.forEach(cb => cb.checked = source.checked);
+    document.querySelectorAll('.box-checkbox').forEach(cb => cb.checked = source.checked);
   }
 
   function printSelectedBoxes() {
