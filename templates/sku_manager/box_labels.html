@@ -1,178 +1,481 @@
-{% load static %}<!DOCTYPE html>
+
+{% load static %}
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Storage Box Labels - Tatkal Pick</title>
-<link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
-<link rel="icon" type="image/svg+xml" href="{% static 'tatkal-pick-icon.svg' %}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<link rel="icon" href="{% static 'favicon.ico' %}">
 <style>
-  /* ===== LABEL ROLL SETTINGS (105mm width, two 50mm stickers per row) ===== */
-  :root {
-    --page-w: 105mm;   /* full roll width */
-    --lw: 50mm;        /* one sticker width  */
-    --lh: 25mm;        /* one sticker height */
-    --gx: 3mm;         /* gap between the 2 stickers */
-    --ox: 0mm;         /* print nudge left/right (set from toolbar) */
-    --oy: 0mm;         /* print nudge up/down (set from toolbar) */
-    --side: calc((var(--page-w) - 2 * var(--lw) - var(--gx)) / 2);  /* = 1mm each side */
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; background: #e2e8f0; color: #0f172a; }
+:root {
+  /* Physical printer media */
+  --page-w: 105mm;
+  --label-w: 50mm;
+  --label-h: 25mm;
+  --gap-x: 3mm;
+  --side: 1mm;
 
-  /* ---------- screen toolbar (never printed) ---------- */
-  .toolbar { background: #0f172a; color: #e2e8f0; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 14px; align-items: end; font-size: 12px; position: sticky; top: 0; z-index: 5; border-bottom: 2px solid #334155; }
-  .brand-mark { display: flex; align-items: center; gap: 8px; color: #f8fafc; font-size: 13px; font-weight: 800; }
-  .brand-mark img { width: 28px; height: 28px; padding: 3px; border-radius: 7px; background: #fff; }
-  .toolbar label { display: flex; flex-direction: column; gap: 3px; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: .04em; color: #94a3b8; }
-  
-  .toolbar input[type="number"], .toolbar select { background: #1e293b; color: #fff; border: 1px solid #334155; border-radius: 8px; padding: 7px 9px; font-size: 12px; min-width: 70px; }
-  .toolbar select { min-width: 220px; }
-  .btn { background: #f59e0b; color: #0f172a; font-weight: 800; border: 0; border-radius: 10px; padding: 9px 18px; cursor: pointer; font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 6px; }
-  .btn.ghost { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; font-weight: 700; }
-  
-  .sheet { padding: 20px 0 60px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-  .scale { zoom: 2.2; }
+  /* Printer alignment adjustments */
+  --ox: 0mm;
+  --oy: 0mm;
+}
 
-  /* ---------- one printed row = 2 stickers side by side ---------- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000;
+  background: #e2e8f0;
+}
+
+/* ========== SCREEN TOOLBAR ========== */
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 14px;
+  color: #fff;
+  background: #0f172a;
+}
+
+.brand-mark {
+  font-weight: 800;
+  margin-right: 10px;
+  padding-bottom: 8px;
+}
+
+.toolbar label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.toolbar input {
+  width: 95px;
+  padding: 8px;
+  color: #fff;
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 5px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 15px;
+  border: 0;
+  border-radius: 6px;
+  background: #f59e0b;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn.ghost {
+  color: #fff;
+  background: #334155;
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 0 60px;
+}
+
+/* Screen-only enlarged preview */
+.scale {
+  zoom: 2;
+}
+
+/* ========== ONE ROW ========== */
+
+/*
+  Page width: 105 mm
+  Side margins: 1 + 1 mm
+  Stickers: 50 + 50 mm
+  Gap: 3 mm
+
+  Total: 1 + 50 + 3 + 50 + 1 = 105 mm
+*/
+
+.row {
+  position: relative;
+  left: var(--ox);
+  top: var(--oy);
+
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: var(--gap-x);
+
+  width: var(--page-w);
+  height: var(--label-h);
+  padding: 0 var(--side);
+  margin: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* Each sticker has an exact physical size */
+.label {
+  display: flex;
+  flex: 0 0 var(--label-w);
+  width: var(--label-w);
+  min-width: var(--label-w);
+  max-width: var(--label-w);
+  height: var(--label-h);
+  min-height: var(--label-h);
+
+  align-items: center;
+  gap: 1mm;
+  padding: 1.2mm;
+
+  overflow: hidden;
+  background: #fff;
+  color: #000;
+}
+
+/* ========== FIRST STICKER: QR + BOX NAME ========== */
+
+.qr {
+  display: block;
+  flex: 0 0 18mm;
+  width: 18mm;
+  height: 18mm;
+  object-fit: contain;
+  image-rendering: crisp-edges;
+}
+
+.info {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: space-between;
+  align-self: stretch;
+
+  min-width: 0;
+  overflow: hidden;
+  padding: 0.5mm 0;
+}
+
+.info-heading {
+  font-size: 5pt;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.box-name {
+  margin-top: 1mm;
+  font-size: 8pt;
+  line-height: 1.05;
+  font-weight: 900;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.brand-name {
+  padding-top: 0.7mm;
+  border-top: 0.2mm solid #000;
+  font-family: monospace;
+  font-size: 5pt;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+/* ========== SECOND STICKER: BOX IDENTIFICATION ========== */
+
+.label.badge-label {
+  padding: 1mm;
+  border-left: 2mm solid var(--accent, #16a34a);
+}
+
+.box-badge {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+}
+
+.badge-heading {
+  margin-bottom: 0.7mm;
+  font-size: 4.5pt;
+  line-height: 1;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.box-title {
+  max-width: 100%;
+  font-size: 8pt;
+  line-height: 1.05;
+  font-weight: 900;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.box-sub {
+  max-width: 100%;
+  margin-top: 0.7mm;
+  font-size: 5pt;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #475569;
+  overflow-wrap: anywhere;
+}
+
+/* ========== SCREEN PREVIEW ========== */
+
+@media screen {
   .row {
-    width: var(--page-w);
-    height: var(--lh);
-    padding: 0 var(--side);
-    display: flex;
-    gap: var(--gx);
-    align-items: flex-start;
-    justify-content: flex-start;
-    position: relative;
-    left: var(--ox);
-    top: var(--oy);
-    background: #fff;
-    margin-bottom: 2mm;
+    outline: 0.2mm solid #94a3b8;
   }
+
   .label {
-    width: var(--lw);
-    height: var(--lh);
-    padding: 1.5mm;
-    display: flex;
-    align-items: center;
-    gap: 1.5mm;
-    overflow: hidden;
-    background: #fff;
-    color: #000;
+    outline: 0.2mm dashed #cbd5e1;
   }
-  .qr { width: 18mm; height: 18mm; flex: none; image-rendering: pixelated; image-rendering: crisp-edges; }
-  .info { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 0.3mm 0; }
-  
-  .box-badge {
-    width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 1mm;
-  }
-  .box-title { font-size: 8pt; font-weight: 900; text-transform: uppercase; word-break: break-all; line-height: 1.1; }
-  .box-sub { font-size: 5pt; font-weight: 700; color: #475569; margin-top: 0.5mm; text-transform: uppercase; }
+}
 
-  /* screen preview only */
-  @media screen {
-    .row { box-shadow: 0 0 0 .2mm #94a3b8; }
-    .label { outline: .2mm dashed #94a3b8; outline-offset: 0; border-radius: 1mm; }
+/* ========== THERMAL PRINT SETTINGS ========== */
+
+@page {
+  size: 105mm 25mm;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    width: var(--page-w);
+    min-width: var(--page-w);
+    max-width: var(--page-w);
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
   }
 
-  /* ---------- printing ---------- */
-  @page { size: 105mm 25mm; margin: 0; }
-  @media print {
-    html, body { background: #fff !important; width: 105mm; }
-    .toolbar, .no-print { display: none !important; }
-    .sheet { padding: 0; display: block; gap: 0; }
-    .scale { zoom: 1; }
-    .row { break-inside: avoid; page-break-inside: avoid; box-shadow: none; margin-bottom: 0; }
-    .label { outline: none; border-radius: 0; }
-    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .toolbar,
+  .no-print {
+    display: none !important;
   }
+
+  .sheet {
+    display: block;
+    width: var(--page-w);
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .scale {
+    zoom: 1;
+  }
+
+  .row {
+    margin: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Advance one label pitch for each pair */
+  .row:not(.last-row) {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .row.last-row {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .label {
+    outline: none !important;
+    border-radius: 0 !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
 </style>
 </head>
+
 <body>
 
-<form class="toolbar no-print" method="get" id="ctl">
-  <div class="brand-mark">
-    <img src="{% static 'tatkal-pick-icon.svg' %}" alt="">
-    <span>Box Labels</span>
-  </div>
+<form class="toolbar no-print" id="ctl" onsubmit="return false;">
+  <div class="brand-mark">BOX LABEL PRINT</div>
 
-  <label>Nudge X (mm)
+  <label>
+    Horizontal X (mm)
     <input type="number" id="nx" step="0.25" value="0">
   </label>
-  <label>Nudge Y (mm)
+
+  <label>
+    Vertical Y (mm)
     <input type="number" id="ny" step="0.25" value="0">
   </label>
 
-  <div style="flex: 1;"></div>
+  <button type="button" class="btn" onclick="window.print()">
+    Print Labels
+  </button>
 
-  <button type="button" class="btn" onclick="window.print()"><i class="fa-solid fa-print"></i> Print Box Stickers</button>
-  <a class="btn ghost" href="{% url 'box_manager' %}"><i class="fa-solid fa-arrow-left"></i> Back to Boxes</a>
+  <button type="button" class="btn ghost" onclick="resetAlignment()">
+    Reset Alignment
+  </button>
+
+  <a class="btn ghost" href="{% url 'box_manager' %}">
+    Back to Boxes
+  </a>
 </form>
 
 <div class="sheet">
   <div class="scale">
+
     {% if box_data_list %}
       {% for data in box_data_list %}
-        <div class="row">
-          
-          <!-- STICKER 1: QR Code + Box Name -->
+
+        <div class="row{% if forloop.last %} last-row{% endif %}">
+
+          <!-- LEFT STICKER: QR CODE AND BOX NAME -->
           <div class="label">
-            <img class="qr" src="data:image/png;base64,{{ data.qr_base64 }}" alt="QR {{ data.box.name }}">
+
+            <img
+              class="qr"
+              src="data:image/png;base64,{{ data.qr_base64 }}"
+              alt="QR {{ data.box.name }}"
+            >
+
             <div class="info">
               <div>
-                <div style="font-size: 5pt; font-weight: 700; color: #64748b; text-transform: uppercase;">Storage Unit</div>
-                <div style="font-size: 8pt; font-weight: 900; text-transform: uppercase; margin-top: 0.5mm;">{{ data.box.name }}</div>
+                <div class="info-heading">Storage Unit</div>
+
+                <div class="box-name">
+                  {{ data.box.name }}
+                </div>
               </div>
-              <div style="font-family: monospace; font-size: 5pt; border-top: 0.2mm solid #000; padding-top: 0.5mm;">
+
+              <div class="brand-name">
                 {{ brand_name }}
               </div>
             </div>
+
           </div>
 
-          <!-- STICKER 2: Color Accent Border + Bold Name Badge -->
-          <div class="label" style="border-left: 2.5mm solid {{ data.box.color_tag }};">
+          <!-- RIGHT STICKER: BOX IDENTIFICATION -->
+          <div
+            class="label badge-label"
+            style="--accent: {{ data.box.color_tag|default:'#16a34a' }};"
+          >
             <div class="box-badge">
-              <div style="font-size: 4.5pt; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 0.8mm;">BIN / DRAWER ID</div>
-              <div class="box-title" style="color: {{ data.box.color_tag }};">{{ data.box.name }}</div>
+
+              <div class="badge-heading">
+                BIN / DRAWER ID
+              </div>
+
+              <div class="box-title">
+                {{ data.box.name }}
+              </div>
+
               {% if data.box.description %}
-                <div class="box-sub">{{ data.box.description }}</div>
+                <div class="box-sub">
+                  {{ data.box.description }}
+                </div>
               {% endif %}
+
             </div>
           </div>
 
         </div>
+
       {% endfor %}
+
     {% else %}
-      <p style="padding: 20px; font-size: 12px; font-weight: bold;">No boxes selected.</p>
+      <p class="no-print" style="padding:20px;">
+        No boxes selected.
+      </p>
     {% endif %}
+
   </div>
 </div>
 
 <script>
+(function () {
   const root = document.documentElement;
   const nx = document.getElementById('nx');
   const ny = document.getElementById('ny');
 
   function applySettings() {
-    root.style.setProperty('--ox', (parseFloat(nx.value) || 0) + 'mm');
-    root.style.setProperty('--oy', (parseFloat(ny.value) || 0) + 'mm');
+    const x = Number.parseFloat(nx.value) || 0;
+    const y = Number.parseFloat(ny.value) || 0;
 
-    try { 
-      localStorage.setItem('boxLabelPrint', JSON.stringify({ x: nx.value, y: ny.value })); 
-    } catch (e) {}
+    root.style.setProperty('--ox', x + 'mm');
+    root.style.setProperty('--oy', y + 'mm');
+
+    try {
+      localStorage.setItem(
+        'boxLabelPrint',
+        JSON.stringify({ x: nx.value, y: ny.value })
+      );
+    } catch (error) {
+      // Printing still works if local storage is unavailable.
+    }
   }
 
   try {
-    const s = JSON.parse(localStorage.getItem('boxLabelPrint') || '{}');
-    if (s.x !== undefined) nx.value = s.x;
-    if (s.y !== undefined) ny.value = s.y;
-  } catch (e) {}
+    const saved = JSON.parse(
+      localStorage.getItem('boxLabelPrint') || '{}'
+    );
 
-  [nx, ny].forEach(el => {
-    if (el) el.addEventListener('input', applySettings);
-  });
+    if (saved.x !== undefined) nx.value = saved.x;
+    if (saved.y !== undefined) ny.value = saved.y;
+  } catch (error) {
+    // Use zero offsets if saved settings cannot be read.
+  }
+
+  nx.addEventListener('input', applySettings);
+  ny.addEventListener('input', applySettings);
+
+  window.resetAlignment = function () {
+    nx.value = 0;
+    ny.value = 0;
+    applySettings();
+  };
+
   applySettings();
+})();
 </script>
 
 </body>
