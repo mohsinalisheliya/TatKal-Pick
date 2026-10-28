@@ -125,6 +125,22 @@
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Customer Analytics</span>
         </a>
 
+        {% if is_master %}
+        <!-- Master console (only the Master Admin sees this) -->
+        <a href="{% url 'master_home' %}" title="Master Admin - users, roles, activity log"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition text-violet-600 dark:text-violet-300 hover:bg-violet-500/10">
+          <i class="fa-solid fa-user-shield text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Master Admin</span>
+        </a>
+        {% endif %}
+
+        <!-- Counter / POS -->
+        <a href="{% url 'pos' %}" title="Counter (POS)"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white">
+          <i class="fa-solid fa-cash-register text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Counter / POS</span>
+        </a>
+
       </nav>
     </div>
 
