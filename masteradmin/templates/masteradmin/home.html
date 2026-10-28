@@ -1,0 +1,22 @@
+{% extends "masteradmin/base.html" %}
+{% block title %}Overview{% endblock %}
+{% block body %}
+<div><h1 class="text-2xl font-black tracking-tight">Overview</h1><p class="text-xs text-slate-500 mt-0.5">Who is using the system and what they are doing.</p></div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400"><i class="fa-solid fa-users text-violet-500 mr-1"></i> Users</div><div class="text-2xl font-black mt-1">{{ users_total }}</div><div class="text-[11px] text-slate-400 mt-0.5">{{ roles.master }} master &middot; {{ roles.admin }} admin &middot; {{ roles.cashier }} cashier{% if inactive %} &middot; {{ inactive }} disabled{% endif %}</div></div>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400"><i class="fa-solid fa-circle text-emerald-500 mr-1"></i> Active now</div><div class="text-2xl font-black mt-1">{{ active_now }}</div><div class="text-[11px] text-slate-400 mt-0.5">acted in the last 30 min &middot; {{ logins_today }} sign-ins today</div></div>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400"><i class="fa-solid fa-receipt text-amber-500 mr-1"></i> Counter sales today</div><div class="text-2xl font-black mt-1">&#8377;{{ sales_today|floatformat:2 }}</div><div class="text-[11px] text-slate-400 mt-0.5">{{ bills_today }} bills</div></div>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400"><i class="fa-solid fa-triangle-exclamation text-rose-500 mr-1"></i> Failed sign-ins (24h)</div><div class="text-2xl font-black mt-1 {% if failed_24h > 4 %}text-rose-500{% endif %}">{{ failed_24h }}</div><div class="text-[11px] text-slate-400 mt-0.5">wrong password attempts</div></div>
+</div>
+<div class="grid lg:grid-cols-3 gap-4">
+  <div class="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5">
+    <div class="flex items-center justify-between mb-3"><h2 class="font-black text-sm">Latest activity</h2><a href="{% url 'master_logs' %}" class="text-xs font-bold text-violet-500">Open full log &rarr;</a></div>
+    {% include "masteradmin/_log_rows.html" with rows=recent compact=True %}
+  </div>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5">
+    <h2 class="font-black text-sm mb-3">Today by cashier</h2>
+    {% for r in by_cashier %}<div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800 text-sm"><div><div class="font-bold">{{ r.cashier_name|default:"-" }}</div><div class="text-[11px] text-slate-400">{{ r.n }} bills</div></div><div class="mono font-black">&#8377;{{ r.t|floatformat:2 }}</div></div>
+    {% empty %}<div class="text-xs text-slate-400 py-6 text-center">No counter sales yet today.</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

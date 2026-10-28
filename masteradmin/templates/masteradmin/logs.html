@@ -1,0 +1,23 @@
+{% extends "masteradmin/base.html" %}
+{% block title %}Activity log{% endblock %}
+{% block body %}
+<div class="flex flex-wrap items-end justify-between gap-3">
+  <div><h1 class="text-2xl font-black tracking-tight">Activity log</h1><p class="text-xs text-slate-500 mt-0.5">{{ total }} record{{ total|pluralize }} &middot; sign-ins, sales, voids, user changes and every change made in the admin app.</p></div>
+  <a href="?{{ qs }}{% if qs %}&{% endif %}export=1" class="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
+</div>
+<form method="get" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 grid grid-cols-2 lg:grid-cols-7 gap-2 text-xs">
+  <select name="user" class="h-10 px-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold"><option value="">All users</option>{% for n in names %}<option value="{{ n }}" {% if g.user == n %}selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+  <select name="role" class="h-10 px-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold"><option value="">All roles</option><option value="master" {% if g.role == 'master' %}selected{% endif %}>master</option><option value="admin" {% if g.role == 'admin' %}selected{% endif %}>admin</option><option value="cashier" {% if g.role == 'cashier' %}selected{% endif %}>cashier</option></select>
+  <select name="action" class="h-10 px-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold"><option value="">All actions</option>{% for a in actions %}<option value="{{ a }}" {% if g.action == a %}selected{% endif %}>{{ a }}</option>{% endfor %}</select>
+  <input type="date" name="from" value="{{ g.from }}" class="h-10 px-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold" title="From">
+  <input type="date" name="to" value="{{ g.to }}" class="h-10 px-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold" title="To">
+  <input name="q" value="{{ g.q }}" placeholder="Search detail / IP" class="h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold">
+  <button class="h-10 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-black">Filter</button>
+</form>
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5">
+  {% include "masteradmin/_log_rows.html" with rows=page.object_list compact=False %}
+  {% if page.paginator.num_pages > 1 %}<div class="flex items-center justify-between mt-4 text-xs font-bold">
+    <span class="text-slate-400">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    <span class="flex gap-2">{% if page.has_previous %}<a class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800" href="?{{ qs }}{% if qs %}&{% endif %}page={{ page.previous_page_number }}">&larr; Newer</a>{% endif %}{% if page.has_next %}<a class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800" href="?{{ qs }}{% if qs %}&{% endif %}page={{ page.next_page_number }}">Older &rarr;</a>{% endif %}</span></div>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receipt {{ sale.bill_no }}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e2e8f0; font-family: 'Courier New', monospace; color: #000; }
+    .bar { text-align: center; padding: 12px; }
+    .bar button { font: 700 13px system-ui, sans-serif; padding: 9px 18px; border: 0; border-radius: 10px; background: #f59e0b; cursor: pointer; }
+    .paper { width: 80mm; max-width: 100%; margin: 0 auto 24px; background: #fff; padding: 6mm 4mm; font-size: 12px; line-height: 1.35; }
+    .c { text-align: center; } .r { text-align: right; } .b { font-weight: 700; }
+    .brand { font-size: 16px; font-weight: 700; letter-spacing: .5px; }
+    .logo { max-width: 40mm; max-height: 18mm; margin: 0 auto 4px; display: block; }
+    hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    td { vertical-align: top; padding: 1px 0; }
+    .void { text-align: center; font-weight: 700; font-size: 18px; border: 2px solid #000; padding: 4px; margin: 6px 0; transform: rotate(-3deg); }
+    .total td { font-size: 15px; font-weight: 700; }
+    @media print {
+      @page { size: 80mm auto; margin: 0; }
+      body { background: #fff; } .bar { display: none; }
+      .paper { width: 80mm; margin: 0; padding: 3mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bar"><button onclick="window.print()">Print receipt</button></div>
+  <div class="paper">
+    <div class="c">
+      {% if logo_url %}<img class="logo" src="{{ logo_url }}" alt="">{% endif %}
+      <div class="brand">{{ brand_name }}</div>
+      {% if tagline %}<div>{{ tagline }}</div>{% endif %}
+      {% if support_contact %}<div>Contact: {{ support_contact }}</div>{% endif %}
+    </div>
+    <hr>
+    {% if sale.status == 'void' %}<div class="void">VOID</div>{% endif %}
+    <table>
+      <tr><td>Bill</td><td class="r b">{{ sale.bill_no }}</td></tr>
+      <tr><td>Date</td><td class="r">{{ sale.created_at|date:"d M Y, h:i A" }}</td></tr>
+      <tr><td>Cashier</td><td class="r">{{ sale.cashier_name|default:"-" }}</td></tr>
+      {% if sale.customer_name %}<tr><td>Customer</td><td class="r">{{ sale.customer_name }}{% if sale.customer_phone %} ({{ sale.customer_phone }}){% endif %}</td></tr>{% endif %}
+    </table>
+    <hr>
+    <table>
+      <tr class="b"><td>Item</td><td class="r">Qty</td><td class="r">Amount</td></tr>
+      {% for i in sale.items.all %}
+      <tr><td colspan="3">{{ i.name }}</td></tr>
+      <tr><td>&nbsp;&nbsp;{{ currency }}{{ i.unit_price }}</td><td class="r">x{{ i.quantity }}</td><td class="r">{{ currency }}{{ i.line_total }}</td></tr>
+      {% endfor %}
+    </table>
+    <hr>
+    <table>
+      <tr><td>Subtotal</td><td class="r">{{ currency }}{{ sale.subtotal }}</td></tr>
+      {% if sale.discount_amount %}<tr><td>Discount ({{ sale.discount_percent|floatformat:"-2" }}%)</td><td class="r">-{{ currency }}{{ sale.discount_amount }}</td></tr>{% endif %}
+      <tr class="total"><td>TOTAL</td><td class="r">{{ currency }}{{ sale.total }}</td></tr>
+      <tr><td>Paid by {{ sale.get_payment_method_display }}</td><td class="r">{{ currency }}{{ sale.amount_received }}</td></tr>
+      {% if sale.change_given %}<tr><td>Change</td><td class="r">{{ currency }}{{ sale.change_given }}</td></tr>{% endif %}
+    </table>
+    <hr>
+    <div class="c">{{ sale.items_count }} item{{ sale.items_count|pluralize }}<br>Thank you! Visit again.</div>
+  </div>
+  {% if auto_print %}<script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });</script>{% endif %}
+</body>
+</html>

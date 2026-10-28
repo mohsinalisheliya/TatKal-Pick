@@ -1,0 +1,64 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Counter{% endblock %} - {{ brand_name }}</title>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>tailwind.config = { darkMode: 'class' }</script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .thin-scroll { scrollbar-width: thin; }
+    @keyframes pop { 0% { transform: scale(.96); opacity: .4 } 100% { transform: scale(1); opacity: 1 } }
+    .pop { animation: pop .18s ease-out }
+  </style>
+  <script>
+    try { if (localStorage.getItem('theme') === 'light') document.documentElement.classList.remove('dark'); } catch (e) {}
+  </script>
+</head>
+<body class="bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100 antialiased {% block body_class %}{% endblock %}">
+
+  <header class="h-16 shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center gap-4 px-4 sm:px-6">
+    <a href="{% url 'pos' %}" class="flex items-center gap-2.5 shrink-0">
+      {% if logo_url %}<img src="{{ logo_url }}" alt="" class="w-9 h-9 rounded-xl object-contain bg-white border border-slate-200">
+      {% else %}<div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-400 flex items-center justify-center text-slate-950 shadow-md shadow-amber-500/20"><i class="fa-solid fa-gem"></i></div>{% endif %}
+      <div class="hidden sm:block leading-tight"><div class="font-black text-sm tracking-wide text-slate-900 dark:text-white">{{ brand_name }}</div><div class="text-[9px] uppercase font-bold tracking-wider text-amber-600 dark:text-amber-400">Counter</div></div>
+    </a>
+    <nav class="flex items-center gap-1 ml-2">
+      <a href="{% url 'pos' %}" class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition {% if active_tab == 'bill' %}bg-amber-500 text-slate-950{% else %}text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800{% endif %}"><i class="fa-solid fa-cash-register"></i> Bill</a>
+      <a href="{% url 'pos_sales' %}" class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition {% if active_tab == 'sales' %}bg-amber-500 text-slate-950{% else %}text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800{% endif %}"><i class="fa-solid fa-receipt"></i> Sales</a>
+    {% if is_manager %}      <a href="{% url 'pos_prices' %}" class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition {% if active_tab == 'prices' %}bg-amber-500 text-slate-950{% else %}text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800{% endif %}"><i class="fa-solid fa-tags"></i> Prices</a>{% endif %}
+    </nav>
+    <div class="flex-1"></div>
+    {% block topbar_extra %}{% endblock %}
+    <div class="hidden md:block text-right leading-tight">
+      <div class="text-[9px] font-bold uppercase tracking-wider text-slate-400">{{ role_label }}</div>
+      <div class="text-sm font-bold text-slate-800 dark:text-white">{{ request.user.first_name|default:request.user.username }}</div>
+    </div>
+    <button id="themeBtn" type="button" title="Switch theme" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:text-amber-500 transition"><i class="fa-solid fa-circle-half-stroke"></i></button>
+    {% if is_master %}<a href="{% url 'master_home' %}" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-violet-500/10 text-violet-600 dark:text-violet-300 hover:bg-violet-500/20 transition"><i class="fa-solid fa-user-shield"></i> Master</a>{% endif %}
+    {% if is_manager %}<a href="{% url 'dashboard' %}" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"><i class="fa-solid fa-gauge-high"></i> Admin</a>{% endif %}
+    <a href="{% url 'logout' %}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-600 text-white transition"><i class="fa-solid fa-right-from-bracket"></i><span class="hidden sm:inline">Logout</span></a>
+  </header>
+
+  {% if messages %}
+  <div class="px-4 sm:px-6 pt-3 space-y-2">
+    {% for msg in messages %}<div class="px-4 py-2.5 rounded-xl text-xs font-bold border {% if msg.tags == 'error' %}bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300{% else %}bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300{% endif %}">{{ msg }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% block body %}{% endblock %}
+
+  <script>
+    document.getElementById('themeBtn').addEventListener('click', function () {
+      var dark = document.documentElement.classList.toggle('dark');
+      try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

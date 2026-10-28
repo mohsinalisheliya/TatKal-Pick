@@ -1,0 +1,29 @@
+{% extends "masteradmin/base.html" %}
+{% block title %}Users{% endblock %}
+{% block body %}
+<div class="flex flex-wrap items-end justify-between gap-3">
+  <div><h1 class="text-2xl font-black tracking-tight">Users &amp; roles</h1><p class="text-xs text-slate-500 mt-0.5 max-w-xl">Passwords are stored encrypted, so nobody (not even you) can read one. If someone forgets theirs, use <b>Reset password</b> and give them the new one.</p></div>
+  <a href="{% url 'master_user_new' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-black"><i class="fa-solid fa-user-plus"></i> New user</a>
+</div>
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 overflow-x-auto">
+<table class="w-full text-xs">
+  <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-2 pr-3">User</th><th class="py-2 pr-3">Role</th><th class="py-2 pr-3">Can sell at</th><th class="py-2 pr-3">Last sign-in</th><th class="py-2 pr-3">Status</th><th class="py-2 text-right">Actions</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr class="border-t border-slate-100 dark:border-slate-800 {% if not r.u.is_active %}opacity-50{% endif %}">
+      <td class="py-3 pr-3"><div class="font-bold text-sm">{{ r.u.first_name|default:r.u.username }}</div><div class="mono text-[10px] text-slate-400">{{ r.u.username }}{% if r.u.profile.note %} &middot; {{ r.u.profile.note }}{% endif %}</div></td>
+      <td class="py-3 pr-3"><span class="px-2 py-1 rounded-lg text-[10px] font-black {% if r.role == 'master' %}bg-violet-500/15 text-violet-500{% elif r.role == 'admin' %}bg-sky-500/15 text-sky-500{% else %}bg-amber-500/15 text-amber-600{% endif %}">{{ r.role_label }}</span></td>
+      <td class="py-3 pr-3">{% if r.tiers %}{% for t in r.tiers %}<span class="inline-block px-1.5 py-0.5 mr-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold capitalize">{{ t }}</span>{% endfor %}{% elif r.role == 'cashier' %}<span class="text-slate-400">retail</span>{% else %}<span class="text-slate-400">all prices</span>{% endif %}</td>
+      <td class="py-3 pr-3 text-slate-500">{% if r.last_login %}{{ r.last_login|date:"d M, h:i A" }}{% if r.last_ip %}<div class="mono text-[10px] text-slate-400">{{ r.last_ip }}</div>{% endif %}{% else %}never{% endif %}</td>
+      <td class="py-3 pr-3">{% if r.u.is_active %}<span class="text-emerald-500 font-bold">Active</span>{% else %}<span class="text-rose-500 font-bold">Disabled</span>{% endif %}</td>
+      <td class="py-3 text-right whitespace-nowrap">
+        <a href="{% url 'master_user_edit' r.u.pk %}" class="inline-flex px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-bold">Edit</a>
+        <a href="{% url 'master_logs' %}?user={{ r.u.username|urlencode }}" class="inline-flex px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-bold">Activity</a>
+        <form method="post" action="{% url 'master_user_reset' r.u.pk %}" class="inline" onsubmit="return confirm('Reset the password for {{ r.u.username }}? Their old password stops working.')">{% csrf_token %}<button class="px-2.5 py-1.5 rounded-lg bg-amber-500/15 text-amber-600 font-bold">Reset password</button></form>
+        {% if r.u != request.user %}<form method="post" action="{% url 'master_user_toggle' r.u.pk %}" class="inline">{% csrf_token %}<button class="px-2.5 py-1.5 rounded-lg {% if r.u.is_active %}bg-rose-500/10 text-rose-500{% else %}bg-emerald-500/10 text-emerald-600{% endif %} font-bold">{% if r.u.is_active %}Disable{% else %}Enable{% endif %}</button></form>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}
