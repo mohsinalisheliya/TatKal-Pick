@@ -41,6 +41,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "sku_manager",
+    "accounts",
+    "pos",
+    "masteradmin",
 ]
 
 MIDDLEWARE = [
@@ -50,6 +53,8 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "accounts.middleware.RoleAccessMiddleware",
+    "accounts.middleware.AuditMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -65,6 +70,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "accounts.context_processors.role",
             ],
         },
     },
@@ -131,5 +137,10 @@ X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 # Authentication Redirects
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'sku_generate'
+LOGIN_REDIRECT_URL = 'role_home'
 LOGOUT_REDIRECT_URL = 'login'
+
+# POS & Role Settings
+POS_MAX_CASHIER_DISCOUNT = 10        # default cashier discount cap in %
+POS_RESELLER_MARKUP_PERCENT = 10     # reseller price when none is set = wholesale + this %
+ADMIN_HOME_URL_NAME = 'dashboard'    # url name admins land on
