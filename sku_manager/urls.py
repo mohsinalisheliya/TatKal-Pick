@@ -4,10 +4,6 @@ from . import views
 from . import analytics_views
 
 urlpatterns = [
-    # Auth
-    path('login/', views.user_login, name='login'),
-    path('logout/', views.user_logout, name='logout'),
-
     # Dashboard
     path('', views.dashboard_home, name='dashboard'),
 
