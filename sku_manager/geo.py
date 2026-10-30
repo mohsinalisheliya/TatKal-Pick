@@ -7,7 +7,7 @@ Order of trust:
   2. a PIN-code prefix, only for prefixes that map to one state without doubt.
 """
 import re
-
+     
 # (canonical name, map code, aliases)  - map codes match static/sku_manager/india_map_data.js
 _STATES = [
     ('Andaman and Nicobar Islands', 'an', ['andaman and nicobar islands', 'andaman nicobar', 'andaman']),
