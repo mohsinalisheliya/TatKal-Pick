@@ -9,7 +9,7 @@ from django.utils import timezone
 from accounts.roles import TIER_KEYS, TIER_LABELS, normalize_tier
 from sku_manager.models import DispatchLog, JewelrySKU, StockBatch
 
-from .models import PosSale, PosSaleItem
+from .models import PosSale, PosSaleItem, ResellerPrice
 
 CENT = Decimal('0.01')
 PLATFORM_NAME = 'Counter (POS)'
@@ -30,11 +30,20 @@ def money(value):
 
 def unit_price(sku, tier):
     """Price of one unit on a given price list - the same three prices as your stock form."""
+    if tier == 'reseller':
+        try:
+            own = sku.reseller_price.price
+        except ResellerPrice.DoesNotExist:
+            own = 0
+        if own > 0:
+            return own
+        from django.conf import settings
+        return money(sku.wholesale_price * (1 + Decimal(str(getattr(settings, 'POS_RESELLER_MARKUP_PERCENT', 10))) / 100))
     if tier == 'buying':
         return sku.purchase_price          # "Buying Price"
     if tier == 'wholesale':
         return sku.wholesale_price         # "Wholesale Price"
-    return sku.selling_price               # "Reselling Price" (saved as the product's selling price)
+    return sku.selling_price               # retail price
 
 
 def all_prices(sku, allowed):
@@ -68,7 +77,7 @@ def checkout(*, user, items, price_list='reselling', discount_percent=0, payment
             return existing, True          # already billed: same answer, no second deduction
 
     allowed = list(allowed_tiers) if allowed_tiers is not None else list(TIER_KEYS)
-    price_list = normalize_tier(price_list)          # old names (retail/reseller) -> reselling
+    price_list = normalize_tier(price_list)
     if price_list not in TIER_KEYS:
         raise PosError('Choose a price list.')
     if price_list not in allowed:

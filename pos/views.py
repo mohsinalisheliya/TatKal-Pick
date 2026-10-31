@@ -18,7 +18,7 @@ from accounts.roles import TIER_LABELS, allowed_tiers, can_void, default_tier, m
 from sku_manager.models import AppSettings, JewelrySKU
 
 from . import services as pos
-from .models import PosSale
+from .models import PosSale, ResellerPrice
 
 ONLY_CASHIER = ('cashier',)     # the counter belongs to cashier accounts; nobody else can open it
 
@@ -111,6 +111,43 @@ def pos_sales(request):
         discount=totals['discount'] or Decimal('0'), avg=(revenue / bills) if bills else Decimal('0'),
         cash=by_payment.get('cash', 0), upi=by_payment.get('upi', 0), card=by_payment.get('card', 0),
         ))
+
+
+@role_required('admin', 'master')
+def pos_prices(request):
+    """Admin-maintained reseller prices; blank or zero uses the configured markup."""
+    products = JewelrySKU.objects.filter(is_listed=True).order_by('name')
+    if request.method == 'POST':
+        changed = 0
+        for product in products:
+            raw = request.POST.get(f'reseller_{product.pk}', '').strip()
+            if not raw:
+                ResellerPrice.objects.filter(sku=product).delete()
+                continue
+            try:
+                value = Decimal(raw)
+                if value < 0:
+                    raise ValueError
+            except Exception:
+                messages.error(request, f'Enter a valid non-negative reseller price for {product.name}.')
+                return redirect('pos_prices')
+            obj, created = ResellerPrice.objects.get_or_create(sku=product, defaults={'price': value})
+            if not created and obj.price != value:
+                obj.price = value
+                obj.save(update_fields=['price', 'updated_at'])
+            changed += 1
+        audit.log(request, 'price_update', f'Saved reseller prices for {changed} products')
+        messages.success(request, 'Reseller prices saved.')
+        return redirect('pos_prices')
+    markup = Decimal(str(getattr(__import__('django.conf', fromlist=['settings']).settings,
+                                'POS_RESELLER_MARKUP_PERCENT', 10)))
+    rows = []
+    for product in products:
+        custom = getattr(product, 'reseller_price', None)
+        wholesale = Decimal(str(product.wholesale_price or 0))
+        rows.append({'p': product, 'own': custom.price if custom else None,
+                     'auto': (wholesale * (1 + markup / 100)).quantize(Decimal('0.01'))})
+    return render(request, 'pos/prices.html', {'rows': rows, 'markup': markup})
 
 
 @role_required(*ONLY_CASHIER)
