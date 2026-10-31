@@ -4,7 +4,7 @@
 <main class="max-w-5xl mx-auto p-4 sm:p-6 space-y-4">
   <div>
     <h1 class="text-2xl font-black tracking-tight">Price lists</h1>
-    <p class="text-xs text-slate-500 mt-1 max-w-2xl">Retail, wholesale and buying prices come from each product's latest stock batch (change them in Inventory). Set a <b>reseller</b> price per product here; leave it empty to use wholesale + the automatic markup shown in grey.</p>
+    <p class="text-xs text-slate-500 mt-1 max-w-2xl">Retail, wholesale and buying prices come from each product's inventory. Set a <b>reseller</b> price per product here; leave it empty to use wholesale + {{ markup }}%.</p>
   </div>
   <form method="post" class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 overflow-x-auto">
     {% csrf_token %}
