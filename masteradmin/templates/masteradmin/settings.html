@@ -1,0 +1,30 @@
+{% extends "masteradmin/base.html" %}
+{% block title %}System settings{% endblock %}
+{% block body %}
+{% with inp="mt-1 w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-semibold normal-case" lab="block font-bold text-slate-400 uppercase tracking-wider text-[10px]" %}
+<div><h1 class="text-2xl font-black tracking-tight">System settings</h1><p class="text-xs text-slate-500 mt-0.5">Brand, labels and store links. Only the Master Admin can change these.</p></div>
+<form method="post" enctype="multipart/form-data" class="grid lg:grid-cols-2 gap-4 text-xs">
+  {% csrf_token %}
+  <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 space-y-3">
+    <h2 class="font-black text-sm">Brand</h2>
+    <label class="{{ lab }}">Brand name<input name="brand_name" value="{{ settings.brand_name }}" class="{{ inp }}"></label>
+    <label class="{{ lab }}">Tagline<input name="tagline" value="{{ settings.tagline }}" class="{{ inp }}"></label>
+    <div class="grid grid-cols-2 gap-2">
+      <label class="{{ lab }}">Currency symbol<input name="currency_symbol" value="{{ settings.currency_symbol }}" class="{{ inp }}"></label>
+      <label class="{{ lab }}">Low stock at (units)<input name="low_stock_threshold" type="number" min="0" value="{{ settings.low_stock_threshold }}" class="{{ inp }}"></label>
+    </div>
+    <label class="{{ lab }}">Support contact<input name="support_contact" value="{{ settings.support_contact }}" class="{{ inp }}"></label>
+    <div class="{{ lab }}">Label / receipt logo
+      {% if settings.label_logo %}<div class="mt-1 flex items-center gap-3"><img src="{{ settings.label_logo.url }}" alt="" class="w-14 h-14 object-contain rounded-xl bg-white border border-slate-200"><label class="flex items-center gap-2 font-bold normal-case"><input type="checkbox" name="remove_label_logo"> Remove logo</label></div>{% endif %}
+      <input type="file" name="label_logo" accept="image/*" class="mt-2 block w-full text-xs font-semibold normal-case"></div>
+  </section>
+  <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 space-y-3">
+    <h2 class="font-black text-sm">Store links <span class="text-slate-400 font-semibold">(printed as QR on labels)</span></h2>
+    <label class="{{ lab }}">Meesho store URL<input name="meesho_store_url" value="{{ settings.meesho_store_url }}" placeholder="https://" class="{{ inp }}"></label>
+    <label class="{{ lab }}">Amazon store URL<input name="amazon_store_url" value="{{ settings.amazon_store_url }}" placeholder="https://" class="{{ inp }}"></label>
+    <label class="{{ lab }}">Flipkart store URL<input name="flipkart_store_url" value="{{ settings.flipkart_store_url }}" placeholder="https://" class="{{ inp }}"></label>
+    <div class="flex justify-end pt-2"><button class="h-10 px-6 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-black">Save settings</button></div>
+  </section>
+</form>
+{% endwith %}
+{% endblock %}

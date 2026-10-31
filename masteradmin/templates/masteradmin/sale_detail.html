@@ -1,0 +1,14 @@
+{% extends "masteradmin/base.html" %}
+{% block title %}Bill {{ sale.bill_no }}{% endblock %}
+{% block body %}
+<div><a href="{% url 'master_sales' %}?date={{ sale.created_at|date:'Y-m-d' }}" class="text-xs font-bold text-violet-500">&larr; Sales</a>
+<h1 class="text-2xl font-black tracking-tight mt-1 mono">{{ sale.bill_no }}{% if sale.status == 'void' %} <span class="text-xs px-2 py-1 rounded bg-rose-500 text-white font-sans">VOID</span>{% endif %}</h1>
+<p class="text-xs text-slate-500">{{ sale.created_at|date:"d M Y, h:i A" }} &middot; cashier {{ sale.cashier_name|default:"-" }} &middot; {{ sale.price_list }} prices &middot; {{ sale.get_payment_method_display }}{% if sale.customer_name %} &middot; {{ sale.customer_name }} {{ sale.customer_phone }}{% endif %}</p></div>
+<div class="max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 text-sm">
+  {% for i in sale.items.all %}<div class="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800"><div><div class="font-bold">{{ i.name }}</div><div class="mono text-[11px] text-slate-400">{{ i.sku_code }} &middot; {{ i.quantity }} &times; &#8377;{{ i.unit_price }}</div></div><div class="mono font-black">&#8377;{{ i.line_total }}</div></div>{% endfor %}
+  <div class="flex justify-between pt-3 text-slate-500"><span>Subtotal</span><span class="mono">&#8377;{{ sale.subtotal }}</span></div>
+  {% if sale.discount_amount %}<div class="flex justify-between text-rose-500"><span>Discount {{ sale.discount_percent }}%</span><span class="mono">-&#8377;{{ sale.discount_amount }}</span></div>{% endif %}
+  <div class="flex justify-between pt-2 text-lg font-black"><span>Total</span><span class="mono">&#8377;{{ sale.total }}</span></div>
+  {% if sale.status == 'void' %}<div class="text-xs text-rose-500 mt-2">Cancelled by {{ sale.voided_by_name }} on {{ sale.voided_at|date:"d M, h:i A" }}</div>{% endif %}
+</div>
+{% endblock %}

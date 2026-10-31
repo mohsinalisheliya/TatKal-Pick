@@ -1,0 +1,26 @@
+{% extends "sku_manager/base.html" %}
+{% block title %}Dispatch desk{% endblock %}
+{% block content %}
+<div>
+  <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Dispatch desk</h1>
+  <p class="text-xs text-slate-500 mt-1">Hello {{ request.user.first_name|default:request.user.username }} - everything you need for packing and returns.</p>
+</div>
+<div class="grid sm:grid-cols-3 gap-4">
+  <a href="{% url 'pdf_order_scan' %}" class="group rounded-3xl p-6 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 hover:border-amber-400 hover:shadow-lg transition">
+    <div class="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-file-invoice"></i></div>
+    <div class="font-black text-lg">PDF Order Scan</div><div class="text-xs text-slate-500 mt-1">Upload marketplace label PDFs, check the order and dispatch.</div>
+  </a>
+  <a href="{% url 'sku_scanner' %}" class="group rounded-3xl p-6 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 hover:border-amber-400 hover:shadow-lg transition">
+    <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-qrcode"></i></div>
+    <div class="font-black text-lg">Barcode / QR Scanner</div><div class="text-xs text-slate-500 mt-1">Scan a product label with the camera or a scanner gun.</div>
+  </a>
+  <a href="{% url 'order_cancellation' %}" class="group rounded-3xl p-6 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 hover:border-rose-400 hover:shadow-lg transition">
+    <div class="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-arrow-rotate-left"></i></div>
+    <div class="font-black text-lg">Returns &amp; Cancellations</div><div class="text-xs text-slate-500 mt-1">Put returned or cancelled orders back into stock.</div>
+  </a>
+</div>
+<div class="rounded-2xl p-4 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 inline-block">
+  <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Dispatched today</div>
+  <div class="text-3xl font-black mt-1">{{ dispatched_today }}</div>
+</div>
+{% endblock %}

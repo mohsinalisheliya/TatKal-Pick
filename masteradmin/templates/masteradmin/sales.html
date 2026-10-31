@@ -1,0 +1,28 @@
+{% extends "masteradmin/base.html" %}
+{% block title %}Sales{% endblock %}
+{% block body %}
+<div class="flex flex-wrap items-end justify-between gap-3">
+  <div><h1 class="text-2xl font-black tracking-tight">Counter sales</h1><p class="text-xs text-slate-500 mt-0.5">{{ day|date:"l, d F Y" }} &middot; read-only</p></div>
+  <form method="get" class="flex items-center gap-2 text-xs">
+    <input type="date" name="date" value="{{ day|date:'Y-m-d' }}" class="h-10 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-bold">
+    <select name="cashier" class="h-10 px-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-bold"><option value="">All cashiers</option>{% for c in cashiers %}<option value="{{ c }}" {% if who == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+    <button class="h-10 px-4 rounded-xl bg-violet-600 text-white font-black">Show</button>
+  </form>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sales</div><div class="text-2xl font-black mt-1">&#8377;{{ revenue|floatformat:2 }}</div><div class="text-[11px] text-slate-400">after &#8377;{{ discount|floatformat:2 }} discounts</div></div>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Bills</div><div class="text-2xl font-black mt-1">{{ bills }}</div></div>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cash</div><div class="text-2xl font-black mt-1">&#8377;{{ cash|floatformat:2 }}</div></div>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">UPI / Card</div><div class="text-2xl font-black mt-1">&#8377;{{ upi|floatformat:2 }} <span class="text-xs text-slate-400">/ &#8377;{{ card|floatformat:2 }}</span></div></div>
+</div>
+{% if market %}<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-xs"><span class="font-black mr-2">Marketplace dispatches:</span>{% for m in market %}<span class="inline-block mr-3"><b>{{ m.platform_name }}</b> {{ m.units }} units</span>{% endfor %}</div>{% endif %}
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 overflow-x-auto">
+<table class="w-full text-xs"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-2 pr-3">Bill</th><th class="py-2 pr-3">Time</th><th class="py-2 pr-3">Cashier</th><th class="py-2 pr-3">Items</th><th class="py-2 pr-3">Price list</th><th class="py-2 pr-3">Payment</th><th class="py-2 text-right">Total</th></tr></thead><tbody>
+{% for s in sales %}<tr class="border-t border-slate-100 dark:border-slate-800 {% if s.status == 'void' %}opacity-50{% endif %}">
+  <td class="py-2.5 pr-3 mono font-bold"><a href="{% url 'master_sale' s.pk %}" class="text-violet-500 {% if s.status == 'void' %}line-through{% endif %}">{{ s.bill_no }}</a>{% if s.status == 'void' %} <span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-500 text-white">VOID</span>{% endif %}</td>
+  <td class="py-2.5 pr-3 text-slate-500">{{ s.created_at|time:"h:i A" }}</td><td class="py-2.5 pr-3">{{ s.cashier_name|default:"-" }}</td>
+  <td class="py-2.5 pr-3 max-w-[280px]"><span class="truncate block">{% for i in s.items.all %}{{ i.name }} &times;{{ i.quantity }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></td>
+  <td class="py-2.5 pr-3 capitalize">{{ s.price_list }}</td><td class="py-2.5 pr-3">{{ s.get_payment_method_display }}</td><td class="py-2.5 text-right mono font-black">&#8377;{{ s.total }}</td></tr>
+{% empty %}<tr><td colspan="7" class="py-12 text-center text-slate-400">No bills on this day.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

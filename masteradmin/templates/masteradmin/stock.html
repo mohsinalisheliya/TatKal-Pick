@@ -1,0 +1,24 @@
+{% extends "masteradmin/base.html" %}
+{% block title %}Stock{% endblock %}
+{% block body %}
+<div class="flex flex-wrap items-end justify-between gap-3">
+  <div><h1 class="text-2xl font-black tracking-tight">Stock overview</h1><p class="text-xs text-slate-500 mt-0.5">Read-only. Stock is added and changed in the Admin app.</p></div>
+  <form method="get" class="flex gap-2 text-xs"><input name="q" value="{{ q }}" placeholder="Search product / SKU" class="h-10 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-semibold"><button class="h-10 px-4 rounded-xl bg-violet-600 text-white font-black">Search</button></form>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Units on hand</div><div class="text-2xl font-black mt-1">{{ total_units }}</div><div class="text-[11px] text-slate-400">{{ products }} products</div></div>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Value at buying price</div><div class="text-2xl font-black mt-1">&#8377;{{ total_cost|floatformat:2 }}</div></div>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Value at reselling price</div><div class="text-2xl font-black mt-1">&#8377;{{ resell_value|floatformat:2 }}</div></div>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Low / out of stock</div><div class="text-2xl font-black mt-1"><span class="text-amber-500">{{ low }}</span> <span class="text-slate-400">/</span> <span class="text-rose-500">{{ out }}</span></div></div>
+</div>
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 overflow-x-auto">
+<table class="w-full text-xs"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-2 pr-3">Product</th><th class="py-2 pr-3">Batches</th><th class="py-2 pr-3 text-right">Stock</th><th class="py-2 pr-3 text-right">Buying</th><th class="py-2 pr-3 text-right">Wholesale</th><th class="py-2 pr-3 text-right">Reselling</th><th class="py-2 text-right">Value (buying)</th></tr></thead><tbody>
+{% for r in rows %}<tr class="border-t border-slate-100 dark:border-slate-800">
+  <td class="py-2.5 pr-3"><div class="font-bold">{{ r.p.name }}</div><div class="mono text-[10px] text-slate-400">{{ r.p.sku }}</div></td>
+  <td class="py-2.5 pr-3">{{ r.batches }}</td>
+  <td class="py-2.5 pr-3 text-right"><span class="px-2 py-0.5 rounded-md font-black {% if r.status == 'out' %}bg-rose-500/15 text-rose-500{% elif r.status == 'low' %}bg-amber-500/15 text-amber-600{% else %}bg-emerald-500/15 text-emerald-600{% endif %}">{{ r.p.stock }}</span></td>
+  <td class="py-2.5 pr-3 text-right mono">{{ r.p.purchase_price }}</td><td class="py-2.5 pr-3 text-right mono">{{ r.p.wholesale_price }}</td><td class="py-2.5 pr-3 text-right mono">{{ r.p.selling_price }}</td>
+  <td class="py-2.5 text-right mono font-bold">&#8377;{{ r.cost|floatformat:2 }}</td></tr>
+{% empty %}<tr><td colspan="7" class="py-12 text-center text-slate-400">No products.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}
