@@ -31,8 +31,7 @@
     <nav class="flex items-center gap-1 ml-2">
       <a href="{% url 'pos' %}" class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition {% if active_tab == 'bill' %}bg-amber-500 text-slate-950{% else %}text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800{% endif %}"><i class="fa-solid fa-cash-register"></i> Bill</a>
       <a href="{% url 'pos_sales' %}" class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition {% if active_tab == 'sales' %}bg-amber-500 text-slate-950{% else %}text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800{% endif %}"><i class="fa-solid fa-receipt"></i> Sales</a>
-    {% if is_manager %}      <a href="{% url 'pos_prices' %}" class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition {% if active_tab == 'prices' %}bg-amber-500 text-slate-950{% else %}text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800{% endif %}"><i class="fa-solid fa-tags"></i> Prices</a>{% endif %}
-    </nav>
+        </nav>
     <div class="flex-1"></div>
     {% block topbar_extra %}{% endblock %}
     <div class="hidden md:block text-right leading-tight">
@@ -40,8 +39,6 @@
       <div class="text-sm font-bold text-slate-800 dark:text-white">{{ request.user.first_name|default:request.user.username }}</div>
     </div>
     <button id="themeBtn" type="button" title="Switch theme" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 hover:text-amber-500 transition"><i class="fa-solid fa-circle-half-stroke"></i></button>
-    {% if is_master %}<a href="{% url 'master_home' %}" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-violet-500/10 text-violet-600 dark:text-violet-300 hover:bg-violet-500/20 transition"><i class="fa-solid fa-user-shield"></i> Master</a>{% endif %}
-    {% if is_manager %}<a href="{% url 'dashboard' %}" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"><i class="fa-solid fa-gauge-high"></i> Admin</a>{% endif %}
     <a href="{% url 'logout' %}" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-600 text-white transition"><i class="fa-solid fa-right-from-bracket"></i><span class="hidden sm:inline">Logout</span></a>
   </header>
 

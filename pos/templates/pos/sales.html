@@ -5,8 +5,8 @@
 <main class="max-w-6xl mx-auto p-4 sm:p-6 space-y-5">
   <div class="flex flex-wrap items-end justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black tracking-tight">{% if is_manager %}Counter sales{% else %}My sales{% endif %}</h1>
-      <p class="text-xs text-slate-500 mt-0.5">{{ day|date:"l, d F Y" }}{% if not is_manager %} &middot; your bills only{% endif %}</p>
+      <h1 class="text-2xl font-black tracking-tight">My sales</h1>
+      <p class="text-xs text-slate-500 mt-0.5">{{ day|date:"l, d F Y" }} &middot; your bills only</p>
     </div>
     <form method="get" class="flex items-center gap-2">
       <input type="date" name="date" value="{{ day|date:'Y-m-d' }}" max="{% now 'Y-m-d' %}" class="h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold">
@@ -24,27 +24,27 @@
   <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 overflow-x-auto">
     <table class="w-full text-xs">
       <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400">
-        <th class="py-2 pr-3">Bill</th><th class="py-2 pr-3">Time</th>{% if is_manager %}<th class="py-2 pr-3">Cashier</th>{% endif %}<th class="py-2 pr-3">Items</th>
+        <th class="py-2 pr-3">Bill</th><th class="py-2 pr-3">Time</th><th class="py-2 pr-3">Items</th>
         <th class="py-2 pr-3">Payment</th><th class="py-2 pr-3 text-right">Total</th><th class="py-2 text-right">Actions</th></tr></thead>
       <tbody>
       {% for s in sales %}
         <tr class="border-t border-slate-100 dark:border-slate-700 {% if s.status == 'void' %}opacity-50{% endif %}">
           <td class="py-2.5 pr-3 mono font-bold {% if s.status == 'void' %}line-through{% endif %}">{{ s.bill_no }}{% if s.status == 'void' %} <span class="no-underline text-[9px] px-1.5 py-0.5 rounded bg-rose-500 text-white font-sans">VOID</span>{% endif %}</td>
           <td class="py-2.5 pr-3 text-slate-500">{{ s.created_at|time:"h:i A" }}</td>
-          {% if is_manager %}<td class="py-2.5 pr-3">{{ s.cashier_name|default:"-" }}</td>{% endif %}
+          
           <td class="py-2.5 pr-3 text-slate-600 dark:text-slate-300 max-w-[260px]"><span class="truncate block">{% for i in s.items.all %}{{ i.name }} &times;{{ i.quantity }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></td>
           <td class="py-2.5 pr-3">{{ s.get_payment_method_display }} <span class="text-[10px] text-slate-400 capitalize">&middot; {{ s.price_list }}</span></td>
           <td class="py-2.5 pr-3 text-right mono font-black">{{ currency }}{{ s.total }}</td>
           <td class="py-2.5 text-right whitespace-nowrap">
             <a href="{% url 'pos_receipt' s.pk %}?print=1" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 font-bold hover:bg-slate-200 dark:hover:bg-slate-600"><i class="fa-solid fa-print"></i> Receipt</a>
-            {% if is_manager and s.status == 'paid' %}
-            <form method="post" action="{% url 'pos_void' s.pk %}" class="inline" onsubmit="return confirm('Void bill {{ s.bill_no }}? The items go back into stock.')">{% csrf_token %}
-              <button class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-500/10 text-rose-600 font-bold hover:bg-rose-500/20"><i class="fa-solid fa-rotate-left"></i> Void</button></form>
+            {% if can_void and s.status == 'paid' %}
+            <form method="post" action="{% url 'pos_void' s.pk %}" class="inline" onsubmit="return confirm('Cancel bill {{ s.bill_no }}? The items go back into stock.')">{% csrf_token %}
+              <button class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-500/10 text-rose-600 font-bold hover:bg-rose-500/20"><i class="fa-solid fa-rotate-left"></i> Cancel bill</button></form>
             {% endif %}
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="7" class="py-14 text-center text-slate-400"><i class="fa-solid fa-receipt text-3xl mb-2 block"></i>No bills on this day.</td></tr>
+        <tr><td colspan="6" class="py-14 text-center text-slate-400"><i class="fa-solid fa-receipt text-3xl mb-2 block"></i>No bills on this day.</td></tr>
       {% endfor %}
       </tbody>
     </table>

@@ -6,9 +6,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from django.conf import settings
-
-from accounts.roles import TIER_KEYS, TIER_LABELS
+from accounts.roles import TIER_KEYS, TIER_LABELS, normalize_tier
 from sku_manager.models import DispatchLog, JewelrySKU, StockBatch
 
 from .models import PosSale, PosSaleItem
@@ -31,18 +29,12 @@ def money(value):
 
 
 def unit_price(sku, tier):
-    """Price of one unit on a given price list."""
-    if tier == 'wholesale':
-        return sku.wholesale_price
+    """Price of one unit on a given price list - the same three prices as your stock form."""
     if tier == 'buying':
-        return sku.purchase_price
-    if tier == 'reseller':
-        own = getattr(getattr(sku, 'reseller_price', None), 'price', None)
-        if own and own > 0:
-            return own
-        markup = Decimal(str(getattr(settings, 'POS_RESELLER_MARKUP_PERCENT', 10)))
-        return money(Decimal(sku.wholesale_price) * (1 + markup / 100)) if sku.wholesale_price > 0 else Decimal('0')
-    return sku.selling_price
+        return sku.purchase_price          # "Buying Price"
+    if tier == 'wholesale':
+        return sku.wholesale_price         # "Wholesale Price"
+    return sku.selling_price               # "Reselling Price" (saved as the product's selling price)
 
 
 def all_prices(sku, allowed):
@@ -65,7 +57,7 @@ def _clean_items(items):
     return merged
 
 
-def checkout(*, user, items, price_list='retail', discount_percent=0, payment_method='cash',
+def checkout(*, user, items, price_list='reselling', discount_percent=0, payment_method='cash',
              amount_received=None, customer_name='', customer_phone='', token='', max_discount=100,
              allowed_tiers=None):
     """Create a paid sale and take the units out of stock (oldest batch first)."""
@@ -76,6 +68,7 @@ def checkout(*, user, items, price_list='retail', discount_percent=0, payment_me
             return existing, True          # already billed: same answer, no second deduction
 
     allowed = list(allowed_tiers) if allowed_tiers is not None else list(TIER_KEYS)
+    price_list = normalize_tier(price_list)          # old names (retail/reseller) -> reselling
     if price_list not in TIER_KEYS:
         raise PosError('Choose a price list.')
     if price_list not in allowed:

@@ -45,3 +45,18 @@ def password_change(request):
         messages.success(request, 'Password changed.')
         return redirect(home_name(user))
     return render(request, 'accounts/password_change.html', {'form': form})
+
+
+from .decorators import role_required  # noqa: E402
+
+
+@role_required('operator')
+def operator_home(request):
+    """Landing page of the Dispatch role: the three tools they are allowed to use."""
+    from django.utils import timezone
+    from sku_manager.models import DispatchLog
+    today = timezone.localdate()
+    return render(request, 'accounts/operator_home.html', {
+        'active_page': 'operator_home',
+        'dispatched_today': DispatchLog.objects.filter(dispatched_at__date=today).exclude(platform_name='Counter (POS)').count(),
+    })

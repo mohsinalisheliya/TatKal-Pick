@@ -1,56 +1,70 @@
 {% extends "masteradmin/base.html" %}
 {% block title %}{% if target %}Edit user{% else %}New user{% endif %}{% endblock %}
 {% block body %}
+{% with inp="mt-1 w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-semibold normal-case" lab="block font-bold text-slate-400 uppercase tracking-wider text-[10px]" %}
 <div><a href="{% url 'master_users' %}" class="text-xs font-bold text-violet-500">&larr; All users</a>
 <h1 class="text-2xl font-black tracking-tight mt-1">{% if target %}Edit {{ target.username }}{% else %}New user{% endif %}</h1></div>
-<form method="post" class="grid lg:grid-cols-2 gap-4">
+<form method="post" class="grid lg:grid-cols-2 gap-4" autocomplete="off">
   {% csrf_token %}
   <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 space-y-3 text-xs">
-    <h2 class="font-black text-sm">Login</h2>
-    <label class="block font-bold text-slate-400 uppercase tracking-wider text-[10px]">Username
-      <input name="username" value="{% if post %}{{ post.username }}{% else %}{{ target.username }}{% endif %}" {% if target %}readonly{% endif %} required class="mt-1 w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-semibold normal-case {% if target %}opacity-60{% endif %}"></label>
-    <label class="block font-bold text-slate-400 uppercase tracking-wider text-[10px]">Full name
-      <input name="first_name" value="{% if post %}{{ post.first_name }}{% else %}{{ target.first_name }}{% endif %}" class="mt-1 w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-semibold normal-case"></label>
-    <label class="block font-bold text-slate-400 uppercase tracking-wider text-[10px]">Email (optional)
-      <input name="email" type="email" value="{% if post %}{{ post.email }}{% else %}{{ target.email }}{% endif %}" class="mt-1 w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-semibold normal-case"></label>
-    {% if not target %}<label class="block font-bold text-slate-400 uppercase tracking-wider text-[10px]">Password (min 6)
-      <input name="password" type="text" autocomplete="off" required class="mt-1 w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-semibold normal-case mono"></label>
-    {% else %}<p class="text-slate-400">To change the password use <b>Reset password</b> on the users list.</p>{% endif %}
-    <label class="block font-bold text-slate-400 uppercase tracking-wider text-[10px]">Note (e.g. "Shop 2 counter", "Reseller - Surat")
-      <input name="note" value="{{ cur.note }}" maxlength="200" class="mt-1 w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-semibold normal-case"></label>
+    <h2 class="font-black text-sm">Account</h2>
+    <label class="{{ lab }}">Username
+      <input name="username" value="{% if post %}{{ post.username }}{% else %}{{ target.username }}{% endif %}" required class="{{ inp }}"></label>
+    <div class="grid grid-cols-2 gap-2">
+      <label class="{{ lab }}">Full name
+        <input name="first_name" value="{% if post %}{{ post.first_name }}{% else %}{{ target.first_name }}{% endif %}" class="{{ inp }}"></label>
+      <label class="{{ lab }}">Phone
+        <input name="phone" value="{{ cur.phone }}" class="{{ inp }}"></label>
+    </div>
+    <label class="{{ lab }}">Email
+      <input name="email" type="email" value="{% if post %}{{ post.email }}{% else %}{{ target.email }}{% endif %}" class="{{ inp }}"></label>
+    <label class="{{ lab }}">Note (e.g. "Shop 2 counter", "Packing table")
+      <input name="note" value="{{ cur.note }}" maxlength="200" class="{{ inp }}"></label>
+    <div class="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+      <div class="font-black text-sm">{% if target %}Change password <span class="text-slate-400 font-semibold">(leave empty to keep the current one)</span>{% else %}Password{% endif %}</div>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="{{ lab }}">{% if target %}New password{% else %}Password (min 6){% endif %}
+          <input name="password" type="text" autocomplete="off" {% if not target %}required{% endif %} class="{{ inp }} mono"></label>
+        <label class="{{ lab }}">Type it again
+          <input name="password2" type="text" autocomplete="off" {% if not target %}required{% endif %} class="{{ inp }} mono"></label>
+      </div>
+    </div>
     {% if target %}<label class="flex items-center gap-2 font-bold"><input type="checkbox" name="is_active" {% if cur.is_active %}checked{% endif %} {% if is_self %}disabled checked{% endif %}> Account is active</label>{% endif %}
   </section>
 
   <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 space-y-4 text-xs">
-    <h2 class="font-black text-sm">Role &amp; price access</h2>
+    <h2 class="font-black text-sm">Role &amp; access</h2>
     {% if is_self %}<input type="hidden" name="role" value="master">{% endif %}
-    <div class="grid grid-cols-3 gap-2" id="roles">
+    <div class="grid grid-cols-2 gap-2" id="roles">
       {% for key, label in roles %}
       <label class="cursor-pointer"><input type="radio" name="role" value="{{ key }}" class="peer sr-only" {% if cur.role == key %}checked{% endif %} {% if is_self %}disabled{% endif %}>
         <div class="p-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-center peer-checked:border-violet-500 peer-checked:bg-violet-500/10 peer-disabled:opacity-40">
-          <i class="fa-solid {% if key == 'master' %}fa-user-shield{% elif key == 'admin' %}fa-boxes-stacked{% else %}fa-cash-register{% endif %} text-lg mb-1.5 block"></i>
+          <i class="fa-solid {% if key == 'master' %}fa-user-shield{% elif key == 'admin' %}fa-boxes-stacked{% elif key == 'operator' %}fa-truck-fast{% else %}fa-cash-register{% endif %} text-lg mb-1.5 block"></i>
           <div class="font-black">{{ label }}</div>
-          <div class="text-[10px] text-slate-400 mt-0.5">{% if key == 'master' %}everything + users &amp; logs{% elif key == 'admin' %}inventory, stock, counter{% else %}counter only{% endif %}</div></div></label>
+          <div class="text-[10px] text-slate-400 mt-0.5">{% if key == 'master' %}users, settings, logs, reports{% elif key == 'admin' %}inventory, products, suppliers, import{% elif key == 'operator' %}scan PDF, barcode scan, returns{% else %}counter (POS) only{% endif %}</div></div></label>
       {% endfor %}
     </div>
+    <p class="text-slate-400">Each role has its own app and cannot open the others.</p>
     <div id="cashier-box" class="space-y-3">
       <div class="font-bold text-slate-400 uppercase tracking-wider text-[10px]">This cashier may sell at</div>
-      <div class="grid grid-cols-2 gap-2">
+      <div class="grid grid-cols-3 gap-2">
         {% for key, label in tiers %}<label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold cursor-pointer"><input type="checkbox" name="tiers" value="{{ key }}" {% if key in cur.tiers %}checked{% endif %}> {{ label }}</label>{% endfor %}
       </div>
       <div class="grid grid-cols-2 gap-2">
-        <label class="block font-bold text-slate-400 uppercase tracking-wider text-[10px]">Starts on
-          <select name="default_tier" class="mt-1 w-full h-10 px-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-semibold normal-case">{% for key, label in tiers %}<option value="{{ key }}" {% if cur.default_tier == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-        <label class="block font-bold text-slate-400 uppercase tracking-wider text-[10px]">Max discount %
-          <input name="max_discount" type="number" min="0" max="100" value="{{ cur.max_discount }}" placeholder="default" class="mt-1 w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-semibold"></label>
+        <label class="{{ lab }}">Starts on
+          <select name="default_tier" class="{{ inp }}">{% for key, label in tiers %}<option value="{{ key }}" {% if cur.default_tier == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label class="{{ lab }}">Max discount %
+          <input name="max_discount" type="number" min="0" max="100" value="{{ cur.max_discount }}" placeholder="default" class="{{ inp }}"></label>
       </div>
-      <p class="text-slate-400">Prices a cashier is not allowed to use are never sent to their screen. <b>Buying / cost</b> sells at the product's purchase price (no discount).</p>
+      <label class="flex items-center gap-2 font-bold"><input type="checkbox" name="can_void" {% if cur.can_void %}checked{% endif %}> May cancel their own bills (stock goes back)</label>
+      <p class="text-slate-400">Prices: <b>Buying</b> = Buying Price, <b>Wholesale</b> = Wholesale Price, <b>Reselling</b> = Reselling Price from the stock form. A cashier never receives a price list they are not allowed. Buying price allows no discount.</p>
     </div>
     <div class="flex justify-end gap-2 pt-2"><a href="{% url 'master_users' %}" class="h-10 px-4 inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 font-bold">Cancel</a><button class="h-10 px-6 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-black">{% if target %}Save changes{% else %}Create user{% endif %}</button></div>
   </section>
 </form>
 <script>
-  (function(){var box=document.getElementById('cashier-box');function sync(){var r=document.querySelector('input[name=role]:checked');box.style.display=(r&&r.value==='cashier')?'':'none';}
+  (function(){var box=document.getElementById('cashier-box');function sync(){var r=document.querySelector('input[name=role]:checked')||document.querySelector('input[name=role][type=hidden]');box.style.display=(r&&r.value==='cashier')?'':'none';}
   document.querySelectorAll('input[name=role]').forEach(function(i){i.addEventListener('change',sync)});sync();})();
 </script>
+{% endwith %}
 {% endblock %}

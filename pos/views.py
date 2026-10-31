@@ -3,28 +3,24 @@ import json
 from datetime import datetime
 from decimal import Decimal
 
-from django.conf import settings
-from django.contrib import messages
 from django.db.models import Count, Sum
+from django.contrib import messages
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 
 from accounts import audit
 from accounts.decorators import role_required
-from accounts.roles import (TIER_KEYS, TIER_LABELS, allowed_tiers, default_tier, get_role, is_manager,
-                            max_discount)
+from accounts.roles import TIER_LABELS, allowed_tiers, can_void, default_tier, max_discount
 from sku_manager.models import AppSettings, JewelrySKU
 
 from . import services as pos
-from .models import PosSale, ResellerPrice
+from .models import PosSale
 
-ANY_ROLE = ('master', 'admin', 'cashier')
-MANAGERS = ('master', 'admin')
+ONLY_CASHIER = ('cashier',)     # the counter belongs to cashier accounts; nobody else can open it
 
 
 def _brand():
@@ -33,7 +29,7 @@ def _brand():
             'support_contact': s.support_contact, 'logo_url': s.label_logo.url if s.label_logo else ''}
 
 
-@role_required(*ANY_ROLE)
+@role_required(*ONLY_CASHIER)
 @ensure_csrf_cookie
 def pos_screen(request):
     tiers = allowed_tiers(request.user)
@@ -42,12 +38,12 @@ def pos_screen(request):
         tiers=[(t, TIER_LABELS[t]) for t in tiers], tier_keys=','.join(tiers), start_tier=default_tier(request.user)))
 
 
-@role_required(*ANY_ROLE)
+@role_required(*ONLY_CASHIER)
 def pos_products_api(request):
     """Every listed product with its live stock. Only the price lists this user may use are included."""
     allowed = allowed_tiers(request.user)
     rows = []
-    for p in JewelrySKU.objects.filter(is_listed=True).select_related('reseller_price').order_by('name'):
+    for p in JewelrySKU.objects.filter(is_listed=True).order_by('name'):
         rows.append({
             'id': p.pk, 'name': p.name, 'sku': p.sku, 'category': p.category, 'color': p.color, 'size': p.size,
             'stock': p.stock, 'prices': pos.all_prices(p, allowed), 'image': p.image.url if p.image else '',
@@ -55,7 +51,7 @@ def pos_products_api(request):
     return JsonResponse({'products': rows})
 
 
-@role_required(*ANY_ROLE)
+@role_required(*ONLY_CASHIER)
 @require_POST
 def pos_checkout(request):
     try:
@@ -64,7 +60,7 @@ def pos_checkout(request):
         return JsonResponse({'ok': False, 'message': 'Bad request.'}, status=400)
     try:
         sale, repeated = pos.checkout(
-            user=request.user, items=body.get('items'), price_list=body.get('price_list', 'retail'),
+            user=request.user, items=body.get('items'), price_list=body.get('price_list', 'reselling'),
             discount_percent=body.get('discount_percent', 0), payment_method=body.get('payment_method', 'cash'),
             amount_received=body.get('amount_received'), customer_name=body.get('customer_name', ''),
             customer_phone=body.get('customer_phone', ''), token=body.get('token', ''),
@@ -85,17 +81,16 @@ def pos_checkout(request):
 
 
 def _visible_sales(user):
-    qs = PosSale.objects.all()
-    return qs if is_manager(user) else qs.filter(cashier=user)
+    return PosSale.objects.filter(cashier=user)          # a cashier only ever sees their own bills
 
 
-@role_required(*ANY_ROLE)
+@role_required(*ONLY_CASHIER)
 def pos_receipt(request, pk):
     sale = get_object_or_404(_visible_sales(request.user).prefetch_related('items'), pk=pk)
     return render(request, 'pos/receipt.html', dict(_brand(), sale=sale, auto_print=request.GET.get('print') == '1'))
 
 
-@role_required(*ANY_ROLE)
+@role_required(*ONLY_CASHIER)
 def pos_sales(request):
     day = timezone.localdate()
     raw = request.GET.get('date', '')
@@ -118,48 +113,17 @@ def pos_sales(request):
         ))
 
 
-@role_required(*MANAGERS)
+@role_required(*ONLY_CASHIER)
 @require_POST
 def pos_void(request, pk):
-    if not is_manager(request.user):
+    """Cancel one of your own bills and put the items back. Only for cashiers the Master Admin allowed."""
+    if not can_void(request.user):
         raise Http404
-    sale = get_object_or_404(PosSale, pk=pk)
+    sale = get_object_or_404(_visible_sales(request.user), pk=pk)
     try:
         pos.void_sale(sale, request.user)
         audit.log(request, 'sale_void', f'Voided bill {sale.bill_no} (total {sale.total}), stock restored')
-        messages.success(request, f'Bill {sale.bill_no} voided and stock restored.')
+        messages.success(request, f'Bill {sale.bill_no} cancelled and stock restored.')
     except pos.PosError as exc:
         messages.error(request, str(exc))
-    back = request.META.get('HTTP_REFERER', '')
-    if back and url_has_allowed_host_and_scheme(back, allowed_hosts={request.get_host()}):
-        return redirect(back)
     return redirect('pos_sales')
-
-
-@role_required(*MANAGERS)
-def pos_prices(request):
-    """Set the reseller price per product (blank = wholesale + markup)."""
-    skus = list(JewelrySKU.objects.filter(is_listed=True).select_related('reseller_price').order_by('name'))
-    if request.method == 'POST':
-        changed = 0
-        for p in skus:
-            raw = request.POST.get(f'reseller_{p.pk}', '').strip()
-            try:
-                value = Decimal(raw) if raw else Decimal('0')
-            except Exception:
-                continue
-            if value < 0:
-                continue
-            current = getattr(getattr(p, 'reseller_price', None), 'price', Decimal('0'))
-            if value != current:
-                if value == 0:
-                    ResellerPrice.objects.filter(sku=p).delete()
-                else:
-                    ResellerPrice.objects.update_or_create(sku=p, defaults={'price': value})
-                changed += 1
-        audit.log(request, 'prices_update', f'Reseller prices changed for {changed} product(s)')
-        messages.success(request, f'Reseller prices saved ({changed} changed).')
-        return redirect('pos_prices')
-    rows = [{'p': p, 'own': getattr(getattr(p, 'reseller_price', None), 'price', None),
-             'auto': pos.unit_price(p, 'reseller')} for p in skus]
-    return render(request, 'pos/prices.html', dict(_brand(), active_tab='prices', rows=rows))

@@ -18,7 +18,7 @@ class PosSale(models.Model):
     cashier_name = models.CharField(max_length=150, blank=True, default='')
     customer_name = models.CharField(max_length=120, blank=True, default='')
     customer_phone = models.CharField(max_length=20, blank=True, default='')
-    price_list = models.CharField(max_length=10, default='retail')          # retail | reseller | wholesale | buying
+    price_list = models.CharField(max_length=10, default='reselling')       # reselling | wholesale | buying
     payment_method = models.CharField(max_length=10, choices=PAYMENT_CHOICES, default='cash')
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
@@ -60,13 +60,3 @@ class PosSaleItem(models.Model):
     def __str__(self):
         return f'{self.name} x{self.quantity}'
 
-
-class ResellerPrice(models.Model):
-    """Optional per-product reseller price. When a product has none, the reseller price is the
-    wholesale price plus settings.POS_RESELLER_MARKUP_PERCENT (default 10%)."""
-    sku = models.OneToOneField('sku_manager.JewelrySKU', on_delete=models.CASCADE, related_name='reseller_price')
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f'{self.sku_id}: {self.price}'

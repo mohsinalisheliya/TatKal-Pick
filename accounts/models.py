@@ -4,15 +4,18 @@ from django.db import models
 
 class UserProfile(models.Model):
     """One row per login: which role the person has and, for cashiers, which prices they may use."""
-    ROLE_CHOICES = [('master', 'Master Admin'), ('admin', 'Admin'), ('cashier', 'Cashier')]
+    ROLE_CHOICES = [('master', 'Master Admin'), ('admin', 'Admin'), ('operator', 'Dispatch'), ('cashier', 'Cashier')]
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='cashier')
-    # comma separated keys from roles.TIERS, e.g. "retail,reseller". Only used for cashiers.
-    price_tiers = models.CharField(max_length=60, blank=True, default='retail')
-    default_tier = models.CharField(max_length=10, blank=True, default='retail')
+    # comma separated keys from roles.TIERS, e.g. "reselling,wholesale". Only used for cashiers.
+    price_tiers = models.CharField(max_length=60, blank=True, default='reselling')
+    default_tier = models.CharField(max_length=10, blank=True, default='reselling')
     # biggest discount (%) this cashier may give; blank = project default
     max_discount = models.PositiveSmallIntegerField(null=True, blank=True)
+    # may this cashier cancel (void) their own bills at the counter?
+    can_void = models.BooleanField(default=False)
+    phone = models.CharField(max_length=20, blank=True, default='')
     note = models.CharField(max_length=200, blank=True, default='')
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                    related_name='+')

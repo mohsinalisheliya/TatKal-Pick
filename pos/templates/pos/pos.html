@@ -126,7 +126,7 @@
                set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }};
 
   var products = [], byId = {}, cart = store.get('tp_pos_cart', {}), plist = store.get('tp_pos_plist', '');
-  var TIERS = (root.dataset.tiers || 'retail').split(','), START = root.dataset.startTier || TIERS[0];
+  var TIERS = (root.dataset.tiers || 'reselling').split(','), START = root.dataset.startTier || TIERS[0];
   if (TIERS.indexOf(plist) === -1) plist = START;       // a saved choice the account may no longer use
   var pay = 'cash', category = '', query = '', token = newToken(), busy = false, lastReceipt = '';
 
