@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from decimal import Decimal
 
+from django.conf import settings
 from django.db.models import Count, Sum
 from django.contrib import messages
 from django.http import Http404, JsonResponse
@@ -139,8 +140,7 @@ def pos_prices(request):
         audit.log(request, 'price_update', f'Saved reseller prices for {changed} products')
         messages.success(request, 'Reseller prices saved.')
         return redirect('pos_prices')
-    markup = Decimal(str(getattr(__import__('django.conf', fromlist=['settings']).settings,
-                                'POS_RESELLER_MARKUP_PERCENT', 10)))
+    markup = Decimal(str(getattr(settings, 'POS_RESELLER_MARKUP_PERCENT', 10)))
     rows = []
     for product in products:
         custom = getattr(product, 'reseller_price', None)

@@ -37,7 +37,6 @@ def unit_price(sku, tier):
             own = 0
         if own > 0:
             return own
-        from django.conf import settings
         return money(sku.wholesale_price * (1 + Decimal(str(getattr(settings, 'POS_RESELLER_MARKUP_PERCENT', 10))) / 100))
     if tier == 'buying':
         return sku.purchase_price          # "Buying Price"

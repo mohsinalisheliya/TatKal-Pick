@@ -34,6 +34,8 @@ class RoleAccessMiddleware:
         app = match.func.__module__.split('.')[0]
         if app == 'accounts':                 # role_home / operator_home guard themselves
             return True
+        if match.url_name == 'pos_prices' and role in (MASTER, ADMIN):
+            return True
         if role == MASTER:
             return app in ('masteradmin', 'django')
         if role == CASHIER:
