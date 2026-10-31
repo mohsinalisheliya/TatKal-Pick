@@ -76,7 +76,7 @@ def _form_data(post):
         'email': post.get('email', '').strip(), 'phone': post.get('phone', '').strip()[:20],
         'role': post.get('role', 'cashier'),
         'tiers': [t for t in post.getlist('tiers') if normalize_tier(t) in TIER_KEYS],
-        'default_tier': post.get('default_tier', 'reselling'),
+        'default_tier': post.get('default_tier', 'retail'),
         'max_discount': post.get('max_discount', '').strip(), 'note': post.get('note', '').strip()[:200],
         'is_active': post.get('is_active') == 'on', 'can_void': post.get('can_void') == 'on',
         'password': post.get('password', ''), 'password2': post.get('password2', ''),
@@ -169,8 +169,8 @@ def user_form(request, pk=None):
                     update_session_auth_hash(request, user)
             return redirect('master_users')
     cur = {'role': get_role(target) if target else 'cashier',
-           'tiers': parse_tiers(prof.price_tiers) if prof else ['reselling'],
-           'default_tier': normalize_tier(prof.default_tier) if prof else 'reselling',
+           'tiers': parse_tiers(prof.price_tiers) if prof else ['retail'],
+           'default_tier': normalize_tier(prof.default_tier) if prof else 'retail',
            'max_discount': prof.max_discount if (prof and prof.max_discount is not None) else '',
            'note': prof.note if prof else '', 'phone': prof.phone if prof else '',
            'can_void': prof.can_void if prof else False,

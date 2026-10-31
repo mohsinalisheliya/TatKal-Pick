@@ -66,7 +66,7 @@ def _clean_items(items):
     return merged
 
 
-def checkout(*, user, items, price_list='reselling', discount_percent=0, payment_method='cash',
+def checkout(*, user, items, price_list='retail', discount_percent=0, payment_method='cash',
              amount_received=None, customer_name='', customer_phone='', token='', max_discount=100,
              allowed_tiers=None):
     """Create a paid sale and take the units out of stock (oldest batch first)."""

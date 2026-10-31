@@ -27,7 +27,7 @@ class PosSale(models.Model):
     cashier_name = models.CharField(max_length=150, blank=True, default='')
     customer_name = models.CharField(max_length=120, blank=True, default='')
     customer_phone = models.CharField(max_length=20, blank=True, default='')
-    price_list = models.CharField(max_length=10, default='reselling')       # reselling | wholesale | buying
+    price_list = models.CharField(max_length=10, default='retail')          # retail | reseller | wholesale | buying
     payment_method = models.CharField(max_length=10, choices=PAYMENT_CHOICES, default='cash')
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)

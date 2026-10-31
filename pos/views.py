@@ -61,7 +61,7 @@ def pos_checkout(request):
         return JsonResponse({'ok': False, 'message': 'Bad request.'}, status=400)
     try:
         sale, repeated = pos.checkout(
-            user=request.user, items=body.get('items'), price_list=body.get('price_list', 'reselling'),
+            user=request.user, items=body.get('items'), price_list=body.get('price_list', 'retail'),
             discount_percent=body.get('discount_percent', 0), payment_method=body.get('payment_method', 'cash'),
             amount_received=body.get('amount_received'), customer_name=body.get('customer_name', ''),
             customer_phone=body.get('customer_phone', ''), token=body.get('token', ''),
