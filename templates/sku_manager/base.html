@@ -109,21 +109,6 @@
         </a>
         {% endif %}
 
-        {% if role == 'admin' %}
-        <!-- Suppliers -->
-        <a href="{% url 'supplier_list' %}" title="Suppliers"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'suppliers' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <i class="fa-solid fa-truck-field text-lg min-w-[20px] text-center"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Suppliers</span>
-        </a>
-        <!-- Import -->
-        <a href="{% url 'import_center' %}" title="Import data"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'import' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-          <i class="fa-solid fa-file-import text-lg min-w-[20px] text-center"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Import Data</span>
-        </a>
-        {% endif %}
-
         {% if role == 'operator' %}
         <!-- RTO & Cancellations -->
         <a href="{% url 'order_cancellation' %}" title="Returns & Cancellations"
