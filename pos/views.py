@@ -147,7 +147,7 @@ def pos_prices(request):
         wholesale = Decimal(str(product.wholesale_price or 0))
         rows.append({'p': product, 'own': custom.price if custom else None,
                      'auto': (wholesale * (1 + markup / 100)).quantize(Decimal('0.01'))})
-    return render(request, 'pos/prices.html', {'rows': rows, 'markup': markup})
+    return render(request, 'pos/prices.html', dict(_brand(), active_tab='prices', rows=rows, markup=markup))
 
 
 @role_required(*ONLY_CASHIER)
