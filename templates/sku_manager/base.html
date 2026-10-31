@@ -44,7 +44,7 @@
     <div class="flex flex-col gap-5 flex-1 min-h-0">
       
       <!-- Logo -->
-      <a href="{% url 'dashboard' %}" class="shrink-0 flex items-center gap-3 px-1 py-1">
+      <a href="{% if role == 'operator' %}{% url 'operator_home' %}{% else %}{% url 'dashboard' %}{% endif %}" class="shrink-0 flex items-center gap-3 px-1 py-1">
         <div class="w-10 h-10 min-w-[40px] rounded-xl bg-gradient-to-tr from-amber-500 to-amber-400 flex items-center justify-center shadow-md shadow-amber-500/20 text-slate-950">
           <img src="{% static 'tatkal-pick-icon.svg' %}" class="w-7 h-7 object-contain" alt="Tatkal Pick">
         </div>
@@ -57,55 +57,93 @@
       <!-- Navigation Links (Fixed, No Scroll) -->
       <nav class="sidebar-nav flex-1 min-h-0 space-y-1.5 overflow-y-auto overflow-x-hidden pb-2">
         
+        {% if role == 'admin' %}
         <!-- Dashboard -->
         <a href="{% url 'dashboard' %}" title="Dashboard"
           class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'dashboard' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-house text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Dashboard</span>
         </a>
+        {% endif %}
+        {% if role == 'operator' %}
+        <!-- Dispatch desk -->
+        <a href="{% url 'operator_home' %}" title="Dispatch desk"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'operator_home' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-truck-fast text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Dispatch Desk</span>
+        </a>
+        {% endif %}
 
+        {% if role == 'operator' %}
         <!-- PDF Order Scan -->
         <a href="{% url 'pdf_order_scan' %}" title="Scan Marketplace PDF"
           class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'pdf_order_scan' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-file-invoice text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">PDF Order Scan</span>
         </a>
+        {% endif %}
 
+        {% if role == 'admin' %}
         <!-- Inventory -->
         <a href="{% url 'inventory_list' %}" title="Inventory"
           class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'inventory' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-boxes-stacked text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Inventory</span>
         </a>
+        {% endif %}
 
+        {% if role == 'admin' %}
         <!-- Products -->
         <a href="{% url 'product_master' %}" title="Add Products & Catalog"
           class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'products' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-tags text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Products</span>
         </a>
+        {% endif %}
 
+        {% if role == 'admin' %}
+        <!-- Suppliers -->
+        <a href="{% url 'supplier_list' %}" title="Suppliers"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'suppliers' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-truck-field text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Suppliers</span>
+        </a>
+        <!-- Import -->
+        <a href="{% url 'import_center' %}" title="Import data"
+          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'import' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
+          <i class="fa-solid fa-file-import text-lg min-w-[20px] text-center"></i>
+          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Import Data</span>
+        </a>
+        {% endif %}
+
+        {% if role == 'operator' %}
         <!-- RTO & Cancellations -->
         <a href="{% url 'order_cancellation' %}" title="Returns & Cancellations"
           class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'cancellation' %}bg-rose-500 text-white font-bold shadow-md shadow-rose-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-arrow-rotate-left text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">RTO & Cancellations</span>
         </a>
+        {% endif %}
 
+        {% if role == 'operator' %}
         <!-- Fast Scanner -->
         <a href="{% url 'sku_scanner' %}" title="Camera Scanner"
           class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'scanner' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-qrcode text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Fast Scanner</span>
         </a>
+        {% endif %}
 
+        {% if role == 'admin' %}
         <!-- Workspace Tools (Consolidated Hub) -->
         <a href="{% url 'workspace_tools' %}" title="Workspace Tools"
           class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition {% if active_page == 'workspace' or active_page == 'catalog' or active_page == 'boxes' or active_page == 'platforms' or active_page == 'dispatch_logs' or active_page == 'export_center' %}bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
           <i class="fa-solid fa-screwdriver-wrench text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Workspace Tools</span>
         </a>
+        {% endif %}
 
+        {% if role == 'admin' %}
         <!-- ANALYTICS -->
         <div class="pt-2 mt-1 border-t border-slate-200 dark:border-slate-800">
           <div class="px-3 pb-1 h-4 overflow-hidden text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">Analytics</div>
@@ -124,22 +162,7 @@
           <i class="fa-solid fa-users-viewfinder text-lg min-w-[20px] text-center"></i>
           <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Customer Analytics</span>
         </a>
-
-        {% if is_master %}
-        <!-- Master console (only the Master Admin sees this) -->
-        <a href="{% url 'master_home' %}" title="Master Admin - users, roles, activity log"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition text-violet-600 dark:text-violet-300 hover:bg-violet-500/10">
-          <i class="fa-solid fa-user-shield text-lg min-w-[20px] text-center"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Master Admin</span>
-        </a>
         {% endif %}
-
-        <!-- Counter / POS -->
-        <a href="{% url 'pos' %}" title="Counter (POS)"
-          class="flex items-center gap-3.5 px-3 py-2.5 rounded-xl transition text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white">
-          <i class="fa-solid fa-cash-register text-lg min-w-[20px] text-center"></i>
-          <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-bold">Counter / POS</span>
-        </a>
 
       </nav>
     </div>
@@ -147,11 +170,7 @@
     <!-- BOTTOM SECTION: Settings, Theme Toggle & User Info -->
     <div class="shrink-0 space-y-1.5 pt-3 border-t border-slate-200 dark:border-slate-800">
 
-      <a href="{% url 'app_settings' %}" title="System Settings"
-        class="flex items-center gap-3.5 px-3 py-2 rounded-xl transition {% if active_page == 'settings' %}bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-white{% endif %}">
-        <i class="fa-solid fa-gear text-lg min-w-[20px] text-center"></i>
-        <span class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap text-xs font-semibold">Settings</span>
-      </a>
+      
       
       <button id="themeToggleBtn" type="button" title="Switch Theme"
         class="w-full flex items-center gap-3.5 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
