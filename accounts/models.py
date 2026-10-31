@@ -8,9 +8,9 @@ class UserProfile(models.Model):
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='cashier')
-    # comma separated keys from roles.TIERS, e.g. "reselling,wholesale". Only used for cashiers.
-    price_tiers = models.CharField(max_length=60, blank=True, default='reselling')
-    default_tier = models.CharField(max_length=10, blank=True, default='reselling')
+    # comma separated keys from roles.TIERS. Only used for cashiers.
+    price_tiers = models.CharField(max_length=60, blank=True, default='retail')
+    default_tier = models.CharField(max_length=10, blank=True, default='retail')
     # biggest discount (%) this cashier may give; blank = project default
     max_discount = models.PositiveSmallIntegerField(null=True, blank=True)
     # may this cashier cancel (void) their own bills at the counter?
