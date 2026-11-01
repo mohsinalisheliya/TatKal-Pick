@@ -1,0 +1,18 @@
+{% extends "sku_manager/base.html" %}
+{% block title %}{% if obj %}Edit supplier{% else %}Add supplier{% endif %}{% endblock %}
+{% block content %}
+<div><a href="{% url 'supplier_list' %}" class="text-xs font-bold text-amber-600">&larr; Suppliers</a>
+<h1 class="text-2xl font-black tracking-tight mt-1 text-slate-900 dark:text-white">{% if obj %}Edit {{ obj.name }}{% else %}Add supplier{% endif %}</h1></div>
+<form method="post" class="max-w-3xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-6 grid sm:grid-cols-2 gap-4 text-xs">
+  {% csrf_token %}
+  {% for f in form %}
+    {% if f.name == 'is_active' %}<label class="sm:col-span-2 flex items-center gap-2 font-bold"><input type="checkbox" name="is_active" {% if f.value %}checked{% endif %}> Active (shows in the stock form dropdown)</label>
+    {% else %}
+    <label class="block font-bold text-slate-400 uppercase tracking-wider text-[10px] {% if f.name == 'name' or f.name == 'address' or f.name == 'notes' %}sm:col-span-2{% endif %}">{{ f.label }}{% if f.field.required %} <span class="text-rose-500">*</span>{% endif %}
+      <input name="{{ f.html_name }}" value="{{ f.value|default_if_none:'' }}" {% if f.field.required %}required{% endif %} class="mt-1 w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border {% if f.errors %}border-rose-500{% else %}border-slate-300 dark:border-slate-700{% endif %} text-sm font-semibold normal-case">
+      {% for e in f.errors %}<span class="text-rose-500 normal-case font-semibold">{{ e }}</span>{% endfor %}</label>
+    {% endif %}
+  {% endfor %}
+  <div class="sm:col-span-2 flex justify-end gap-2"><a href="{% url 'supplier_list' %}" class="h-10 px-4 inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-700 font-bold">Cancel</a><button class="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black">Save supplier</button></div>
+</form>
+{% endblock %}

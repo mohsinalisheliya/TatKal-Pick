@@ -3,7 +3,6 @@ import json
 from datetime import datetime
 from decimal import Decimal
 
-from django.conf import settings
 from django.db.models import Count, Sum
 from django.contrib import messages
 from django.http import Http404, JsonResponse
@@ -19,7 +18,7 @@ from accounts.roles import TIER_LABELS, allowed_tiers, can_void, default_tier, m
 from sku_manager.models import AppSettings, JewelrySKU
 
 from . import services as pos
-from .models import PosSale, ResellerPrice
+from .models import PosSale
 
 ONLY_CASHIER = ('cashier',)     # the counter belongs to cashier accounts; nobody else can open it
 
@@ -61,7 +60,7 @@ def pos_checkout(request):
         return JsonResponse({'ok': False, 'message': 'Bad request.'}, status=400)
     try:
         sale, repeated = pos.checkout(
-            user=request.user, items=body.get('items'), price_list=body.get('price_list', 'retail'),
+            user=request.user, items=body.get('items'), price_list=body.get('price_list', 'reselling'),
             discount_percent=body.get('discount_percent', 0), payment_method=body.get('payment_method', 'cash'),
             amount_received=body.get('amount_received'), customer_name=body.get('customer_name', ''),
             customer_phone=body.get('customer_phone', ''), token=body.get('token', ''),
@@ -112,42 +111,6 @@ def pos_sales(request):
         discount=totals['discount'] or Decimal('0'), avg=(revenue / bills) if bills else Decimal('0'),
         cash=by_payment.get('cash', 0), upi=by_payment.get('upi', 0), card=by_payment.get('card', 0),
         ))
-
-
-@role_required('admin', 'master')
-def pos_prices(request):
-    """Admin-maintained reseller prices; blank or zero uses the configured markup."""
-    products = JewelrySKU.objects.filter(is_listed=True).order_by('name')
-    if request.method == 'POST':
-        changed = 0
-        for product in products:
-            raw = request.POST.get(f'reseller_{product.pk}', '').strip()
-            if not raw:
-                ResellerPrice.objects.filter(sku=product).delete()
-                continue
-            try:
-                value = Decimal(raw)
-                if value < 0:
-                    raise ValueError
-            except Exception:
-                messages.error(request, f'Enter a valid non-negative reseller price for {product.name}.')
-                return redirect('pos_prices')
-            obj, created = ResellerPrice.objects.get_or_create(sku=product, defaults={'price': value})
-            if not created and obj.price != value:
-                obj.price = value
-                obj.save(update_fields=['price', 'updated_at'])
-            changed += 1
-        audit.log(request, 'price_update', f'Saved reseller prices for {changed} products')
-        messages.success(request, 'Reseller prices saved.')
-        return redirect('pos_prices')
-    markup = Decimal(str(getattr(settings, 'POS_RESELLER_MARKUP_PERCENT', 10)))
-    rows = []
-    for product in products:
-        custom = getattr(product, 'reseller_price', None)
-        wholesale = Decimal(str(product.wholesale_price or 0))
-        rows.append({'p': product, 'own': custom.price if custom else None,
-                     'auto': (wholesale * (1 + markup / 100)).quantize(Decimal('0.01'))})
-    return render(request, 'pos/prices.html', dict(_brand(), active_tab='prices', rows=rows, markup=markup))
 
 
 @role_required(*ONLY_CASHIER)

@@ -1,0 +1,35 @@
+{% extends "sku_manager/base.html" %}
+{% block title %}Import data{% endblock %}
+{% block content %}
+<div><h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Import data</h1>
+<p class="text-xs text-slate-500 mt-1">Bring in products, stock and suppliers from Excel or CSV. You choose which of your columns goes to which field.</p></div>
+<div class="grid md:grid-cols-3 gap-4">
+{% for c in cards %}
+  <div class="rounded-3xl p-6 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 flex flex-col">
+    <div class="w-12 h-12 rounded-2xl bg-{{ c.color }}-500/15 text-{{ c.color }}-600 dark:text-{{ c.color }}-400 flex items-center justify-center text-xl mb-4"><i class="fa-solid {{ c.icon }}"></i></div>
+    <div class="font-black text-lg">{{ c.title }}</div>
+    <p class="text-xs text-slate-500 mt-1 flex-1">{{ c.blurb }}</p>
+    <div class="flex items-center gap-2 mt-5">
+      <a href="{% url 'import_start' c.key %}" class="flex-1 text-center h-10 leading-10 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black"><i class="fa-solid fa-file-import mr-1"></i> Import</a>
+      <a href="{% url 'import_sample' c.key %}" class="h-10 px-3 inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-700 text-xs font-bold" title="Download a sample file"><i class="fa-solid fa-download mr-1.5"></i> Sample</a>
+    </div>
+  </div>
+{% endfor %}
+</div>
+<div class="grid lg:grid-cols-3 gap-4">
+  <div class="lg:col-span-2 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 overflow-x-auto">
+    <h2 class="font-black text-sm mb-3">Recent imports</h2>
+    <table class="w-full text-xs"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-2 pr-3">When</th><th class="py-2 pr-3">What</th><th class="py-2 pr-3">File</th><th class="py-2 pr-3">Result</th><th></th></tr></thead><tbody>
+    {% for j in jobs %}<tr class="border-t border-slate-100 dark:border-slate-700"><td class="py-2 pr-3 text-slate-500 whitespace-nowrap">{{ j.created_at|date:"d M, h:i A" }}</td><td class="py-2 pr-3 font-bold capitalize">{{ j.kind }}</td><td class="py-2 pr-3 truncate max-w-[180px]">{{ j.filename }}</td>
+      <td class="py-2 pr-3">{% if j.status == 'done' %}<span class="text-emerald-500 font-bold">{{ j.result.counts.created }} new</span> &middot; {{ j.result.counts.updated }} updated &middot; {{ j.result.counts.skipped }} skipped{% if j.result.counts.errors %} &middot; <span class="text-rose-500 font-bold">{{ j.result.counts.errors }} errors</span>{% endif %}{% elif j.status == 'failed' %}<span class="text-rose-500 font-bold">cancelled (errors)</span>{% else %}<span class="text-slate-400">not finished</span>{% endif %}</td>
+      <td class="py-2 text-right"><a href="{% if j.status == 'done' or j.status == 'failed' %}{% url 'import_result' j.pk %}{% else %}{% url 'import_map' j.pk %}{% endif %}" class="font-bold text-amber-600">Open</a></td></tr>
+    {% empty %}<tr><td colspan="5" class="py-8 text-center text-slate-400">Nothing imported yet.</td></tr>{% endfor %}</tbody></table>
+  </div>
+  <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5">
+    <h2 class="font-black text-sm mb-3">Saved mappings</h2>
+    {% for m in saved %}<div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-700 text-xs"><div><div class="font-bold">{{ m.name }}</div><div class="text-slate-400 capitalize">{{ m.kind }}</div></div>
+      <form method="post" action="{% url 'import_mapping_delete' m.pk %}" onsubmit="return confirm('Delete this saved mapping?')">{% csrf_token %}<button class="text-rose-500 font-bold">Delete</button></form></div>
+    {% empty %}<p class="text-xs text-slate-400">When you map a file you can save the mapping, so the next file with the same columns is one click.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

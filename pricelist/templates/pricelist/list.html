@@ -1,0 +1,107 @@
+{% extends "sku_manager/base.html" %}
+{% block title %}Price Lists{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Price Lists</h1>
+    <p class="text-xs text-slate-500 mt-1">{{ total }} product{{ total|pluralize }} &middot; change any price, then press <b>Save</b> on the row or <b>Save all changes</b>. The cashier sees these prices straight away.</p>
+  </div>
+  <button id="saveAll" type="button" disabled class="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-black disabled:opacity-40 disabled:cursor-not-allowed">
+    <i class="fa-solid fa-floppy-disk"></i> Save all changes <span id="dirtyCount" class="hidden px-1.5 rounded-full bg-slate-950 text-amber-400 text-[11px]"></span>
+  </button>
+</div>
+
+<form method="get" class="flex flex-wrap gap-2 text-xs">
+  <input name="q" value="{{ q }}" placeholder="Search product, SKU, colour..." class="h-10 w-72 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold">
+  <select name="category" class="h-10 px-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold">
+    <option value="">All categories</option>{% for c in categories %}<option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c }}</option>{% endfor %}
+  </select>
+  <label class="h-10 px-3 inline-flex items-center gap-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold"><input type="checkbox" name="missing" value="1" {% if missing %}checked{% endif %}> A price is missing</label>
+  <button class="h-10 px-4 rounded-xl bg-amber-500 text-slate-950 font-black">Search</button>
+</form>
+
+<div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-3 sm:p-5 overflow-x-auto">
+<table class="w-full text-xs" id="priceTable">
+  <thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400">
+    <th class="py-2 pr-3">Product</th><th class="py-2 pr-3 text-right">Stock</th>
+    <th class="py-2 pr-2 text-rose-500">Buying (&#8377;)</th><th class="py-2 pr-2 text-amber-500">Wholesale (&#8377;)</th>
+    <th class="py-2 pr-2 text-emerald-500">Reselling (&#8377;)</th><th class="py-2 pr-2 text-sky-500">Retail (&#8377;)</th><th class="py-2 text-right"></th></tr></thead>
+  <tbody>
+  {% for p in page %}
+  <tr class="border-t border-slate-100 dark:border-slate-700" data-id="{{ p.pk }}">
+    <td class="py-2 pr-3"><div class="font-bold text-sm">{{ p.name }}</div><div class="mono text-[10px] text-slate-400">{{ p.sku }}</div></td>
+    <td class="py-2 pr-3 text-right mono">{{ p.stock }}</td>
+    {% for f, label in fields %}
+    <td class="py-2 pr-2"><input type="number" step="0.01" min="0" inputmode="decimal" aria-label="{{ label }} price of {{ p.name }}" data-f="{{ f }}"
+        value="{% if f == 'purchase_price' %}{{ p.purchase_price|stringformat:'.2f' }}{% elif f == 'wholesale_price' %}{{ p.wholesale_price|stringformat:'.2f' }}{% elif f == 'selling_price' %}{{ p.selling_price|stringformat:'.2f' }}{% else %}{{ p.retail_price|stringformat:'.2f' }}{% endif %}"
+        class="pin w-24 h-9 px-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 mono font-bold text-right"></td>
+    {% endfor %}
+    <td class="py-2 text-right whitespace-nowrap"><span class="rowmsg text-[10px] font-bold mr-2"></span><button type="button" class="rowsave h-9 px-3 rounded-lg bg-slate-100 dark:bg-slate-700 font-black text-[11px] disabled:opacity-30" disabled><i class="fa-solid fa-floppy-disk"></i> Save</button></td>
+  </tr>
+  {% empty %}<tr><td colspan="7" class="py-10 text-center text-slate-400">No products match.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if page.paginator.num_pages > 1 %}
+<div class="flex items-center justify-between text-xs font-bold">
+  <span class="text-slate-500">Page {{ page.number }} of {{ page.paginator.num_pages }} &middot; save before changing page</span>
+  <div class="flex gap-2">
+    {% if page.has_previous %}<a class="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800" href="?{{ qs }}&page={{ page.previous_page_number }}">Previous</a>{% endif %}
+    {% if page.has_next %}<a class="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800" href="?{{ qs }}&page={{ page.next_page_number }}">Next</a>{% endif %}
+  </div>
+</div>
+{% endif %}
+<div id="toast" class="fixed bottom-5 right-5 z-50 hidden px-4 py-3 rounded-xl text-xs font-bold shadow-xl"></div>
+
+<script>
+(function () {
+  var FIELDS = ['purchase_price', 'wholesale_price', 'selling_price', 'retail_price'];
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#priceTable tbody tr[data-id]'));
+  var saveAll = document.getElementById('saveAll'), badge = document.getElementById('dirtyCount'), toastEl = document.getElementById('toast');
+  function csrf() { var m = document.cookie.match(/csrftoken=([^;]+)/); return m ? m[1] : ''; }
+  function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : Math.round(n * 100) / 100; }
+  function inputs(tr) { return Array.prototype.slice.call(tr.querySelectorAll('input.pin')); }
+  function isDirty(tr) { return inputs(tr).some(function (i) { return num(i.value) !== num(i.dataset.orig); }); }
+  function body(tr) { var o = { id: tr.dataset.id }; inputs(tr).forEach(function (i) { o[i.dataset.f] = i.value; }); return o; }
+  function toast(msg, ok) {
+    toastEl.textContent = msg; toastEl.className = 'fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl text-xs font-bold shadow-xl ' + (ok ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white');
+    clearTimeout(toast.t); toast.t = setTimeout(function () { toastEl.classList.add('hidden'); }, 3500);
+  }
+  function refresh() {
+    var n = 0;
+    rows.forEach(function (tr) {
+      var d = isDirty(tr); if (d) n++;
+      tr.classList.toggle('bg-amber-50', d); tr.classList.toggle('dark:bg-amber-500/10', d);
+      tr.querySelector('.rowsave').disabled = !d;
+      if (d) tr.querySelector('.rowmsg').textContent = '';
+    });
+    saveAll.disabled = n === 0; badge.textContent = n; badge.classList.toggle('hidden', n === 0);
+  }
+  rows.forEach(function (tr) { inputs(tr).forEach(function (i) { i.dataset.orig = i.value; i.addEventListener('input', refresh);
+    i.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); if (isDirty(tr)) send([tr]); } }); });
+    tr.querySelector('.rowsave').addEventListener('click', function () { send([tr]); }); });
+  saveAll.addEventListener('click', function () { send(rows.filter(isDirty)); });
+
+  function send(list) {
+    if (!list.length) return;
+    saveAll.disabled = true; list.forEach(function (tr) { tr.querySelector('.rowsave').disabled = true; });
+    fetch('{% url "price_save" %}', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+      body: JSON.stringify({ rows: list.map(body) }) })
+      .then(function (r) { return r.json().then(function (j) { return j; }); })
+      .then(function (j) {
+        var byId = {}; rows.forEach(function (tr) { byId[tr.dataset.id] = tr; });
+        (j.saved || []).forEach(function (s) { var tr = byId[s.id]; if (!tr) return;
+          inputs(tr).forEach(function (i) { i.value = parseFloat(s[i.dataset.f]).toFixed(2); i.dataset.orig = i.value; i.classList.remove('border-rose-500'); });
+          var m = tr.querySelector('.rowmsg'); m.textContent = 'Saved'; m.className = 'rowmsg text-[10px] font-bold mr-2 text-emerald-600'; });
+        (j.errors || []).forEach(function (e) { var tr = byId[e.id]; if (!tr) return;
+          var m = tr.querySelector('.rowmsg'); m.textContent = e.message; m.className = 'rowmsg text-[10px] font-bold mr-2 text-rose-500'; });
+        toast(j.message || 'Saved', j.ok); refresh();
+      })
+      .catch(function () { toast('Could not save - check your connection and try again', false); refresh(); });
+  }
+  window.addEventListener('beforeunload', function (e) { if (rows.some(isDirty)) { e.preventDefault(); e.returnValue = ''; } });
+  refresh();
+})();
+</script>
+{% endblock %}

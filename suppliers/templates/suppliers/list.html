@@ -1,0 +1,31 @@
+{% extends "sku_manager/base.html" %}
+{% block title %}Suppliers{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-3">
+  <div><h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Suppliers</h1><p class="text-xs text-slate-500 mt-1">{{ total }} supplier{{ total|pluralize }} &middot; each stock batch can have its own supplier.</p></div>
+  <div class="flex items-center gap-2">
+    <a href="{% url "import_start" "suppliers" %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold"><i class="fa-solid fa-file-import"></i> Import</a>
+    <a href="{% url 'supplier_new' %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black"><i class="fa-solid fa-plus"></i> Add supplier</a>
+  </div>
+</div>
+<form method="get" class="flex flex-wrap gap-2 text-xs">
+  <input name="q" value="{{ q }}" placeholder="Search name, phone, city, GST..." class="h-10 w-72 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold">
+  <select name="show" class="h-10 px-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-bold">
+    <option value="active" {% if show == 'active' %}selected{% endif %}>Active</option><option value="disabled" {% if show == 'disabled' %}selected{% endif %}>Disabled</option><option value="all" {% if show == 'all' %}selected{% endif %}>All</option></select>
+  <button class="h-10 px-4 rounded-xl bg-amber-500 text-slate-950 font-black">Search</button>
+</form>
+<div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 overflow-x-auto">
+<table class="w-full text-xs"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-2 pr-3">Supplier</th><th class="py-2 pr-3">Contact</th><th class="py-2 pr-3">City</th><th class="py-2 pr-3 text-right">Batches</th><th class="py-2 pr-3 text-right">Units</th><th class="py-2 text-right">Actions</th></tr></thead><tbody>
+{% for s in suppliers %}<tr class="border-t border-slate-100 dark:border-slate-700 {% if not s.is_active %}opacity-50{% endif %}">
+  <td class="py-3 pr-3"><a href="{% url 'supplier_detail' s.pk %}" class="font-bold text-sm hover:text-amber-500">{{ s.name }}</a>{% if s.gstin %}<div class="mono text-[10px] text-slate-400">GST {{ s.gstin }}</div>{% endif %}</td>
+  <td class="py-3 pr-3">{{ s.contact_person }}{% if s.phone %}<div class="mono text-slate-500">{{ s.phone }}</div>{% endif %}</td>
+  <td class="py-3 pr-3">{{ s.city }}</td>
+  <td class="py-3 pr-3 text-right mono">{{ s.batch_count }}</td><td class="py-3 pr-3 text-right mono">{{ s.units|default:0 }}</td>
+  <td class="py-3 text-right whitespace-nowrap">
+    <a href="{% url 'supplier_edit' s.pk %}" class="inline-flex px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 font-bold">Edit</a>
+    <form method="post" action="{% url 'supplier_toggle' s.pk %}" class="inline">{% csrf_token %}<button class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 font-bold">{% if s.is_active %}Disable{% else %}Enable{% endif %}</button></form>
+    {% if not s.batch_count %}<form method="post" action="{% url 'supplier_delete' s.pk %}" class="inline" onsubmit="return confirm('Delete {{ s.name|escapejs }}?')">{% csrf_token %}<button class="px-2.5 py-1.5 rounded-lg bg-rose-500/10 text-rose-500 font-bold">Delete</button></form>{% endif %}
+  </td></tr>
+{% empty %}<tr><td colspan="6" class="py-12 text-center text-slate-400"><i class="fa-solid fa-truck-field text-3xl mb-2 block"></i>No suppliers yet. Add one, import a list, or add them straight from the stock form.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

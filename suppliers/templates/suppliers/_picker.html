@@ -1,0 +1,60 @@
+{# Searchable supplier dropdown.  {% include "suppliers/_picker.html" with selected=supplier_obj %}  -> posts "supplier_id" #}
+<div class="sup-picker relative" data-search="{% url 'supplier_search_api' %}" data-add="{% url 'supplier_quick_add_api' %}">
+  <label class="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1"><i class="fa-solid fa-truck-field text-amber-500 mr-1"></i> Supplier <span class="text-slate-400 normal-case font-medium">(who this batch was bought from)</span></label>
+  <input type="hidden" name="supplier_id" class="sup-id" value="{{ selected.pk|default:'' }}">
+  <div class="relative">
+    <input type="text" class="sup-input w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-3.5 pr-16 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+      placeholder="Search supplier by name, phone or city..." autocomplete="off" value="{{ selected.name|default:'' }}">
+    <button type="button" class="sup-clear absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 {% if not selected %}hidden{% endif %}" title="Remove supplier"><i class="fa-solid fa-xmark"></i></button>
+    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
+  </div>
+  <div class="sup-list hidden absolute z-30 mt-1 w-full max-h-64 overflow-y-auto rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl text-xs"></div>
+</div>
+<script>
+(function () {
+  var root = document.currentScript.previousElementSibling;
+  var input = root.querySelector('.sup-input'), hid = root.querySelector('.sup-id'), list = root.querySelector('.sup-list'), clear = root.querySelector('.sup-clear');
+  var chosen = input.value, timer, items = [], cursor = -1, lastQuery = null;
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
+  function csrf() { var m = document.cookie.match(/csrftoken=([^;]+)/); if (m) return m[1]; var f = document.querySelector('input[name=csrfmiddlewaretoken]'); return f ? f.value : ''; }
+  function pick(it) { hid.value = it.id; input.value = it.name; chosen = it.name; clear.classList.remove('hidden'); close(); }
+  function close() { list.classList.add('hidden'); cursor = -1; }
+  function render(data, q) {
+    items = data.results; var html = '';
+    items.forEach(function (it, i) {
+      html += '<button type="button" data-i="' + i + '" class="sup-opt w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-3 hover:bg-amber-500/10 ' + (i === cursor ? 'bg-amber-500/10' : '') + '"><span class="font-bold">' + esc(it.name) + '</span><span class="text-slate-400 mono text-[10px] truncate">' + esc([it.phone, it.city].filter(Boolean).join(' · ')) + '</span></button>';
+    });
+    if (q && !data.exact) html += '<button type="button" class="sup-new w-full text-left px-3.5 py-2.5 border-t border-slate-100 dark:border-slate-700 font-bold text-amber-600 hover:bg-amber-500/10"><i class="fa-solid fa-plus mr-1.5"></i> Add &ldquo;' + esc(q) + '&rdquo; as a new supplier</button>';
+    if (!html) html = '<div class="px-3.5 py-3 text-slate-400">No suppliers yet - type a name to add one.</div>';
+    list.innerHTML = html; list.classList.remove('hidden');
+  }
+  function search(q) {
+    lastQuery = q;
+    fetch(root.dataset.search + '?q=' + encodeURIComponent(q), {credentials: 'same-origin'}).then(function (r) { return r.json(); })
+      .then(function (d) { if (q === lastQuery) render(d, q); }).catch(function () {});
+  }
+  input.addEventListener('focus', function () { input.select(); search(input.value === chosen ? '' : input.value.trim()); });
+  input.addEventListener('input', function () {
+    if (hid.value && input.value !== chosen) { hid.value = ''; clear.classList.add('hidden'); }   // typing again un-selects
+    clearTimeout(timer); var q = input.value.trim(); timer = setTimeout(function () { search(q); }, 150);
+  });
+  input.addEventListener('keydown', function (e) {
+    var opts = list.querySelectorAll('.sup-opt');
+    if (e.key === 'ArrowDown') { e.preventDefault(); cursor = Math.min(opts.length - 1, cursor + 1); render({results: items, exact: true}, ''); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); cursor = Math.max(0, cursor - 1); render({results: items, exact: true}, ''); }
+    else if (e.key === 'Enter') { if (!list.classList.contains('hidden')) { e.preventDefault(); if (cursor >= 0 && items[cursor]) pick(items[cursor]); else if (items.length === 1) pick(items[0]); } }
+    else if (e.key === 'Escape') { close(); }
+  });
+  list.addEventListener('mousedown', function (e) {
+    var o = e.target.closest('.sup-opt'), n = e.target.closest('.sup-new');
+    if (o) { e.preventDefault(); pick(items[parseInt(o.dataset.i, 10)]); }
+    else if (n) {
+      e.preventDefault();
+      fetch(root.dataset.add, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()}, body: JSON.stringify({name: input.value})})
+        .then(function (r) { return r.json(); }).then(function (d) { if (d.ok) pick(d); else alert(d.message || 'Could not add the supplier'); });
+    }
+  });
+  clear.addEventListener('click', function () { hid.value = ''; input.value = ''; chosen = ''; clear.classList.add('hidden'); input.focus(); });
+  document.addEventListener('click', function (e) { if (!root.contains(e.target)) { close(); if (hid.value) input.value = chosen; else input.value = ''; } });
+})();
+</script>

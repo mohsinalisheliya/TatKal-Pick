@@ -21,6 +21,10 @@ from suppliers.models import Supplier
 U = get_user_model()
 
 
+def Ux(name):
+    return U.objects.get(username=name)
+
+
 class Base(TestCase):
     def setUp(self):
         call_command('create_user', 'boss', 'bosspass', '--role', 'master')
@@ -28,9 +32,10 @@ class Base(TestCase):
         call_command('create_user', 'dina', 'dinapass', '--role', 'operator')
         call_command('create_user', 'ravi', 'ravipass', '--role', 'cashier', '--tiers', 'reselling,wholesale')
         call_command('create_user', 'cost', 'costpass', '--role', 'cashier', '--tiers', 'buying')
+        call_command('create_user', 'shop', 'shoppass', '--role', 'cashier', '--tiers', 'retail,reselling')
         self.boss, self.adam, self.dina, self.ravi, self.cost = (U.objects.get(username=n) for n in ('boss', 'adam', 'dina', 'ravi', 'cost'))
-        self.ring = JewelrySKU.objects.create(name='Ring', category='RNG', purchase_price=110, wholesale_price=121, selling_price=140)
-        StockBatch.objects.create(sku=self.ring, batch_no='A', quantity=20, purchase_price=110, wholesale_price=121, selling_price=140)
+        self.ring = JewelrySKU.objects.create(name='Ring', category='RNG', purchase_price=110, wholesale_price=121, selling_price=140, retail_price=199)
+        StockBatch.objects.create(sku=self.ring, batch_no='A', quantity=20, purchase_price=110, wholesale_price=121, selling_price=140, retail_price=199)
         self.ring.sync_stock_from_batches()
 
     def sell(self, tier, qty=1, **kw):
@@ -43,7 +48,7 @@ class SeparationTests(Base):
     PATHS = {
         '/': ('admin',), '/inventory/': ('admin',), '/products/': ('admin',), '/analytics/products/': ('admin',),
         '/export/': ('admin',), '/suppliers/': ('admin',), '/import/': ('admin',),
-        '/pos/': ('cashier',), '/pos/sales/': ('cashier',), '/pos/api/products/': ('cashier',),
+        '/prices/': ('admin',), '/pos/': ('cashier',), '/pos/sales/': ('cashier',), '/pos/api/products/': ('cashier',),
         '/master/': ('master',), '/master/users/': ('master',), '/master/settings/': ('master',), '/master/logs/': ('master',),
         '/scanner/': ('operator',), '/orders/scan-pdf/': ('operator',), '/cancellations/': ('operator',),
         '/orders/history/': ('operator',), '/orders/batch/': ('operator',),
@@ -119,10 +124,24 @@ class CounterTests(Base):
         self.assertEqual(self.sell('reselling').status_code, 400)
         self.assertEqual(self.sell('buying', discount_percent=5).status_code, 400)
 
-    def test_old_names_from_version_one_still_work(self):
-        self.assertEqual(parse_tiers('retail,reseller,wholesale'), ['reselling', 'wholesale'])
+    def test_retail_is_its_own_price_list(self):
+        self.client.force_login(Ux('shop'))
+        self.assertEqual(self.client.get('/pos/api/products/').json()['products'][0]['prices'], {'retail': 199.0, 'reselling': 140.0})
+        self.assertEqual(self.sell('retail').json()['total'], '199.00')
+        self.assertEqual(self.sell('reselling').json()['total'], '140.00')
+        self.assertEqual(self.sell('wholesale').status_code, 400)
+        self.client.force_login(self.ravi)                                   # ravi has no retail
+        self.assertEqual(self.sell('retail').status_code, 400)
+
+    def test_unset_price_cannot_be_sold(self):
+        JewelrySKU.objects.filter(pk=self.ring.pk).update(retail_price=0)
+        self.client.force_login(Ux('shop'))
+        r = self.sell('retail'); self.assertEqual(r.status_code, 400); self.assertIn('price', r.json()['message'])
+
+    def test_old_reseller_name_still_works(self):
+        self.assertEqual(parse_tiers('reseller,wholesale,retail'), ['reselling', 'wholesale', 'retail'])
         self.client.force_login(self.ravi)
-        r = self.sell('retail'); self.assertEqual(r.status_code, 200, r.content); self.assertTrue(r.json()['ok'])   # an old browser tab
+        r = self.sell('reseller'); self.assertEqual(r.status_code, 200, r.content); self.assertTrue(r.json()['ok'])
 
     def test_discount_cap_and_stock(self):
         self.client.force_login(self.ravi)
@@ -188,6 +207,17 @@ class MasterTests(Base):
         self.boss.refresh_from_db(); self.assertTrue(self.boss.is_active)
         self.client.post(f'/master/users/{self.boss.pk}/', {'username': 'boss', 'role': 'admin', 'is_active': 'on'})
         self.assertEqual(get_role(U.objects.get(pk=self.boss.pk)), 'master')
+
+    def test_old_settings_address_reaches_master_settings(self):
+        """The Settings link from the old admin app used to say 'belongs to a different account type'."""
+        r = self.client.get('/settings/')
+        self.assertRedirects(r, '/master/settings/', fetch_redirect_response=False)
+        self.assertEqual(self.client.get('/master/settings/').status_code, 200)
+        self.assertContains(self.client.get('/master/'), 'href="/master/settings/"')
+        for u in (self.adam, self.dina, self.ravi):                            # nobody else may open the old one either
+            self.client.force_login(u)
+            self.assertEqual(self.client.get('/settings/').status_code, 302)
+            self.assertNotIn('/master/settings/', self.client.get('/settings/')['Location'])
 
     def test_settings_are_master_only(self):
         r = self.client.post('/master/settings/', {'brand_name': 'MY SHOP', 'tagline': 't', 'currency_symbol': '₹', 'low_stock_threshold': '9',
@@ -486,3 +516,77 @@ class ImportTests(Base):
         for url in ('/import/', '/import/sample/products/', '/import/sample/inventory/', '/import/sample/suppliers/'):
             self.assertEqual(self.client.get(url).status_code, 200, url)
         self.assertEqual(self.client.get('/import/new/bogus/').status_code, 404)
+
+
+# ------------------------------------------------------------------ four prices on stock form + price lists page
+class PriceListTests(Base):
+    def setUp(self):
+        super().setUp(); self.client.force_login(self.adam)
+        self.pen = JewelrySKU.objects.create(name='Pendant', category='NCK')
+        self.url = reverse('stock_action', args=[self.ring.pk])
+
+    def save(self, rows):
+        return self.client.post('/prices/save/', json.dumps({'rows': rows}), content_type='application/json')
+
+    def test_stock_form_has_retail_price(self):
+        html = self.client.get(self.url).content.decode()
+        for label in ('Buying Price', 'Wholesale Price', 'Reselling Price', 'Retail Price'):
+            self.assertIn(label, html)
+        self.client.post(self.url, {'batch_no': 'R1', 'stock_qty': '4', 'purchase_price': '100', 'wholesale_price': '120', 'reselling_price': '150', 'retail_price': '230'})
+        b = self.ring.batches.get(batch_no='R1'); self.assertEqual(b.retail_price, D('230'))
+        self.ring.refresh_from_db(); self.assertEqual((self.ring.selling_price, self.ring.retail_price), (D('150'), D('230')))
+
+    def test_page_lists_products_with_all_four_prices(self):
+        r = self.client.get('/prices/')
+        self.assertContains(r, 'Ring'); self.assertContains(r, 'value="199.00"'); self.assertContains(r, 'Save all changes')
+        self.assertContains(self.client.get('/prices/?q=pend'), 'Pendant'); self.assertNotContains(self.client.get('/prices/?q=pend'), 'value="199.00"')
+        self.assertNotContains(self.client.get('/prices/?missing=1&q=ring'), 'Ring</div>')      # all four set -> not "missing"
+        self.assertContains(self.client.get('/prices/?missing=1'), 'Pendant')
+        self.assertContains(self.client.get('/prices/'), 'Price Lists')
+
+    def test_save_one_and_many(self):
+        r = self.save([{'id': self.ring.pk, 'purchase_price': '100', 'wholesale_price': '130', 'selling_price': '150.5', 'retail_price': '210'},
+                       {'id': self.pen.pk, 'purchase_price': '10', 'wholesale_price': '', 'selling_price': '30', 'retail_price': '45'}]).json()
+        self.assertTrue(r['ok']); self.assertEqual(r['changed'], 2)
+        self.ring.refresh_from_db(); self.pen.refresh_from_db()
+        self.assertEqual((self.ring.purchase_price, self.ring.wholesale_price, self.ring.selling_price, self.ring.retail_price), (D('100'), D('130'), D('150.50'), D('210')))
+        self.assertEqual((self.pen.wholesale_price, self.pen.retail_price), (D('0'), D('45')))
+        self.assertEqual(AuditLog.objects.filter(action='price_update').count(), 2)
+
+    def test_new_prices_survive_a_stock_sync_and_reach_the_counter(self):
+        self.save([{'id': self.ring.pk, 'purchase_price': '100', 'wholesale_price': '130', 'selling_price': '150', 'retail_price': '210'}])
+        self.ring.sync_stock_from_batches(); self.ring.refresh_from_db()
+        self.assertEqual((self.ring.selling_price, self.ring.retail_price), (D('150'), D('210')))   # not put back to 140 / 199
+        self.client.force_login(Ux('shop'))
+        self.assertEqual(self.sell('retail').json()['total'], '210.00')
+
+    def test_bad_rows_are_reported_good_rows_saved(self):
+        r = self.save([{'id': self.ring.pk, 'purchase_price': 'abc', 'wholesale_price': '1', 'selling_price': '1', 'retail_price': '1'},
+                       {'id': self.pen.pk, 'purchase_price': '5', 'wholesale_price': '6', 'selling_price': '7', 'retail_price': '8'},
+                       {'id': 999999, 'purchase_price': '1'},
+                       {'id': self.pen.pk, 'purchase_price': '-4'}]).json()
+        self.assertFalse(r['ok']); self.assertEqual(len(r['errors']), 3)
+        self.ring.refresh_from_db(); self.pen.refresh_from_db()
+        self.assertEqual(self.ring.selling_price, D('140')); self.assertEqual(self.pen.retail_price, D('8'))
+
+    def test_unchanged_row_is_not_logged_and_empty_body_refused(self):
+        self.save([{'id': self.ring.pk, 'purchase_price': '110', 'wholesale_price': '121', 'selling_price': '140', 'retail_price': '199'}])
+        self.assertFalse(AuditLog.objects.filter(action='price_update').exists())
+        self.assertEqual(self.save([]).status_code, 400)
+        self.assertEqual(self.client.post('/prices/save/', 'not json', content_type='application/json').status_code, 400)
+        self.assertEqual(self.client.get('/prices/save/').status_code, 405)
+
+    def test_only_admin(self):
+        for u in (self.boss, self.ravi, self.dina):
+            self.client.force_login(u)
+            self.assertEqual(self.client.get('/prices/').status_code, 302)
+            self.assertEqual(self.save([{'id': self.ring.pk, 'selling_price': '1'}]).status_code, 302)
+        self.ring.refresh_from_db(); self.assertEqual(self.ring.selling_price, D('140'))
+
+    def test_import_accepts_retail_column(self):
+        text = f'SKU ID,Batch,Qty,Retail price\n{self.ring.sku},Z1,3,249\n'
+        self.client.post('/import/new/inventory/', {'file': SimpleUploadedFile('i.csv', text.encode())})
+        job = ImportJob.objects.latest('pk')
+        self.client.post(f'/import/job/{job.pk}/map/', {'map_sku': '0', 'map_batch_no': '1', 'map_quantity': '2', 'map_retail_price': '3'})
+        self.client.post(f'/import/job/{job.pk}/commit/')
+        self.assertEqual(self.ring.batches.get(batch_no='Z1').retail_price, D('249'))

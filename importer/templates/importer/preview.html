@@ -1,0 +1,27 @@
+{% extends "sku_manager/base.html" %}
+{% block title %}Preview import{% endblock %}
+{% block content %}
+<div><a href="{% url 'import_map' job.pk %}" class="text-xs font-bold text-amber-600">&larr; Change the mapping</a>
+<h1 class="text-2xl font-black tracking-tight mt-1 text-slate-900 dark:text-white">Preview &mdash; nothing is saved yet</h1>
+<p class="text-xs text-slate-500 mt-1"><b>{{ job.filename }}</b> &middot; {{ total }} rows checked</p></div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="rounded-2xl p-4 bg-emerald-500/10 border border-emerald-500/30"><div class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Will be created</div><div class="text-3xl font-black mt-1">{{ counts.created }}</div></div>
+  <div class="rounded-2xl p-4 bg-sky-500/10 border border-sky-500/30"><div class="text-[10px] font-bold uppercase tracking-wider text-sky-600">Will be updated</div><div class="text-3xl font-black mt-1">{{ counts.updated }}</div></div>
+  <div class="rounded-2xl p-4 bg-slate-500/10 border border-slate-500/30"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Skipped</div><div class="text-3xl font-black mt-1">{{ counts.skipped }}</div></div>
+  <div class="rounded-2xl p-4 {% if counts.errors %}bg-rose-500/10 border border-rose-500/30{% else %}bg-slate-500/10 border border-slate-500/30{% endif %}"><div class="text-[10px] font-bold uppercase tracking-wider text-rose-500">Problems</div><div class="text-3xl font-black mt-1">{{ counts.errors }}</div></div>
+</div>
+{% if would_abort %}<div class="px-4 py-3 rounded-xl text-xs font-bold bg-rose-500/10 border border-rose-500/30 text-rose-600">"All or nothing" is on and some rows have problems, so importing now would save nothing. Fix the file or change the mapping.</div>
+{% elif counts.errors %}<div class="px-4 py-3 rounded-xl text-xs font-bold bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300">Rows with problems are left out; the good rows are imported. You can download the problem rows afterwards.</div>{% endif %}
+<div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 overflow-x-auto">
+  <table class="w-full text-xs"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-2 pr-3">Row</th><th class="py-2 pr-3">Result</th><th class="py-2">Detail</th></tr></thead><tbody>
+  {% for r in rows %}<tr class="border-t border-slate-100 dark:border-slate-700"><td class="py-2 pr-3 mono text-slate-400">{{ r.n }}</td>
+    <td class="py-2 pr-3"><span class="px-2 py-0.5 rounded-md text-[10px] font-black {% if r.status == 'error' %}bg-rose-500/15 text-rose-500{% elif r.status == 'created' %}bg-emerald-500/15 text-emerald-600{% elif r.status == 'updated' %}bg-sky-500/15 text-sky-600{% else %}bg-slate-500/15 text-slate-500{% endif %}">{{ r.status }}</span></td>
+    <td class="py-2 {% if r.status == 'error' %}text-rose-600 dark:text-rose-300{% endif %}">{{ r.message }}</td></tr>{% endfor %}
+  </tbody></table>
+  <p class="text-[11px] text-slate-400 mt-3">Showing the problem rows first, then a sample of the others.</p>
+</div>
+<form method="post" action="{% url 'import_commit' job.pk %}" class="flex justify-end gap-2">{% csrf_token %}
+  <a href="{% url 'import_map' job.pk %}" class="h-11 px-5 inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold">Back</a>
+  <button {% if would_abort or counts.created|add:counts.updated == 0 %}disabled{% endif %} class="h-11 px-7 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-xs"><i class="fa-solid fa-file-import mr-1.5"></i> Import now</button>
+</form>
+{% endblock %}

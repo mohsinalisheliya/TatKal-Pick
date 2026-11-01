@@ -4,15 +4,6 @@ from django.conf import settings
 from django.db import models
 
 
-class ResellerPrice(models.Model):
-    sku = models.OneToOneField('sku_manager.JewelrySKU', on_delete=models.CASCADE, related_name='reseller_price')
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f'{self.sku} reseller price: {self.price}'
-
-
 class PosSale(models.Model):
     PAYMENT_CHOICES = [('cash', 'Cash'), ('upi', 'UPI'), ('card', 'Card')]
     STATUS_PAID = 'paid'
@@ -27,7 +18,7 @@ class PosSale(models.Model):
     cashier_name = models.CharField(max_length=150, blank=True, default='')
     customer_name = models.CharField(max_length=120, blank=True, default='')
     customer_phone = models.CharField(max_length=20, blank=True, default='')
-    price_list = models.CharField(max_length=10, default='retail')          # retail | reseller | wholesale | buying
+    price_list = models.CharField(max_length=10, default='reselling')       # reselling | wholesale | buying
     payment_method = models.CharField(max_length=10, choices=PAYMENT_CHOICES, default='cash')
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)

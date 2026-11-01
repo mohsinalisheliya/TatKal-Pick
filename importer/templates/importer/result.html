@@ -1,0 +1,21 @@
+{% extends "sku_manager/base.html" %}
+{% block title %}Import finished{% endblock %}
+{% block content %}
+<div><h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-white">{% if job.status == 'failed' %}Import cancelled{% else %}Import finished{% endif %}</h1>
+<p class="text-xs text-slate-500 mt-1"><b>{{ job.filename }}</b> &middot; {{ res.total }} rows</p></div>
+{% if job.status == 'failed' %}<div class="px-4 py-3 rounded-xl text-xs font-bold bg-rose-500/10 border border-rose-500/30 text-rose-600">"All or nothing" was on and some rows had problems, so nothing was saved.</div>{% endif %}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="rounded-2xl p-4 bg-emerald-500/10 border border-emerald-500/30"><div class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Created</div><div class="text-3xl font-black mt-1">{% if job.status == 'failed' %}0{% else %}{{ res.counts.created }}{% endif %}</div></div>
+  <div class="rounded-2xl p-4 bg-sky-500/10 border border-sky-500/30"><div class="text-[10px] font-bold uppercase tracking-wider text-sky-600">Updated</div><div class="text-3xl font-black mt-1">{% if job.status == 'failed' %}0{% else %}{{ res.counts.updated }}{% endif %}</div></div>
+  <div class="rounded-2xl p-4 bg-slate-500/10 border border-slate-500/30"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Skipped</div><div class="text-3xl font-black mt-1">{{ res.counts.skipped }}</div></div>
+  <div class="rounded-2xl p-4 bg-rose-500/10 border border-rose-500/30"><div class="text-[10px] font-bold uppercase tracking-wider text-rose-500">Problems</div><div class="text-3xl font-black mt-1">{{ res.counts.errors }}</div></div>
+</div>
+{% if res.rows %}<div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 overflow-x-auto">
+  <table class="w-full text-xs"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-2 pr-3">Row</th><th class="py-2 pr-3">Result</th><th class="py-2">Detail</th></tr></thead><tbody>
+  {% for r in res.rows %}<tr class="border-t border-slate-100 dark:border-slate-700"><td class="py-2 pr-3 mono text-slate-400">{{ r.n }}</td><td class="py-2 pr-3">{{ r.status }}</td><td class="py-2 {% if r.status == 'error' %}text-rose-600 dark:text-rose-300{% endif %}">{{ r.message }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+<div class="flex flex-wrap gap-2">
+  <a href="{{ after_url }}" class="h-11 px-6 inline-flex items-center rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black">See the {{ spec.title }}</a>
+  {% if res.counts.errors %}<a href="{% url 'import_errors_csv' job.pk %}" class="h-11 px-5 inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold"><i class="fa-solid fa-download mr-1.5"></i> Download problem rows</a>{% endif %}
+  <a href="{% url 'import_center' %}" class="h-11 px-5 inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold">Import something else</a>
+</div>
+{% endblock %}

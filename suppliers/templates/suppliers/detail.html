@@ -1,0 +1,24 @@
+{% extends "sku_manager/base.html" %}
+{% block title %}{{ obj.name }}{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-start justify-between gap-3">
+  <div><a href="{% url 'supplier_list' %}" class="text-xs font-bold text-amber-600">&larr; Suppliers</a>
+  <h1 class="text-2xl font-black tracking-tight mt-1 text-slate-900 dark:text-white">{{ obj.name }}{% if not obj.is_active %} <span class="text-xs px-2 py-1 rounded bg-slate-500 text-white font-sans">DISABLED</span>{% endif %}</h1>
+  <p class="text-xs text-slate-500 mt-1">{{ obj.contact_person }}{% if obj.phone %} &middot; {{ obj.phone }}{% endif %}{% if obj.alt_phone %} / {{ obj.alt_phone }}{% endif %}{% if obj.email %} &middot; {{ obj.email }}{% endif %}</p>
+  <p class="text-xs text-slate-500">{{ obj.address }}{% if obj.city %}, {{ obj.city }}{% endif %}{% if obj.state %}, {{ obj.state }}{% endif %}{% if obj.gstin %} &middot; GST {{ obj.gstin }}{% endif %}</p>
+  {% if obj.notes %}<p class="text-xs text-slate-400 mt-1">{{ obj.notes }}</p>{% endif %}</div>
+  <a href="{% url 'supplier_edit' obj.pk %}" class="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold"><i class="fa-solid fa-pen"></i> Edit</a>
+</div>
+<div class="grid grid-cols-3 gap-3 max-w-2xl">
+  <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Batches</div><div class="text-2xl font-black mt-1">{{ batch_total }}</div></div>
+  <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Units left</div><div class="text-2xl font-black mt-1">{{ units }}</div></div>
+  <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4"><div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Stock value</div><div class="text-2xl font-black mt-1">&#8377;{{ value|floatformat:2 }}</div></div>
+</div>
+<div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 overflow-x-auto">
+<table class="w-full text-xs"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Batch</th><th class="py-2 pr-3">Product</th><th class="py-2 pr-3 text-right">Left</th><th class="py-2 text-right">Buying price</th></tr></thead><tbody>
+{% for b in batches %}<tr class="border-t border-slate-100 dark:border-slate-700"><td class="py-2.5 pr-3 text-slate-500">{{ b.created_at|date:"d M Y" }}</td><td class="py-2.5 pr-3 mono font-bold">{{ b.batch_no }}</td>
+  <td class="py-2.5 pr-3"><a href="{% url 'product_batches' b.sku_id %}" class="font-bold hover:text-amber-500">{{ b.sku.name }}</a><div class="mono text-[10px] text-slate-400">{{ b.sku.sku }}</div></td>
+  <td class="py-2.5 pr-3 text-right mono">{{ b.quantity }}</td><td class="py-2.5 text-right mono">&#8377;{{ b.purchase_price }}</td></tr>
+{% empty %}<tr><td colspan="5" class="py-10 text-center text-slate-400">No batches linked to this supplier yet.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

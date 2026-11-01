@@ -1,0 +1,65 @@
+{% extends "sku_manager/base.html" %}
+{% block title %}Map columns{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-3">
+  <div><a href="{% url 'import_start' job.kind %}" class="text-xs font-bold text-amber-600">&larr; Choose another file</a>
+  <h1 class="text-2xl font-black tracking-tight mt-1 text-slate-900 dark:text-white">Match your columns &mdash; {{ spec.title }}</h1>
+  <p class="text-xs text-slate-500 mt-1"><b>{{ job.filename }}</b> &middot; {{ total }} data rows &middot; {{ headers|length }} columns</p></div>
+  {% if saved %}<div class="flex items-center gap-2 text-xs"><span class="font-bold text-slate-400">Use saved mapping</span>
+    {% for m in saved %}<a href="?use={{ m.pk }}" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold hover:bg-amber-500 hover:text-slate-950">{{ m.name }}</a>{% endfor %}</div>{% endif %}
+</div>
+
+<div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-4 overflow-x-auto">
+  <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">First rows of your file</div>
+  <table class="text-[11px] w-full"><thead><tr>{% for h in headers %}<th class="text-left py-1.5 pr-4 font-black text-amber-600 whitespace-nowrap">{{ h }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for r in sample %}<tr class="border-t border-slate-100 dark:border-slate-700">{% for c in r %}<td class="py-1.5 pr-4 whitespace-nowrap text-slate-600 dark:text-slate-300 max-w-[180px] truncate">{{ c }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
+</div>
+
+<form method="post" class="space-y-4">
+  {% csrf_token %}
+  <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5">
+    <div class="grid grid-cols-12 gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 pb-2 border-b border-slate-100 dark:border-slate-700"><div class="col-span-4">Our field</div><div class="col-span-8">Comes from your column</div></div>
+    {% for g in groups %}
+      {% if g.name %}<div class="pt-4 pb-1 text-[10px] font-black uppercase tracking-widest text-teal-600">{{ g.name }}</div>{% endif %}
+      {% for r in g.rows %}
+      <div class="grid grid-cols-12 gap-3 items-center py-2.5 border-b border-slate-50 dark:border-slate-700/40">
+        <div class="col-span-12 sm:col-span-4"><div class="text-xs font-black">{{ r.f.label }}{% if r.f.required %} <span class="text-rose-500">*</span>{% endif %}</div>{% if r.f.help %}<div class="text-[10px] text-slate-400">{{ r.f.help }}</div>{% endif %}</div>
+        <div class="col-span-12 sm:col-span-8 flex gap-2">
+          <select name="map_{{ r.f.key }}" data-key="{{ r.f.key }}" class="map-sel flex-1 h-10 px-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold">
+            <option value="">&mdash; not in my file &mdash;</option>
+            <option value="__fixed__" {% if r.is_fixed %}selected{% endif %}>Same value for every row&hellip;</option>
+            {% for c in cols %}<option value="{{ c.i }}" {% if r.col == c.i %}selected{% endif %}>{{ c.name }}{% if c.examples %}  &nbsp;(e.g. {{ c.examples }}){% endif %}</option>{% endfor %}
+          </select>
+          <input name="fixed_{{ r.f.key }}" value="{{ r.fixed }}" placeholder="type the value" class="fixed-in {% if not r.is_fixed %}hidden{% endif %} w-44 h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-amber-400 text-xs font-semibold">
+        </div>
+      </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+
+  <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-5 grid md:grid-cols-2 gap-4 text-xs">
+    <div class="space-y-3">
+      <div class="font-black text-sm">Options</div>
+      {% if 'on_duplicate' in options %}<label class="block font-bold text-slate-400 uppercase tracking-wider text-[10px]">If it already exists
+        <select name="on_duplicate" class="mt-1 w-full h-10 px-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold normal-case"><option value="skip" {% if opts.on_duplicate != 'update' %}selected{% endif %}>Skip it (leave the existing one alone)</option><option value="update" {% if opts.on_duplicate == 'update' %}selected{% endif %}>Update it with the values from the file</option></select></label>{% endif %}
+      {% if 'create_suppliers' in options %}<label class="flex items-center gap-2 font-bold"><input type="checkbox" name="create_suppliers" {% if opts.create_suppliers %}checked{% endif %}> Add suppliers that do not exist yet</label>{% endif %}
+      {% if 'create_boxes' in options %}<label class="flex items-center gap-2 font-bold"><input type="checkbox" name="create_boxes" {% if opts.create_boxes %}checked{% endif %}> Add storage boxes that do not exist yet</label>{% endif %}
+      <label class="flex items-start gap-2 font-bold"><input type="checkbox" name="strict" class="mt-0.5" {% if opts.strict %}checked{% endif %}> <span>All or nothing<span class="block font-medium text-slate-400">If even one row has a problem, import nothing.</span></span></label>
+    </div>
+    <div class="space-y-3">
+      <div class="font-black text-sm">Save this mapping</div>
+      <input name="save_as" placeholder="e.g. Shree Traders stock sheet" class="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold">
+      <p class="text-slate-400">Next time, one click applies the same column matching to a new file.</p>
+    </div>
+  </div>
+  <div class="flex justify-end"><button class="h-11 px-7 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs">Preview import <i class="fa-solid fa-arrow-right ml-1.5"></i></button></div>
+</form>
+<script>
+  document.querySelectorAll('.map-sel').forEach(function (s) {
+    s.addEventListener('change', function () {
+      var box = s.parentNode.querySelector('.fixed-in'); var fixed = s.value === '__fixed__';
+      box.classList.toggle('hidden', !fixed); if (fixed) box.focus();
+    });
+  });
+</script>
+{% endblock %}

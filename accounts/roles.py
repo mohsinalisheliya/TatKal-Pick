@@ -4,15 +4,16 @@ from django.conf import settings
 MASTER, ADMIN, OPERATOR, CASHIER = 'master', 'admin', 'operator', 'cashier'
 ROLE_LABELS = {MASTER: 'Master Admin', ADMIN: 'Admin', OPERATOR: 'Dispatch', CASHIER: 'Cashier'}
 
-# The three price lists in your inventory form. They map 1:1 to the batch / product fields:
+# The four price lists in your inventory form. They map 1:1 to the batch / product fields:
 #   buying    -> purchase_price   ("Buying Price")
 #   wholesale -> wholesale_price  ("Wholesale Price")
 #   reselling -> selling_price    ("Reselling Price")
-TIERS = [('retail', 'Retail'), ('reseller', 'Reseller'), ('wholesale', 'Wholesale'), ('buying', 'Buying')]
+#   retail    -> retail_price     ("Retail Price")
+TIERS = [('buying', 'Buying'), ('wholesale', 'Wholesale'), ('reselling', 'Reselling'), ('retail', 'Retail')]
 TIER_KEYS = [k for k, _ in TIERS]
 TIER_LABELS = dict(TIERS)
 # names used by the first version of the counter
-LEGACY_TIERS = {'reselling': 'retail'}
+LEGACY_TIERS = {'reseller': 'reselling'}
 
 DEFAULT_CASHIER_DISCOUNT = getattr(settings, 'POS_MAX_CASHIER_DISCOUNT', 10)
 
@@ -68,14 +69,14 @@ def allowed_tiers(user):
     if get_role(user) != CASHIER:
         return []
     profile = get_profile(user)
-    return (parse_tiers(profile.price_tiers) if profile else []) or ['retail']
+    return (parse_tiers(profile.price_tiers) if profile else []) or ['reselling']
 
 
 def default_tier(user):
     tiers = allowed_tiers(user)
     profile = get_profile(user)
     wanted = normalize_tier(profile.default_tier) if profile else None
-    return wanted if wanted in tiers else (tiers[0] if tiers else 'retail')
+    return wanted if wanted in tiers else (tiers[0] if tiers else 'reselling')
 
 
 def max_discount(user):

@@ -34,8 +34,6 @@ class RoleAccessMiddleware:
         app = match.func.__module__.split('.')[0]
         if app == 'accounts':                 # role_home / operator_home guard themselves
             return True
-        if match.url_name == 'pos_prices' and role in (MASTER, ADMIN):
-            return True
         if role == MASTER:
             return app in ('masteradmin', 'django')
         if role == CASHIER:
@@ -57,7 +55,10 @@ class RoleAccessMiddleware:
                     match = None
                 if match is not None:
                     role = get_role(user)
-                    if not self._allowed(role, match):
+                    old_settings = match.url_name == 'app_settings' and match.func.__module__.split('.')[0] != 'masteradmin'
+                    if old_settings and role == MASTER:
+                        return redirect(reverse('master_settings'))     # old Settings address -> master Settings
+                    if old_settings or not self._allowed(role, match):   # Settings is master-only for everybody else
                         target = reverse(home_name(user))
                         if path != target:
                             messages.error(request, 'That page belongs to a different account type.', fail_silently=True)

@@ -1,0 +1,14 @@
+{% extends "sku_manager/base.html" %}
+{% block title %}Import {{ spec.title }}{% endblock %}
+{% block content %}
+<div><a href="{% url 'import_center' %}" class="text-xs font-bold text-amber-600">&larr; Import data</a>
+<h1 class="text-2xl font-black tracking-tight mt-1 text-slate-900 dark:text-white">Import {{ spec.title }}</h1><p class="text-xs text-slate-500 mt-1 max-w-xl">{{ spec.blurb }}</p></div>
+<form method="post" enctype="multipart/form-data" class="max-w-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-6 space-y-4">
+  {% csrf_token %}
+  <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Excel (.xlsx) or CSV file
+    <input type="file" name="file" required accept=".csv,.xlsx,.xlsm,.txt,.tsv" class="mt-2 block w-full text-xs font-semibold normal-case file:mr-3 file:px-4 file:py-2 file:rounded-xl file:border-0 file:bg-amber-500 file:text-slate-950 file:font-black"></label>
+  <p class="text-xs text-slate-500">The first row must be the column titles. Next you will match your columns to our fields, and see a preview before anything is saved.</p>
+  <div class="flex items-center gap-2"><button class="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs">Upload &amp; continue</button>
+  <a href="{% url 'import_sample' kind %}" class="h-10 px-4 inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-700 text-xs font-bold"><i class="fa-solid fa-download mr-1.5"></i> Sample file</a></div>
+</form>
+{% endblock %}
