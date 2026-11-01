@@ -94,6 +94,18 @@
             value="{% if form_values %}{{ form_values.reselling_price|default:form_values.selling_price }}{% elif is_edit %}{{ selected_batch.selling_price }}{% else %}{{ item.selling_price }}{% endif %}"
             class="w-full bg-slate-50 dark:bg-slate-900 border border-emerald-500/30 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 dark:text-white">
         </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-sky-600 dark:text-sky-400 mb-1">Retail Price (&#8377;)</label>
+          <input type="number" step="0.01" min="0" name="retail_price"
+            value="{% if form_values %}{{ form_values.retail_price }}{% elif is_edit %}{{ selected_batch.retail_price }}{% else %}{{ item.retail_price }}{% endif %}"
+            class="w-full bg-slate-50 dark:bg-slate-900 border border-sky-500/30 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900 dark:text-white">
+        </div>
+      </div>
+
+      <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400" for="supplier-name">Supplier</label>
+        <input id="supplier-name" type="text" name="supplier_name" list="supplier-options" class="sup-picker w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-bold" value="{{ supplier_value }}" placeholder="Search or type a supplier name">
+        <datalist id="supplier-options">{% for s in suppliers %}<option value="{{ s.name }}">{% endfor %}</datalist>
       </div>
 
       <div class="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-700">
