@@ -455,7 +455,7 @@ def product_detail(request, pk):
     sellable_units = sum(batch.quantity for batch in sellable_batches)
     held_units = sum(batch.quantity for batch in held_batches)
     cost_value = sum((batch.quantity * batch.purchase_price for batch in sellable_batches), Decimal('0'))
-    retail_value = sum((batch.quantity * batch.selling_price for batch in sellable_batches), Decimal('0'))
+    retail_value = sum((batch.quantity * batch.retail_price for batch in sellable_batches), Decimal('0'))
 
     if sellable_units == 0:
         stock_state = 'out'
@@ -465,7 +465,7 @@ def product_detail(request, pk):
         stock_state = 'ok'
 
     cost = item.purchase_price
-    mrp = item.selling_price
+    mrp = item.retail_price
     price_map = {price.platform_id: price.price for price in item.platform_prices.all()}
     listing_sku_map = {
         mapping.platform_id: mapping
