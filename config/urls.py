@@ -8,6 +8,9 @@ urlpatterns = [
     path('', include('accounts.urls')),          # login, logout, change password
     path('pos/', include('pos.urls')),
     path('master/', include('masteradmin.urls')),
+    path('suppliers/', include('suppliers.urls')),
+    path('import/', include('importer.urls')),
+    path('prices/', include('pricelist.urls')),
     path('', include('sku_manager.urls')),
 ]
 

@@ -44,6 +44,9 @@ INSTALLED_APPS = [
     "accounts",
     "pos",
     "masteradmin",
+    "suppliers",
+    "importer",
+    "pricelist",
 ]
 
 MIDDLEWARE = [

@@ -45,6 +45,7 @@ class JewelrySKU(models.Model):
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     wholesale_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    retail_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -84,6 +85,7 @@ class JewelrySKU(models.Model):
             self.purchase_price = latest.purchase_price
             self.wholesale_price = latest.wholesale_price
             self.selling_price = latest.selling_price
+            self.retail_price = latest.retail_price
             self.batch_no = latest.batch_no
             if latest.storage_box:
                 self.storage_box = latest.storage_box
@@ -95,6 +97,7 @@ class JewelrySKU(models.Model):
             'purchase_price',
             'wholesale_price',
             'selling_price',
+            'retail_price',
             'batch_no',
             'storage_box',
             'section_name',
@@ -157,11 +160,13 @@ class StockBatch(models.Model):
     ]
 
     sku = models.ForeignKey(JewelrySKU, on_delete=models.CASCADE, related_name='batches')
+    supplier = models.ForeignKey('suppliers.Supplier', on_delete=models.SET_NULL, null=True, blank=True, related_name='batches')
     batch_no = models.CharField(max_length=120)
     quantity = models.PositiveIntegerField(default=0)
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     wholesale_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    retail_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     storage_box = models.ForeignKey(StorageBox, on_delete=models.SET_NULL, null=True, blank=True)
     section_name = models.CharField(max_length=50, blank=True, default='Main Section')
     supplier_name = models.CharField(max_length=100, blank=True, default='Primary Supplier')

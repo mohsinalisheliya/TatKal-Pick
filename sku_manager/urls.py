@@ -48,8 +48,6 @@ urlpatterns = [
     path('packaging/delete/<int:pk>/', views.packaging_delete, name='packaging_delete'),
 
     # Settings & Export
-    path('settings/', views.app_settings_view, name='app_settings'),
-    
     # Naya: Centralized Data Export Center
     path('export/', views.export_center, name='export_center'),
     path('export/inventory/', views.export_inventory_csv, name='export_inventory_csv'),
