@@ -1,7 +1,58 @@
-__pycache__/
-*.py[cod]
+# ---- Secrets (never commit) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+credentials.json
+client_secret*.json
+service-account*.json
+secrets.py
+local_settings.py
+
+# ---- Databases and backups (customer + stock data) ----
 db.sqlite3
+db.sqlite3-journal
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+backups/
+
+# ---- Uploaded files (label PDFs hold customer addresses) ----
+media/
+staticfiles/
+static_root/
+
+# ---- Python environments (this is what made 9,600+ files in your map) ----
+.conda/
 .venv/
 venv/
 env/
-.env
+ENV/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ---- Logs and temp ----
+*.log
+logs/
+tmp/
+*.tmp
+
+# ---- Editors and OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Node / build (if you use Tailwind builds etc.) ----
+node_modules/
+dist/
+build/
