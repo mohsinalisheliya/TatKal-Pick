@@ -12,7 +12,7 @@ urlpatterns = [
     path('import/', include('importer.urls')),
     path('prices/', include('pricelist.urls')),
     path('', include('sku_manager.urls')),
-]
+]     
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
