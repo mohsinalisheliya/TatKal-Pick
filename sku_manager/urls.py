@@ -47,7 +47,10 @@ urlpatterns = [
     path('packaging/', views.packaging_manager, name='packaging_manager'),
     path('packaging/delete/<int:pk>/', views.packaging_delete, name='packaging_delete'),
 
-    # Settings & Export
+    # Legacy URL: middleware redirects Master to /master/settings/ and refuses other roles.
+    path('settings/', views.app_settings_view, name='app_settings'),
+
+    # Export
     # Naya: Centralized Data Export Center
     path('export/', views.export_center, name='export_center'),
     path('export/inventory/', views.export_inventory_csv, name='export_inventory_csv'),
