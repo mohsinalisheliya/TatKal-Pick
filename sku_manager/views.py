@@ -6,7 +6,7 @@ import colorsys
 import re
 import qrcode
 from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from django.core.paginator import Paginator
@@ -43,6 +43,7 @@ from .models import (
     StockBatch,
 )
 from .pdf_orders import LabelParseError, extract_labels
+from suppliers.models import Supplier
 
 DEFAULT_PLATFORMS = ['Flipkart', 'Amazon', 'Meesho', 'Website']
 JEWELRY_CATEGORIES = [
@@ -668,27 +669,59 @@ def stock_action(request, pk):
             'boxes': boxes,
             'platform_rows': platform_rows,
             'all_batches_count': item.batches.count(),
-            'suggested_batch': f"BAT-{datetime.now().strftime('%y%m%d-%H%M')}",
             'form_values': form_values,
             'active_batches_with_stock': active_batches_with_stock,
             'packaging_materials': packaging_materials,
+            'suppliers': Supplier.objects.filter(is_active=True).order_by('name'),
+            'supplier_value': (form_values.get('supplier_name', '') if form_values is not None else
+                               (selected_batch.supplier.name if selected_batch and selected_batch.supplier_id else '')),
             'active_page': 'inventory',
         })
 
     if request.method == 'POST':
-        batch_no = request.POST.get('batch_no', '').strip() or f"BAT-{datetime.now().strftime('%y%m%d%H%M')}"
-        qty_raw = request.POST.get('stock_qty', '0').strip()
-        stock_qty = int(qty_raw) if qty_raw.isdigit() else 0
+        errors = []
+        batch_no = request.POST.get('batch_no', '').strip()
+        if not batch_no:
+            errors.append('Batch number is required.')
+        elif len(batch_no) > 120:
+            errors.append('Batch number must be 120 characters or fewer.')
+        elif item.batches.filter(batch_no__iexact=batch_no).exclude(pk=selected_batch.pk if is_edit else None).exists():
+            errors.append(f"Batch number '{batch_no}' already exists for this product.")
 
-        p_cost = request.POST.get('purchase_price', '').strip()
-        w_cost = request.POST.get('wholesale_price', '').strip()
-        s_price = request.POST.get(
-            'selling_price',
-            request.POST.get('reselling_price', ''),
-        ).strip()
-        purchase_price = Decimal(p_cost) if p_cost else Decimal('0.00')
-        wholesale_price = Decimal(w_cost) if w_cost else Decimal('0.00')
-        selling_price = Decimal(s_price) if s_price else Decimal('0.00')
+        qty_raw = request.POST.get('stock_qty', '').strip()
+        stock_qty = 0
+        if not qty_raw.isdigit() or int(qty_raw) < 1:
+            errors.append('Quantity must be a whole number greater than zero.')
+        else:
+            stock_qty = int(qty_raw)
+
+        def read_price(field, legacy_field=None):
+            raw = request.POST.get(field, request.POST.get(legacy_field, '') if legacy_field else '').strip()
+            try:
+                value = Decimal(raw or '0').quantize(Decimal('0.01'))
+            except (InvalidOperation, ValueError):
+                errors.append(f'{field.replace("_", " ").title()} must be a valid number.')
+                return Decimal('0.00')
+            if value < 0:
+                errors.append(f'{field.replace("_", " ").title()} cannot be negative.')
+            return value
+
+        purchase_price = read_price('purchase_price')
+        wholesale_price = read_price('wholesale_price')
+        selling_price = read_price('reselling_price', 'selling_price')
+        retail_price = read_price('retail_price')
+
+        supplier_id = request.POST.get('supplier_id', '').strip()
+        supplier_name = ' '.join(request.POST.get('supplier_name', '').split())
+        supplier = None
+        if supplier_id:
+            supplier = Supplier.objects.filter(pk=supplier_id, is_active=True).first()
+            if supplier is None:
+                errors.append('That supplier no longer exists or is disabled.')
+        elif supplier_name:
+            supplier = Supplier.objects.filter(name__iexact=supplier_name, is_active=True).first()
+            if supplier is None:
+                errors.append(f'Supplier "{supplier_name}" no longer exists or is disabled.')
 
         box_id = request.POST.get('existing_box_id', '').strip()
         storage_box = StorageBox.objects.filter(pk=box_id).first() if box_id else None
@@ -698,6 +731,19 @@ def stock_action(request, pk):
         # Packaging: any number of materials, each with a qty per product unit
         packaging_wanted = parse_packaging_post(request.POST)
 
+        for platform in platforms:
+            p_val = request.POST.get(f'platform_price_{platform.id}', '').strip()
+            if p_val:
+                try:
+                    if Decimal(p_val) < 0:
+                        raise InvalidOperation
+                except (InvalidOperation, ValueError):
+                    errors.append(f'{platform.name} price must be a non-negative number.')
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+            return render_form(request.POST)
+
         with transaction.atomic():
             if is_edit:
                 batch = selected_batch
@@ -706,6 +752,9 @@ def stock_action(request, pk):
                 batch.purchase_price = purchase_price
                 batch.wholesale_price = wholesale_price
                 batch.selling_price = selling_price
+                batch.retail_price = retail_price
+                batch.supplier = supplier
+                batch.supplier_name = supplier.name if supplier else ''
                 batch.storage_box = storage_box
                 batch.section_name = section_name
                 if stock_qty > 0:
@@ -723,6 +772,9 @@ def stock_action(request, pk):
                     purchase_price=purchase_price,
                     wholesale_price=wholesale_price,
                     selling_price=selling_price,
+                    retail_price=retail_price,
+                    supplier=supplier,
+                    supplier_name=supplier.name if supplier else '',
                     storage_box=storage_box, section_name=section_name,
                     status='active' if stock_qty > 0 else 'disabled',
                     finished_at=timezone.now() if stock_qty == 0 else None,
