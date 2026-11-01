@@ -618,7 +618,7 @@ def stock_action(request, pk):
 
     is_edit = selected_batch is not None
 
-    def render_form(form_values=None):
+    def render_form(form_values=None, form_errors=None):
         price_map = {pp.platform_id: pp.price for pp in item.platform_prices.all()}
         platform_rows = [
             {
@@ -675,6 +675,7 @@ def stock_action(request, pk):
             'suppliers': Supplier.objects.filter(is_active=True).order_by('name'),
             'supplier_value': (form_values.get('supplier_name', '') if form_values is not None else
                                (selected_batch.supplier.name if selected_batch and selected_batch.supplier_id else '')),
+            'form_errors': form_errors or [],
             'active_page': 'inventory',
         })
 
@@ -740,9 +741,7 @@ def stock_action(request, pk):
                 except (InvalidOperation, ValueError):
                     errors.append(f'{platform.name} price must be a non-negative number.')
         if errors:
-            for error in errors:
-                messages.error(request, error)
-            return render_form(request.POST)
+            return render_form(request.POST, errors)
 
         with transaction.atomic():
             if is_edit:
