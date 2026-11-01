@@ -56,12 +56,13 @@
   <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-6 shadow-sm">
     <form method="POST" action="" class="space-y-5">
       {% csrf_token %}
+      {% if form_errors %}<div class="rounded-xl border border-rose-300 bg-rose-50 dark:bg-rose-500/10 px-4 py-3 text-xs text-rose-700 dark:text-rose-300 space-y-1">{% for error in form_errors %}<div><i class="fa-solid fa-circle-exclamation mr-1"></i>{{ error }}</div>{% endfor %}</div>{% endif %}
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1">Batch Number <span class="text-rose-500">*</span></label>
           <input type="text" name="batch_no" required
-            value="{% if form_values %}{{ form_values.batch_no }}{% elif is_edit %}{{ selected_batch.batch_no }}{% else %}{{ suggested_batch }}{% endif %}"
+            value="{% if form_values %}{{ form_values.batch_no }}{% elif is_edit %}{{ selected_batch.batch_no }}{% endif %}"
             class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-amber-600 dark:text-amber-400 focus:outline-none focus:border-amber-500">
         </div>
         <div>
@@ -69,12 +70,12 @@
             <i class="fa-solid fa-boxes-stacked text-amber-500 mr-1"></i> THIS BATCH QUANTITY <span class="text-rose-500">*</span>
           </label>
           <input type="number" min="0" name="stock_qty" required
-            value="{% if form_values %}{{ form_values.stock_qty }}{% elif is_edit %}{{ selected_batch.quantity }}{% else %}10{% endif %}"
+            value="{% if form_values %}{{ form_values.stock_qty }}{% elif is_edit %}{{ selected_batch.quantity }}{% endif %}"
             class="w-full bg-amber-50 dark:bg-slate-900 border border-amber-200 dark:border-amber-500/50 rounded-xl px-3.5 py-2.5 text-sm font-mono font-black text-amber-700 dark:text-amber-400 focus:outline-none focus:border-amber-500">
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <div>
           <label class="block text-xs font-semibold uppercase text-rose-600 dark:text-rose-400 mb-1">Buying Price (₹)</label>
           <input type="number" step="0.01" min="0" name="purchase_price"
