@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 from accounts import audit
 from accounts.decorators import role_required
 
-from . import engine
+from . import engine, samples
 from .kinds import KINDS
 from .models import ImportJob, ImportMapping
 from .parsing import FileProblem, read_table
@@ -194,14 +194,14 @@ def import_errors_csv(request, pk):
 
 @admin_only
 def import_sample(request, kind):
-    spec = _kind(kind)
-    resp = HttpResponse(content_type='text/csv; charset=utf-8')
-    resp['Content-Disposition'] = f'attachment; filename="sample-{kind}.csv"'
-    resp.write('﻿')
-    w = csv.writer(resp)
-    w.writerow(spec['sample_headers'])
-    for r in spec['sample_rows']:
-        w.writerow(r[:len(spec['sample_headers'])])
+    """A complete sample: every column of the importer, example rows, and a 'How to fill' sheet. ?format=csv for CSV."""
+    _kind(kind)
+    if request.GET.get('format') == 'csv':
+        resp = HttpResponse(samples.as_csv(kind), content_type='text/csv; charset=utf-8')
+        resp['Content-Disposition'] = f'attachment; filename="sample-{kind}.csv"'
+        return resp
+    resp = HttpResponse(samples.as_xlsx(kind), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    resp['Content-Disposition'] = f'attachment; filename="sample-{kind}.xlsx"'
     return resp
 
 
