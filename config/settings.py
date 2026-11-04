@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "suppliers",
     "importer",
     "pricelist",
+    "backups",
 ]
 
 MIDDLEWARE = [

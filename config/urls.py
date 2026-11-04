@@ -7,6 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('accounts.urls')),          # login, logout, change password
     path('pos/', include('pos.urls')),
+    path('master/backups/', include('backups.urls')),
     path('master/', include('masteradmin.urls')),
     path('suppliers/', include('suppliers.urls')),
     path('import/', include('importer.urls')),
