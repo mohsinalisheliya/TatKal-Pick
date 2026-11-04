@@ -47,6 +47,9 @@ urlpatterns = [
     path('packaging/', views.packaging_manager, name='packaging_manager'),
     path('packaging/delete/<int:pk>/', views.packaging_delete, name='packaging_delete'),
 
+    # Keep the old URL working; role middleware redirects Master to /master/settings/.
+    path('settings/', views.app_settings_view, name='app_settings'),
+
     # Export
     # Naya: Centralized Data Export Center
     path('export/', views.export_center, name='export_center'),
