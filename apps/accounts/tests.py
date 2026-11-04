@@ -590,3 +590,95 @@ class PriceListTests(Base):
         self.client.post(f'/import/job/{job.pk}/map/', {'map_sku': '0', 'map_batch_no': '1', 'map_quantity': '2', 'map_retail_price': '3'})
         self.client.post(f'/import/job/{job.pk}/commit/')
         self.assertEqual(self.ring.batches.get(batch_no='Z1').retail_price, D('249'))
+
+
+# ------------------------------------------------------------------ complete sample files
+class SampleFileTests(Base):
+    def setUp(self):
+        super().setUp(); self.client.force_login(self.adam)
+        for n in ('Flipkart', 'Amazon', 'Meesho', 'Website', 'Offline'):
+            Platform.objects.get_or_create(name=n)
+
+    def xlsx(self, kind):
+        from openpyxl import load_workbook
+        r = self.client.get(f'/import/sample/{kind}/')
+        self.assertEqual(r.status_code, 200); self.assertIn('spreadsheetml', r['Content-Type'])
+        return load_workbook(io.BytesIO(r.content)), r.content
+
+    def test_products_sample_has_every_column(self):
+        wb, _ = self.xlsx('products')
+        self.assertEqual(wb.sheetnames, ['Data', 'How to fill'])
+        heads = [c.value for c in wb['Data'][1]]
+        for h in ('Product name', 'Category', 'Style', 'Design / model', 'Colour', 'Size', 'Serial number', 'Listed (yes/no)',
+                  'Flipkart seller SKU', 'Meesho seller SKU', 'Offline seller SKU', 'Flipkart selling rate', 'Offline selling rate'):
+            self.assertIn(h, heads)
+        self.assertEqual(len(heads), 8 + 5 + 5)
+        self.assertGreaterEqual(wb['Data'].max_row, 11)
+        guide = {r[0].value: r[1].value for r in wb['How to fill'].iter_rows(min_row=2) if r[1].value}
+        self.assertEqual(guide['Product name'], 'Required'); self.assertEqual(guide['Style'], 'Optional')
+
+    def test_products_sample_imports_cleanly(self):
+        _, raw = self.xlsx('products')
+        before = JewelrySKU.objects.count()
+        self.client.post('/import/new/products/', {'file': SimpleUploadedFile('sample-products.xlsx', raw)})
+        job = ImportJob.objects.latest('pk')
+        from importer import engine
+        headers, _ = engine.load(job)
+        mapping = {k: str(v['col']) for k, v in engine.guess_mapping('products', headers).items()}
+        self.assertEqual(len(mapping), len(headers))                    # every column found its field by itself
+        self.client.post(f'/import/job/{job.pk}/map/', {f'map_{k}': v for k, v in mapping.items()})
+        self.client.post(f'/import/job/{job.pk}/commit/'); job.refresh_from_db()
+        self.assertEqual(job.result['counts'], {'created': 12, 'updated': 0, 'skipped': 0, 'errors': 0}, job.result['errors'][:3])
+        self.assertEqual(JewelrySKU.objects.count(), before + 12)
+        self.assertTrue(JewelrySKU.objects.filter(sku__endswith='-120').exists())      # the explicit serial
+        self.assertFalse(JewelrySKU.objects.get(name='MAANG TIKKA').is_listed)
+        self.assertEqual(MarketplaceListingSKU.objects.filter(sku__name='GOLD BANGLE SET', platform__name='Flipkart').count(), 1)
+
+    def test_inventory_sample_uses_real_skus_and_imports(self):
+        self.run_products()
+        wb, raw = self.xlsx('inventory')
+        rows = list(wb['Data'].iter_rows(min_row=2, values_only=True))
+        skus = {s for s in JewelrySKU.objects.values_list('sku', flat=True)}
+        self.assertTrue(all((r[0] in skus) or r[0] in (None, '') for r in rows))
+        self.client.post('/import/new/inventory/', {'file': SimpleUploadedFile('s.xlsx', raw)})
+        job = ImportJob.objects.latest('pk')
+        from importer import engine
+        headers, _ = engine.load(job)
+        mapping = {k: str(v['col']) for k, v in engine.guess_mapping('inventory', headers).items()}
+        self.assertEqual(len(mapping), len(headers))
+        self.client.post(f'/import/job/{job.pk}/map/', {**{f'map_{k}': v for k, v in mapping.items()}, 'create_suppliers': 'on', 'create_boxes': 'on'})
+        self.client.post(f'/import/job/{job.pk}/commit/'); job.refresh_from_db()
+        self.assertEqual(job.result['counts'], {'created': 6, 'updated': 0, 'skipped': 0, 'errors': 0}, job.result['errors'][:3])
+        self.assertEqual(Supplier.objects.count(), 5)
+
+    def test_suppliers_sample_imports_and_phone_stays_text(self):
+        wb, raw = self.xlsx('suppliers')
+        self.assertEqual(wb['Data']['C2'].value, '9876543210'); self.assertEqual(wb['Data']['C2'].number_format, '@')
+        self.client.post('/import/new/suppliers/', {'file': SimpleUploadedFile('s.xlsx', raw)})
+        job = ImportJob.objects.latest('pk')
+        from importer import engine
+        headers, _ = engine.load(job)
+        mapping = {k: str(v['col']) for k, v in engine.guess_mapping('suppliers', headers).items()}
+        self.assertEqual(len(mapping), 10)
+        self.client.post(f'/import/job/{job.pk}/map/', {f'map_{k}': v for k, v in mapping.items()})
+        self.client.post(f'/import/job/{job.pk}/commit/'); job.refresh_from_db()
+        self.assertEqual(job.result['counts']['created'], 5)
+        self.assertEqual(Supplier.objects.get(name='Jai Ambe Jewels').alt_phone, '9898054321')
+
+    def test_csv_version_and_buttons(self):
+        for kind in ('products', 'inventory', 'suppliers'):
+            r = self.client.get(f'/import/sample/{kind}/?format=csv')
+            self.assertEqual(r.status_code, 200); self.assertIn('text/csv', r['Content-Type'])
+            self.assertGreaterEqual(len(r.content.decode('utf-8-sig').splitlines()), 4)
+        self.assertContains(self.client.get('/import/new/products/'), 'Sample Excel')
+        self.assertContains(self.client.get('/import/new/products/'), 'format=csv')
+
+    def run_products(self):
+        _, raw = self.xlsx('products')
+        self.client.post('/import/new/products/', {'file': SimpleUploadedFile('p.xlsx', raw)})
+        job = ImportJob.objects.latest('pk')
+        from importer import engine
+        headers, _ = engine.load(job)
+        m = {k: str(v['col']) for k, v in engine.guess_mapping('products', headers).items()}
+        self.client.post(f'/import/job/{job.pk}/map/', {f'map_{k}': v for k, v in m.items()})
+        self.client.post(f'/import/job/{job.pk}/commit/')

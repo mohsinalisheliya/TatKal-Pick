@@ -35,13 +35,13 @@ class RoleAccessMiddleware:
         if app == 'accounts':                 # role_home / operator_home guard themselves
             return True
         if role == MASTER:
-            return app in ('masteradmin', 'django')
+            return app in ('masteradmin', 'backups', 'django')
         if role == CASHIER:
             return app == 'pos'
         if role == OPERATOR:
             return match.url_name in OPERATOR_URL_NAMES
         if role == ADMIN:
-            return app not in ('masteradmin', 'pos', 'django') and match.url_name not in OPERATOR_URL_NAMES
+            return app not in ('masteradmin', 'backups', 'pos', 'django') and match.url_name not in OPERATOR_URL_NAMES
         return False
 
     def __call__(self, request):

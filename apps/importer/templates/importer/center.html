@@ -11,7 +11,7 @@
     <p class="text-xs text-slate-500 mt-1 flex-1">{{ c.blurb }}</p>
     <div class="flex items-center gap-2 mt-5">
       <a href="{% url 'import_start' c.key %}" class="flex-1 text-center h-10 leading-10 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black"><i class="fa-solid fa-file-import mr-1"></i> Import</a>
-      <a href="{% url 'import_sample' c.key %}" class="h-10 px-3 inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-700 text-xs font-bold" title="Download a sample file"><i class="fa-solid fa-download mr-1.5"></i> Sample</a>
+      <a href="{% url 'import_sample' c.key %}" class="h-10 px-3 inline-flex items-center rounded-xl bg-slate-100 dark:bg-slate-700 text-xs font-bold" title="Excel sample with every column and a How-to-fill sheet"><i class="fa-solid fa-file-excel mr-1.5"></i> Sample</a>
     </div>
   </div>
 {% endfor %}

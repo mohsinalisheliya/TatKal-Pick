@@ -30,6 +30,14 @@ def _apply_role(user, role):
     user.is_superuser = role == 'master'
 
 
+def _backup_status():
+    try:
+        from backups import services
+        return services.status()
+    except Exception:
+        return None
+
+
 @master_only
 def home(request):
     now = timezone.now()
@@ -54,7 +62,7 @@ def home(request):
         'failed_24h': AuditLog.objects.filter(action='login_failed', created_at__gte=now - timedelta(hours=24)).count(),
         'logins_today': AuditLog.objects.filter(action='login', created_at__date=today).count(),
         'stock_units': stock_agg['u'] or 0, 'stock_cost': stock_agg['c'] or 0, 'dispatched_today': dispatched,
-        'by_cashier': by_cashier, 'recent': AuditLog.objects.all()[:12]})
+        'by_cashier': by_cashier, 'recent': AuditLog.objects.all()[:12], 'backup': _backup_status()})
 
 
 @master_only

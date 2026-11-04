@@ -1,0 +1,92 @@
+{% extends "masteradmin/base.html" %}
+{% block title %}Backups{% endblock %}
+{% block body %}
+{% with inp="w-full h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-semibold" %}
+<div class="flex flex-wrap items-end justify-between gap-3">
+  <div><h1 class="text-2xl font-black tracking-tight">Backups</h1><p class="text-xs text-slate-500 mt-0.5">Download everything now, or let the system copy it to your pendrive on a schedule.</p></div>
+  <div class="px-4 py-2 rounded-xl text-xs font-bold border {% if st.level == 'ok' %}bg-emerald-500/10 border-emerald-500/30 text-emerald-600{% elif st.level == 'warn' %}bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300{% else %}bg-slate-500/10 border-slate-500/30 text-slate-500{% endif %}">
+    <i class="fa-solid {% if st.level == 'ok' %}fa-circle-check{% elif st.level == 'warn' %}fa-triangle-exclamation{% else %}fa-circle-pause{% endif %} mr-1"></i>{{ st.text }}
+    {% if st.last %}<span class="font-medium opacity-80"> Last: {{ st.last|date:"d M Y, H:i" }}.</span>{% endif %}{% if st.next %}<span class="font-medium opacity-80"> Next: {{ st.next|date:"d M, H:i" }}.</span>{% endif %}
+  </div>
+</div>
+
+{% if errors %}<div class="px-4 py-3 rounded-xl text-xs font-bold bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 space-y-1">{% for e in errors %}<div><i class="fa-solid fa-circle-exclamation mr-1"></i>{{ e }}</div>{% endfor %}</div>{% endif %}
+
+<div class="grid lg:grid-cols-5 gap-5">
+  <section class="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 space-y-4 self-start">
+    <div><h2 class="font-black text-sm">Download the full database</h2><p class="text-xs text-slate-500 mt-1">One .zip with every table. Keep it safe, it contains customer and user data.</p></div>
+    <form method="post" action="{% url 'backups_download' %}" class="space-y-3">{% csrf_token %}
+      <label class="flex items-start gap-2 text-xs font-bold"><input type="checkbox" name="include_csv" checked class="mt-0.5"> <span>Readable Excel/CSV files of every table<span class="block font-medium text-slate-400">Open in Excel. Not used for restoring.</span></span></label>
+      <label class="flex items-start gap-2 text-xs font-bold"><input type="checkbox" name="include_media" class="mt-0.5"> <span>Also include uploaded files<span class="block font-medium text-slate-400">Product photos and marketplace label PDFs. Makes the file bigger.</span></span></label>
+      <button class="w-full h-11 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-black text-sm"><i class="fa-solid fa-download mr-1.5"></i> Download full backup</button>
+    </form>
+    <div class="pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 space-y-1">
+      <div class="font-bold text-slate-600 dark:text-slate-300">To restore a backup</div>
+      <div>On the computer with the project, run: <code class="mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">python manage.py restore_backup "path\to\backup.zip"</code></div>
+      <div>It asks you to type YES, saves a copy of the current data first, then replaces everything with the backup.</div>
+    </div>
+  </section>
+
+  <section class="lg:col-span-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5">
+    <h2 class="font-black text-sm">Automatic backup</h2>
+    <form method="post" class="mt-3 space-y-4 text-xs">{% csrf_token %}
+      <label class="flex items-center gap-2 font-black text-sm"><input type="checkbox" name="enabled" {% if form %}{% if form.enabled %}checked{% endif %}{% elif s.enabled %}checked{% endif %}> Turn on automatic backup</label>
+
+      <label class="block"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Backup folders (one per line)</span>
+        <textarea name="destinations" rows="3" placeholder="E:\TatkalBackups" class="mt-1.5 w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 mono text-sm font-semibold">{% if form %}{{ form.destinations }}{% else %}{{ s.destinations }}{% endif %}</textarea>
+        <span class="block mt-1 text-[11px] text-slate-400">Type the pendrive's drive letter and a folder, for example <b>E:\TatkalBackups</b>. Add a second line for another drive. If the pendrive is not plugged in, the backup waits on this computer and is copied as soon as it is back.</span></label>
+
+      <div class="grid sm:grid-cols-3 gap-3">
+        <label class="block"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">How often</span>
+          <select name="frequency" id="freq" class="mt-1.5 {{ inp }}">{% for k, l in freqs %}<option value="{{ k }}" {% if form %}{% if form.frequency == k %}selected{% endif %}{% elif s.frequency == k %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></label>
+        <label class="block" data-show="hours"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Every (hours)</span>
+          <input type="number" name="every_hours" min="1" max="168" value="{% if form %}{{ form.every_hours }}{% else %}{{ s.every_hours }}{% endif %}" class="mt-1.5 {{ inp }}"></label>
+        <label class="block" data-show="weekly"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Day</span>
+          <select name="weekday" class="mt-1.5 {{ inp }}">{% for i, d in weekdays %}<option value="{{ i }}" {% if form %}{% if form.weekday == i|stringformat:"s" %}selected{% endif %}{% elif s.weekday == i %}selected{% endif %}>{{ d }}</option>{% endfor %}</select></label>
+        <label class="block" data-show="daily weekly"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">At time (24h)</span>
+          <input name="at_time" value="{% if form %}{{ form.at_time }}{% else %}{{ s.at_time|time:'H:i' }}{% endif %}" placeholder="21:00" class="mt-1.5 {{ inp }} mono"></label>
+        <label class="block"><span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Backups to keep</span>
+          <input type="number" name="keep_last" min="1" max="365" value="{% if form %}{{ form.keep_last }}{% else %}{{ s.keep_last }}{% endif %}" class="mt-1.5 {{ inp }}"></label>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-2 font-bold">
+        <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"><input type="checkbox" name="local_copy" {% if form %}{% if form.local_copy %}checked{% endif %}{% elif s.local_copy %}checked{% endif %}> Also keep a copy on this computer</label>
+        <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"><input type="checkbox" name="include_csv" {% if form %}{% if form.include_csv %}checked{% endif %}{% elif s.include_csv %}checked{% endif %}> Readable CSV files</label>
+        <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"><input type="checkbox" name="include_media" {% if form %}{% if form.include_media %}checked{% endif %}{% elif s.include_media %}checked{% endif %}> Include uploaded files</label>
+      </div>
+      <p class="text-[11px] text-slate-400">Old backups beyond the number to keep are deleted, only files named <span class="mono">tatkal-backup-*.zip</span>. This computer's copies are in <span class="mono">{{ local_dir }}</span>.</p>
+
+      <div class="flex flex-wrap gap-2">
+        <button class="h-10 px-5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-black"><i class="fa-solid fa-floppy-disk mr-1.5"></i> Save settings</button>
+        <button type="submit" formaction="{% url 'backups_test' %}" formnovalidate class="h-10 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 font-black"><i class="fa-solid fa-plug mr-1.5"></i> Test the drive</button>
+        <button type="submit" formaction="{% url 'backups_now' %}" formnovalidate class="h-10 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black"><i class="fa-solid fa-rotate mr-1.5"></i> Back up now</button>
+      </div>
+      <p class="text-[11px] text-slate-400">"Test the drive" and "Back up now" use the settings you last saved.</p>
+    </form>
+  </section>
+</div>
+
+<section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 overflow-x-auto">
+  <h2 class="font-black text-sm mb-3">History</h2>
+  <table class="w-full text-xs"><thead><tr class="text-left text-[10px] uppercase tracking-wider text-slate-400"><th class="py-2 pr-3">When</th><th class="py-2 pr-3">Type</th><th class="py-2 pr-3">Result</th><th class="py-2 pr-3">File</th><th class="py-2 pr-3 text-right">Size</th><th class="py-2">Details</th></tr></thead><tbody>
+  {% for r in runs %}<tr class="border-t border-slate-100 dark:border-slate-800 align-top">
+    <td class="py-2.5 pr-3 whitespace-nowrap">{{ r.started_at|date:"d M Y, H:i" }}</td><td class="py-2.5 pr-3">{{ r.get_trigger_display }}</td>
+    <td class="py-2.5 pr-3"><span class="px-2 py-0.5 rounded-full font-black {% if r.status == 'ok' %}bg-emerald-500/15 text-emerald-600{% elif r.status == 'partial' %}bg-amber-500/15 text-amber-600{% else %}bg-rose-500/15 text-rose-500{% endif %}">{{ r.get_status_display }}</span></td>
+    <td class="py-2.5 pr-3 mono">{{ r.filename|default:"-" }}</td><td class="py-2.5 pr-3 text-right mono">{% if r.size_bytes %}{{ r.size_bytes|filesizeformat }}{% else %}-{% endif %}</td>
+    <td class="py-2.5 text-slate-500">{{ r.message }}{% for d in r.detail %}<div class="mono text-[10px] {% if d.ok %}text-slate-400{% else %}text-rose-500{% endif %}">{{ d.where }}: {{ d.message }}</div>{% endfor %}</td></tr>
+  {% empty %}<tr><td colspan="6" class="py-8 text-center text-slate-400">No backups yet. Press "Back up now" to make the first one.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+
+<section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 text-xs space-y-2">
+  <h2 class="font-black text-sm">How the automatic part runs</h2>
+  <p class="text-slate-500">While the system is running, it checks every minute whether a backup is due. If the computer was off at the scheduled time, the backup runs as soon as the system starts again.</p>
+  <p class="text-slate-500">If you want backups even when the website is not open, add a Windows scheduled task once (run this in Command Prompt). It does nothing unless a backup is due:</p>
+  <pre class="mono text-[11px] bg-slate-100 dark:bg-slate-800 rounded-xl p-3 overflow-x-auto select-all">{{ task_cmd }}</pre>
+  <p class="text-slate-500">Tip: a pendrive can be lost. Turn on BitLocker To Go for it (right-click the drive in Explorer) so the backup cannot be read by someone else.</p>
+</section>
+{% endwith %}
+<script>
+(function(){var f=document.getElementById('freq');function s(){document.querySelectorAll('[data-show]').forEach(function(e){e.style.display=e.dataset.show.split(' ').indexOf(f.value)>-1?'':'none'})}f.addEventListener('change',s);s();})();
+</script>
+{% endblock %}
