@@ -18,7 +18,7 @@ db.sqlite3-journal
 *.db
 *.dump
 *.sql.gz
-backups/
+backup_files/
 
 # ---- Uploaded files (label PDFs hold customer addresses) ----
 media/
