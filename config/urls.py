@@ -12,7 +12,7 @@ urlpatterns = [
     path('suppliers/', include('suppliers.urls')),
     path('import/', include('importer.urls')),
     path('prices/', include('pricelist.urls')),
-    path('', include('sku_manager.urls')),
+    path('', include('sku_manager.urls')),    
 ]     
 
 if settings.DEBUG:
