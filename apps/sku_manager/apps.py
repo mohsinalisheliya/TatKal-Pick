@@ -6,3 +6,4 @@ class SkuManagerConfig(AppConfig):
     name = "sku_manager"
     verbose_name = "SKU Manager"
 
+     
