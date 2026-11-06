@@ -7,7 +7,7 @@
   <p class="text-xs text-slate-500 mt-1"><b>{{ job.filename }}</b> &middot; {{ total }} data rows &middot; {{ headers|length }} columns</p></div>
   {% if saved %}<div class="flex items-center gap-2 text-xs"><span class="font-bold text-slate-400">Use saved mapping</span>
     {% for m in saved %}<a href="?use={{ m.pk }}" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 font-bold hover:bg-amber-500 hover:text-slate-950">{{ m.name }}</a>{% endfor %}</div>{% endif %}
-</div>
+</div>   
 
 <div class="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-3xl p-4 overflow-x-auto">
   <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">First rows of your file</div>
