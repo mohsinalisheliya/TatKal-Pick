@@ -9,7 +9,7 @@ def guess_mapping(kind, headers):
     """Best guess: header text equals / contains one of the field's aliases."""
     from .kinds import norm
     spec = KINDS[kind]['fields']()
-    normed = [norm(h) for h in headers]
+    normed = [norm(h) for h in headers]   
     used, out = set(), {}
     for f in spec:                                  # exact matches first
         for i, h in enumerate(normed):
