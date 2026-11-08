@@ -203,3 +203,4 @@ def as_xlsx(kind):
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
+     

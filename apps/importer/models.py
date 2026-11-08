@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
 
-
+    
 class ImportMapping(models.Model):
     """A saved "my column X is your field Y" mapping, so the next file of the same shape needs no clicking."""
     kind = models.CharField(max_length=20)
