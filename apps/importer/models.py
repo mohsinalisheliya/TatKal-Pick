@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+
+
     
 class ImportMapping(models.Model):
     """A saved "my column X is your field Y" mapping, so the next file of the same shape needs no clicking."""
@@ -9,7 +11,6 @@ class ImportMapping(models.Model):
     # {field_key: {"col": "<header text>"} or {"fixed": "<text>"}}
     mapping = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         unique_together = ('kind', 'name')
         ordering = ['kind', 'name']
