@@ -152,4 +152,4 @@ The logo is a single color: a parcel inside scan corners, for *pick* and *scan*.
 
 <div align="center">
 <sub>Built with Django · Made for fast, accurate dispatch</sub>
-</div>
+</div>    
