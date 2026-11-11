@@ -28,8 +28,9 @@ SECRET_KEY = "django-insecure-x$6$(nq068!i5@+*=-8)s0s#vq4xrhaebr=6#^xsz_(dks&6$q
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["velfira.com", "www.velfira.com", "tatkal.velfira.com", "localhost", "127.0.0.1", ".trycloudflare.com"]
 CSRF_TRUSTED_ORIGINS = [
+    "https://tatkal.velfira.com",
     "https://f734-2402-a00-401-d3b7-d567-eeb7-df7f-65bb.ngrok-free.app",
 ]
 
