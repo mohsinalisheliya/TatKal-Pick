@@ -7,7 +7,7 @@
 # 60 = 1 minute | 120 = 2 minutes | 300 = 5 minutes
 CHECK_INTERVAL=05
 REMOTE="origin"
-
+   
 # Terminal Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
