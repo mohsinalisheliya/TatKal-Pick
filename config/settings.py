@@ -33,7 +33,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://inv.velfira.com",
     "https://f734-2402-a00-401-d3b7-d567-eeb7-df7f-65bb.ngrok-free.app",
 ]
-
+     
 
 # Application definition
 
