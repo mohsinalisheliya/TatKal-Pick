@@ -31,12 +31,12 @@ DEBUG = True
 ALLOWED_HOSTS = ["velfira.com", "www.velfira.com", "inv.velfira.com", "localhost", "127.0.0.1", ".trycloudflare.com"]
 CSRF_TRUSTED_ORIGINS = [
     "https://inv.velfira.com",
-    "https://f734-2402-a00-401-d3b7-d567-eeb7-df7f-65bb.ngrok-free.app",
+    
 ]
      
 
 # Application definition
-
+   
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
